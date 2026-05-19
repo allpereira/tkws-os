@@ -1,0 +1,111 @@
+# Docker Compose para PRODUÇÃO
+# Roda em EC2 t4g.medium ou maior. Postgres em RDS produção.
+# Frontend é hospedado no Cloudflare Pages (ADR-012), não está aqui.
+# Uso: docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
+
+services:
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: tkws-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/caddy/Caddyfile.prod:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - api
+      - zitadel
+    networks:
+      - tkws
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  redis:
+    image: redis:7-alpine
+    container_name: tkws-redis
+    restart: unless-stopped
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis-data:/data
+    networks:
+      - tkws
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  zitadel:
+    image: ghcr.io/zitadel/zitadel:latest
+    container_name: tkws-zitadel
+    restart: unless-stopped
+    command: 'start-from-init --masterkey "${ZITADEL_MASTERKEY}" --tlsMode external'
+    environment:
+      ZITADEL_DATABASE_POSTGRES_HOST: ${DB_HOST}
+      ZITADEL_DATABASE_POSTGRES_PORT: ${DB_PORT}
+      ZITADEL_DATABASE_POSTGRES_DATABASE: zitadel
+      ZITADEL_DATABASE_POSTGRES_USER_USERNAME: ${DB_USER}
+      ZITADEL_DATABASE_POSTGRES_USER_PASSWORD: ${DB_PASSWORD}
+      ZITADEL_DATABASE_POSTGRES_USER_SSL_MODE: require
+      ZITADEL_DATABASE_POSTGRES_ADMIN_USERNAME: ${DB_USER}
+      ZITADEL_DATABASE_POSTGRES_ADMIN_PASSWORD: ${DB_PASSWORD}
+      ZITADEL_DATABASE_POSTGRES_ADMIN_SSL_MODE: require
+      ZITADEL_EXTERNALSECURE: "true"
+      ZITADEL_EXTERNALDOMAIN: auth.tkws.com.br
+      ZITADEL_EXTERNALPORT: 443
+      ZITADEL_PORT: 8088
+      ZITADEL_FIRSTINSTANCE_ORG_HUMAN_USERNAME: ${ZITADEL_ADMIN_USER}
+      ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORD: ${ZITADEL_ADMIN_PASSWORD}
+    networks:
+      - tkws
+
+  api:
+    image: ghcr.io/${GITHUB_REPOSITORY:-groupws/tkws-os}/api:${IMAGE_TAG:-latest}
+    container_name: tkws-api
+    restart: unless-stopped
+    environment:
+      DB_URL: jdbc:postgresql://${DB_HOST}:${DB_PORT}/tkws?ssl=true&sslmode=require
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_POOL_SIZE: 30
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      ZITADEL_ISSUER: https://auth.tkws.com.br
+      # Aceita: domínio custom, Cloudflare Pages, e Capacitor (mobile)
+      # capacitor://localhost = iOS; https://localhost = Android WebView
+      CORS_ORIGINS: "https://app.tkws.com.br,https://tkws-os.pages.dev,capacitor://localhost,https://localhost"
+      ENVIRONMENT: production
+      LOG_LEVEL: INFO
+      JAVA_OPTS: "-XX:MaxRAMPercentage=70.0 -XX:+UseG1GC -XX:+UseStringDeduplication"
+    depends_on:
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
+    networks:
+      - tkws
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+volumes:
+  redis-data:
+  caddy-data:
+  caddy-config:
+
+networks:
+  tkws:
+    driver: bridge

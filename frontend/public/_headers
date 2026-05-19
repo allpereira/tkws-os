@@ -1,0 +1,18 @@
+/*
+  Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: SAMEORIGIN
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: geolocation=(), microphone=(), camera=()
+  X-XSS-Protection: 1; mode=block
+
+# Cache agressivo em assets versionados pelo Vite (hash no filename)
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# HTML nunca cacheia (sempre busca versão nova)
+/*.html
+  Cache-Control: public, max-age=0, must-revalidate
+
+/
+  Cache-Control: public, max-age=0, must-revalidate

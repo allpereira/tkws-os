@@ -1,0 +1,31 @@
+{
+    email admin@tkws.com.br
+}
+
+# Frontend é hospedado no Cloudflare Pages (staging.tkws.com.br aponta direto pra Cloudflare).
+# Caddy aqui só serve API e Zitadel.
+
+# API
+api.staging.tkws.com.br {
+    reverse_proxy api:8080
+    encode gzip zstd
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options nosniff
+        -Server
+    }
+}
+
+# Zitadel (auth)
+auth.staging.tkws.com.br {
+    reverse_proxy zitadel:8088 {
+        transport http {
+            versions h2c 1.1
+        }
+    }
+    encode gzip zstd
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        -Server
+    }
+}

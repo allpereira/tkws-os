@@ -1,0 +1,31 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+  flyway:
+    # Em testes, environment=test bloqueia execução do seed de dev
+    placeholders:
+      environment: test
+
+  # Em testes, mockamos OIDC. JwtDecoder bean é substituído via @MockBean.
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # Não usado em testes (substituído via DynamicPropertyRegistry/MockBean)
+          issuer-uri: http://localhost:9999/mock-zitadel
+
+tkws:
+  cors:
+    allowed-origins: http://localhost:5173
+
+logging:
+  level:
+    com.groupws.tkws: DEBUG
+    org.testcontainers: INFO
+    org.hibernate.SQL: WARN

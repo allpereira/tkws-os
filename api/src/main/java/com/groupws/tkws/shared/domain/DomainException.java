@@ -1,0 +1,19 @@
+package com.groupws.tkws.shared.domain;
+
+/**
+ * Exceção base para regras de negócio.
+ * Subclasses representam violações específicas de invariantes do domínio.
+ */
+public abstract class DomainException extends RuntimeException {
+
+    private final String code;
+
+    protected DomainException(String code, String message) {
+        super(message);
+        this.code = code;
+    }
+
+    public String code() {
+        return code;
+    }
+}
