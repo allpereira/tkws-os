@@ -1,0 +1,11 @@
+com/groupws/tkws/features/tenants/domain/TenantTest.class
+com/groupws/tkws/features/tenants/application/CreateTenantUseCaseTest.class
+com/groupws/tkws/features/tenants/infrastructure/TenantRepositoryIT.class
+com/groupws/tkws/features/tenants/domain/TenantTest$LifecycleOperations.class
+com/groupws/tkws/shared/ArchitectureTest.class
+com/groupws/tkws/shared/MockJwtConfig$MockJwtDecoder.class
+com/groupws/tkws/features/tenants/web/TenantControllerIT.class
+com/groupws/tkws/features/tenants/domain/TenantTest$WhenCreating.class
+com/groupws/tkws/shared/AbstractIntegrationTest.class
+com/groupws/tkws/shared/MockJwtConfig.class
+com/groupws/tkws/shared/EmailTest.class

@@ -7,10 +7,10 @@ FROM node:22-alpine AS builder
 
 WORKDIR /build
 
-COPY package.json package-lock.json* ./
-RUN npm ci --prefer-offline --no-audit
+COPY frontend/package.json frontend/package-lock.json* ./
+RUN npm install --prefer-offline --no-audit
 
-COPY . .
+COPY frontend/ .
 ARG VITE_API_URL
 ARG VITE_ZITADEL_AUTHORITY
 ARG VITE_ZITADEL_CLIENT_ID

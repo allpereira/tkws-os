@@ -1,0 +1,8 @@
+/Users/allpereira/Documents/GitHub/TKWS/tkws-os/api/src/test/java/com/groupws/tkws/features/tenants/application/CreateTenantUseCaseTest.java
+/Users/allpereira/Documents/GitHub/TKWS/tkws-os/api/src/test/java/com/groupws/tkws/features/tenants/domain/TenantTest.java
+/Users/allpereira/Documents/GitHub/TKWS/tkws-os/api/src/test/java/com/groupws/tkws/features/tenants/infrastructure/TenantRepositoryIT.java
+/Users/allpereira/Documents/GitHub/TKWS/tkws-os/api/src/test/java/com/groupws/tkws/features/tenants/web/TenantControllerIT.java
+/Users/allpereira/Documents/GitHub/TKWS/tkws-os/api/src/test/java/com/groupws/tkws/shared/AbstractIntegrationTest.java
+/Users/allpereira/Documents/GitHub/TKWS/tkws-os/api/src/test/java/com/groupws/tkws/shared/ArchitectureTest.java
+/Users/allpereira/Documents/GitHub/TKWS/tkws-os/api/src/test/java/com/groupws/tkws/shared/EmailTest.java
+/Users/allpereira/Documents/GitHub/TKWS/tkws-os/api/src/test/java/com/groupws/tkws/shared/MockJwtConfig.java
