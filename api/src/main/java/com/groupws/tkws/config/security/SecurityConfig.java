@@ -24,11 +24,15 @@ import java.util.List;
 @EnableMethodSecurity
 public class SecurityConfig {
 
-    @Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri}")
-    private String issuerUri;
+    private final String issuerUri;
+    private final String allowedOrigins;
 
-    @Value("${tkws.cors.allowed-origins}")
-    private String allowedOrigins;
+    public SecurityConfig(
+            @Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri}") String issuerUri,
+            @Value("${tkws.cors.allowed-origins}") String allowedOrigins) {
+        this.issuerUri = issuerUri;
+        this.allowedOrigins = allowedOrigins;
+    }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {

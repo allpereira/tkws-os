@@ -17,11 +17,12 @@
 git clone https://github.com/groupws/tkws-os.git
 cd tkws-os
 
-# 2. Sobe ambiente local completo
+# 2. Sobe ambiente local completo (Zitadel inclui login V2 + gateway na 8088)
+docker compose pull zitadel zitadel-login
 docker compose up -d
 
 # 3. Aguarda Zitadel inicializar (1-3 min na primeira vez)
-docker compose logs -f zitadel
+docker compose logs -f zitadel zitadel-login
 # Quando ver "starting server", Ctrl+C
 
 # 4. Configura Zitadel (uma vez)
@@ -30,12 +31,19 @@ docker compose logs -f zitadel
 # Segue docs/04-AUTH.md seção "Setup inicial"
 # Copia Client ID que gerou
 
-# 5. Cria .env local com o Client ID
-echo "ZITADEL_CLIENT_ID=cole_aqui" > .env
-
-# 6. Restart do frontend pra pegar a env
+# 5a. Frontend via Docker Compose (imagem nginx na porta 5173)
+echo "ZITADEL_CLIENT_ID=cole_o_client_id_real" > .env
 docker compose up -d --build frontend
+
+# 5b. Frontend via Vite local (recomendado para HMR — npm run dev)
+cp frontend/.env.example frontend/.env.local
+# Edite frontend/.env.local e defina VITE_ZITADEL_CLIENT_ID=<client_id>
+cd frontend && npm install && npm run dev
 ```
+
+> **Importante:** `ZITADEL_CLIENT_ID` na raiz alimenta só o build do container `frontend`.
+> O Vite (`npm run dev`) lê **`frontend/.env.local`** (`VITE_ZITADEL_CLIENT_ID`). Sem isso,
+> a tela fica em "Redirecionando para login..." ou mostra "Autenticação não configurada".
 
 ### URLs locais
 
@@ -45,8 +53,171 @@ docker compose up -d --build frontend
 | API | http://localhost:8080 | Bearer JWT |
 | Swagger UI | http://localhost:8080/swagger-ui.html | público |
 | Zitadel | http://localhost:8088 | admin@tkws.local / Admin@123456 |
-| Postgres | localhost:5432 | tkws / tkws |
-| Redis | localhost:6379 | sem senha (dev) |
+| Postgres | localhost:5433 | tkws / tkws |
+| Redis | localhost:6380 | sem senha (dev) |
+
+## Inspecionando Postgres, Redis e Zitadel (dev local)
+
+Referência rápida para **consultar dados** durante o desenvolvimento. Credenciais e portas estão na tabela acima.
+
+> **Dois bancos no mesmo Postgres:** `tkws` (dados da API + Flyway) e `zitadel` (usuários, apps OIDC, sessões). Não misture migrations do TKWS no banco `zitadel`.
+
+### PostgreSQL
+
+#### GUI (recomendado para explorar schema e rodar SQL)
+
+Qualquer cliente JDBC/Postgres funciona com:
+
+| Campo | Valor (dev) |
+|---|---|
+| Host | `localhost` |
+| Porta | `5433` |
+| Database | `tkws` ou `zitadel` |
+| Usuário | `tkws` |
+| Senha | `tkws` |
+| SSL | desligado |
+
+Opções populares (gratuitas ou com tier free):
+
+| Ferramenta | Observação |
+|---|---|
+| [DBeaver](https://dbeaver.io/) | Multi-banco, bom para dia a dia |
+| [pgAdmin](https://www.pgadmin.org/) | Oficial Postgres, mais pesado |
+| [TablePlus](https://tableplus.com/) | Leve no Mac (versão free limitada) |
+| [DataGrip](https://www.jetbrains.com/datagrip/) | Pago, integra bem com IntelliJ |
+| Extensão **PostgreSQL** no VS Code / Cursor | SQL direto no editor |
+
+No cliente, conecte em `tkws` para ver `tenants`, `users`, `feature_flags`, `flyway_schema_history`. Conecte em `zitadel` só se precisar inspecionar dados internos do IdP (raro no dia a dia — prefira a console do Zitadel).
+
+#### Console (`psql`)
+
+**Via container** (não precisa instalar `psql` no Mac):
+
+```bash
+# Banco da aplicação
+docker compose exec postgres psql -U tkws -d tkws
+
+# Banco do Zitadel
+docker compose exec postgres psql -U tkws -d zitadel
+```
+
+**Do host** (se tiver `psql` instalado, ex.: `brew install libpq`):
+
+```bash
+psql -h localhost -p 5433 -U tkws -d tkws
+# senha: tkws
+```
+
+Consultas úteis no banco `tkws`:
+
+```sql
+-- Tabelas do domínio
+SELECT id, name, slug, status, created_at FROM tenants ORDER BY created_at DESC LIMIT 20;
+SELECT id, email, full_name, zitadel_id, tenant_id FROM users ORDER BY created_at DESC LIMIT 20;
+SELECT name, default_enabled, enabled_for_tenants, disabled_for_tenants FROM feature_flags;
+
+-- Migrations aplicadas pelo Flyway
+SELECT installed_rank, version, description, success, installed_on
+FROM flyway_schema_history
+ORDER BY installed_rank;
+
+-- Dentro do psql
+\dt          -- lista tabelas
+\d tenants   -- descreve colunas da tabela
+\q           -- sai
+```
+
+### Redis
+
+#### GUI
+
+| Ferramenta | Observação |
+|---|---|
+| [Redis Insight](https://redis.io/insight/) | Oficial Redis, gratuito |
+| [Another Redis Desktop Manager](https://github.com/qishibo/AnotherRedisDesktopManager) | Open source |
+| [Medis](https://getmedis.com/) | Mac, interface simples |
+
+Conexão dev: host `localhost`, porta `6380`, **sem senha**, database `0`.
+
+#### Console (`redis-cli`)
+
+```bash
+# Via container
+docker compose exec redis redis-cli
+
+# Do host (brew install redis)
+redis-cli -p 6380
+```
+
+Comandos úteis:
+
+```bash
+PING                    # deve responder PONG
+INFO keyspace           # quantidade de chaves por DB
+DBSIZE                  # total de chaves no DB atual
+KEYS *                  # lista chaves (ok em dev; evite em produção)
+GET nome_da_chave       # valor string
+TYPE nome_da_chave     # tipo da chave
+TTL nome_da_chave       # tempo restante (se houver expiração)
+MONITOR                 # stream ao vivo de comandos (debug; Ctrl+C para parar)
+```
+
+> Em dev o Redis costuma estar vazio até a API passar a usar cache/sessão distribuída. `DBSIZE` retornando `0` é normal.
+
+### Zitadel
+
+#### GUI (console web)
+
+1. Abra http://localhost:8088
+2. Login: `admin@tkws.local` / `Admin@123456`
+3. Áreas mais usadas no dia a dia:
+
+| Menu | Para quê |
+|---|---|
+| **Projects** → TKWS OS → **Applications** | Client ID, redirect URIs, PKCE |
+| **Projects** → **Roles** | Roles (`system_admin`, `org_admin`, …) |
+| **Users** | Usuários de teste, reset de senha, MFA |
+| **Organizations** | Multi-tenant do Zitadel (orgs de clientes) |
+| **Instance** → **Settings** | Políticas de login, MFA, sessão |
+
+Setup completo de projeto/app/roles: [`docs/04-AUTH.md`](04-AUTH.md) (seção *Setup inicial*).
+
+#### Console (HTTP e logs)
+
+**Descoberta OIDC** (issuer, JWKS, endpoints):
+
+```bash
+curl -s http://localhost:8088/.well-known/openid-configuration | jq .
+```
+
+**Logs do container** (erros de login, migração interna, DB):
+
+```bash
+docker compose logs -f zitadel
+docker compose logs --tail=100 zitadel
+```
+
+**Health / processo subiu:**
+
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8088/.well-known/openid-configuration
+# esperado: 200
+```
+
+**Testar JWT na API** (copie o access token do browser após login no frontend):
+
+```bash
+curl -s -H "Authorization: Bearer <access_token>" http://localhost:8080/api/v1/users/me | jq .
+```
+
+Decodificar claims do JWT (sem validar assinatura — só debug local):
+
+```bash
+# payload = segunda parte do JWT (base64url)
+echo '<access_token>' | cut -d. -f2 | tr '_-' '/+' | base64 -d 2>/dev/null | jq .
+```
+
+> Não edite usuários/apps críticos direto no banco `zitadel`; use a console ou a API do Zitadel. Detalhes de auth no código: [`docs/04-AUTH.md`](04-AUTH.md).
 
 ### URLs em staging e produção
 
@@ -245,7 +416,9 @@ Bom uso de Zustand: modal aberto/fechado, tema, sidebar collapsed.
 
 ## Rodando fora do container (mais ágil)
 
-Quando você está iterando rápido em código, rodar API direto na máquina dá hot reload melhor:
+Quando você está iterando rápido em código, rodar API direto na máquina dá hot reload melhor.
+
+Postgres e Redis do Compose usam **5433** e **6380** no host (`application.yml` já aponta para essas portas), para não conflitar com outras instâncias locais em 5432/6379.
 
 ```bash
 # Sobe só os deps em container
@@ -255,7 +428,7 @@ docker compose up -d postgres redis zitadel
 cd api
 ./mvnw spring-boot:run
 
-# Roda frontend local com HMR
+# Roda frontend local com HMR (requer frontend/.env.local — passo 5b acima)
 cd ../frontend
 npm install
 npm run dev
@@ -307,8 +480,21 @@ Outra aplicação está nessa porta. `lsof -i:8080` pra ver qual.
 Rodar Vite localmente (não em container) para ter HMR real:
 ```bash
 docker compose stop frontend
+cp frontend/.env.example frontend/.env.local   # se ainda não existir
+# Defina VITE_ZITADEL_CLIENT_ID no .env.local
 cd frontend && npm run dev
 ```
+
+### "Redirecionando para login..." sem sair da página
+Causa mais comum: **`VITE_ZITADEL_CLIENT_ID` ausente** em `frontend/.env.local` ao usar `npm run dev`.
+
+1. Crie o app Web no Zitadel com redirect `http://localhost:5173/callback` (ver `docs/04-AUTH.md`).
+2. Copie o Client ID para `frontend/.env.local`.
+3. Reinicie o Vite.
+4. Se aparecer painel de erro, abra o DevTools → Console e confira rede até `localhost:8088`.
+
+Com Docker Compose no frontend, use `.env` na raiz com `ZITADEL_CLIENT_ID` e `docker compose up -d --build frontend`
+(não use o placeholder `replace-after-setup`).
 
 ## Mobile (Capacitor)
 

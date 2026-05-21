@@ -61,18 +61,19 @@ Dentro do projeto:
 1. Applications → New
 2. Nome: `TKWS Web`
 3. Type: **Web**
-4. Authentication Method: **PKCE** (PKCE-only, sem client secret)
-5. Redirect URIs:
+4. Authentication Method: **PKCE** (no console: "PKCE" / `NONE` — **não** use Private Key JWT; isso gera `empty client assertion` no callback)
+5. **Access Token Type: JWT** (obrigatório — a API Spring valida JWT; tipo Bearer/opaco gera **401** em `/users/me`)
+6. Redirect URIs:
    - Dev: `http://localhost:5173/callback`
    - Staging: `https://staging.tkws.com.br/callback`
    - **Staging previews** (Cloudflare Pages preview deploys): `https://*.tkws-os-staging.pages.dev/callback`
    - Prod: `https://app.tkws.com.br/callback`
    - **Prod preview** (Cloudflare alternativo): `https://tkws-os.pages.dev/callback`
-6. Post Logout URIs:
+7. Post Logout URIs:
    - Dev: `http://localhost:5173`
    - Staging: `https://staging.tkws.com.br` + `https://*.tkws-os-staging.pages.dev`
    - Prod: `https://app.tkws.com.br` + `https://tkws-os.pages.dev`
-7. Cria e **copia o Client ID**
+8. Cria e **copia o Client ID**
 
 > **Nota sobre wildcard:** Zitadel suporta `*` em redirect URIs. Isso é necessário pra preview
 > deploys do Cloudflare Pages funcionarem (cada PR ganha URL única tipo `abc123.tkws-os.pages.dev`).
@@ -143,7 +144,12 @@ public ResponseEntity<TenantView> create(@Valid @RequestBody CreateTenantCommand
 
 ### Frontend — react-oidc-context
 
-`features/auth/api/oidc-config.ts` configura provider:
+`features/auth/api/oidc-config.ts` configura o provider e exporta `isOidcConfigured()` (valida
+`VITE_ZITADEL_CLIENT_ID` em dev). Rotas: `/` (home protegida) e `/callback` (retorno OIDC).
+Variáveis em `frontend/.env.local` — copiar de `frontend/.env.example`. Hook recomendado:
+`useRequireAuth()`.
+
+Configuração base:
 
 ```ts
 export const oidcConfig: AuthProviderProps = {
@@ -318,6 +324,52 @@ Provável: redirect URI não cadastrado, ou Client ID errado, ou cookies bloquea
 # Limpa cookies/localstorage do browser e tenta de novo
 ```
 
+### Console redireciona para `/ui/v2/login/login` (não abre a UI)
+
+A instância está com **Login V2 obrigatório**, mas o serviço `zitadel-login` ainda não tem PAT — o console também exige login e cai no mesmo endpoint quebrado (502 ou Not Found).
+
+**Desbloqueio rápido em dev** (volta ao Login V1 embutido no `zitadel`):
+
+```bash
+./scripts/zitadel-dev-disable-login-v2.sh
+```
+
+Depois acesse http://localhost:8088/ui/console, crie o app Web e o PAT do login-client. Para reativar Login V2, siga a seção abaixo e `scripts/zitadel-install-login-pat.sh`.
+
+### `{"code":5,"message":"Not Found"}` em `/ui/v2/login/login`
+
+O Zitadel **4.x** usa **Login V2** (`/ui/v2/login/...`). O container `zitadel` sozinho **não** serve essa UI —
+é preciso o serviço `zitadel-login` + `zitadel-gateway` (Caddy na porta 8088), já definidos em `docker-compose.yml`.
+
+**Instalação nova** (bootstrap gera o PAT automaticamente):
+
+```bash
+docker compose pull zitadel zitadel-login
+docker compose up -d zitadel zitadel-login zitadel-gateway
+```
+
+**Instância já existente** (sem apagar o banco): crie o PAT manualmente e instale no volume:
+
+1. Console: http://localhost:8088/ui/console (`admin@tkws.local` / `Admin@123456`)
+2. Users → machine user `login-client` → PAT → salve em `docker/zitadel/login-client.pat`
+3. Instance → Members → role **Instance Login Client** (`IAM_LOGIN_CLIENT`)
+4. `./scripts/zitadel-install-login-pat.sh`
+5. `docker compose up -d zitadel-login zitadel-gateway`
+
+**Último recurso** (apaga dados do Zitadel): `docker compose down -v` e `docker compose up -d`.
+
+### "Redirecionando para login..." preso em `http://localhost:5173/`
+
+| Cenário | O que verificar |
+|---|---|
+| `npm run dev` (Vite) | Arquivo `frontend/.env.local` com `VITE_ZITADEL_CLIENT_ID` real; reiniciar Vite após editar |
+| `docker compose` frontend | `.env` na raiz com `ZITADEL_CLIENT_ID` (não `replace-after-setup`); rebuild: `docker compose up -d --build frontend` |
+| Zitadel | `curl -s http://localhost:8088/.well-known/openid-configuration` retorna JSON |
+| App Web no Zitadel | Redirect URI `http://localhost:5173/callback` cadastrado; método **PKCE** |
+
+O frontend exibe **"Autenticação não configurada"** quando o Client ID está vazio ou é placeholder.
+Após login, o Zitadel retorna para `/callback`; o `AuthProvider` processa o código e redireciona para `/`.
+
 ### 401 em todo endpoint protegido
 
 ```bash
@@ -326,6 +378,43 @@ curl -v -H "Authorization: Bearer <token>" https://api.tkws.com.br/api/v1/users/
 
 # Verifica logs da API:
 docker compose logs api | grep -i jwt
+```
+
+### `empty client assertion` no callback (`/callback`)
+
+O app Web foi criado com **Private Key JWT** em vez de **PKCE**. O frontend (`oidc-client-ts`) usa PKCE público e não envia `client_assertion`.
+
+1. Console → app **TKWS Web** → **Authentication Method: PKCE** (não Private Key JWT)
+2. Limpe localStorage e faça login de novo
+
+Em dev:
+
+```bash
+./scripts/zitadel-dev-pkce-auth-method.sh <client_id>
+```
+
+### 500 em `GET /api/v1/users/me` (`Email não pode ser nulo`)
+
+O **access token** do Zitadel muitas vezes **não inclui** o claim `email` (só o `id_token`). A API usa `preferred_username` como fallback (login costuma ser o e-mail, ex. `admin@tkws.local`).
+
+Se persistir:
+
+1. App Web → scopes incluem `email`
+2. Logout + login no frontend
+3. Confira no [jwt.io](https://jwt.io) se o access token tem `email` ou `preferred_username` com `@`
+
+### 401 em `GET /api/v1/users/me` após login no frontend
+
+Causa mais comum: app Web no Zitadel com **Access Token Type = Bearer** (opaco). A API usa `JwtDecoder` e só aceita **JWT**.
+
+1. Console Zitadel → app **TKWS Web** → **Token Settings** → **Access Token Type: JWT**
+2. Faça **logout e login** de novo no app (token antigo continua opaco)
+3. No DevTools → Application → Local Storage, o `access_token` deve começar com `eyJ`
+
+Em dev, script alternativo (projeção; prefira alterar no console):
+
+```bash
+./scripts/zitadel-dev-jwt-access-token.sh 373713356953026566
 ```
 
 ## Roles e permissões — quadro de referência

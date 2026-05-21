@@ -7,7 +7,7 @@ spring:
       enabled: true
 
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/tkws}
+    url: ${DB_URL:jdbc:postgresql://localhost:5433/tkws}
     username: ${DB_USER:tkws}
     password: ${DB_PASSWORD:tkws}
     hikari:
@@ -39,7 +39,7 @@ spring:
   data:
     redis:
       host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6379}
+      port: ${REDIS_PORT:6380}
 
   security:
     oauth2:

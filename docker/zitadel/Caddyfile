@@ -1,0 +1,10 @@
+# Roteia Login V2 (container zitadel-login) e API/console (container zitadel).
+:8088 {
+	handle /ui/v2/login* {
+		reverse_proxy zitadel-login:3000
+	}
+
+	handle {
+		reverse_proxy zitadel:8088
+	}
+}

@@ -11,8 +11,9 @@ services:
       POSTGRES_DB: tkws
       POSTGRES_USER: tkws
       POSTGRES_PASSWORD: tkws
+    # Host 5433 evita conflito com Postgres local (5432). Dentro do container: 5432.
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./scripts/init-zitadel-db.sql:/docker-entrypoint-initdb.d/init-zitadel-db.sql
@@ -27,8 +28,9 @@ services:
   redis:
     image: redis:7-alpine
     container_name: tkws-redis
+    # Host 6380 evita conflito com Redis local (6379). Dentro do container: 6379.
     ports:
-      - "6379:6379"
+      - "6380:6379"
     volumes:
       - redis-data:/data
     healthcheck:
@@ -40,7 +42,7 @@ services:
       - tkws
 
   zitadel:
-    image: ghcr.io/zitadel/zitadel:latest
+    image: ghcr.io/zitadel/zitadel:${ZITADEL_VERSION:-v4.15.0}
     container_name: tkws-zitadel
     command: 'start-from-init --masterkey "MasterkeyNeedsToHave32Characters" --tlsMode disabled'
     environment:
@@ -57,14 +59,77 @@ services:
       ZITADEL_EXTERNALDOMAIN: localhost
       ZITADEL_EXTERNALPORT: 8088
       ZITADEL_PORT: 8088
+      # CORS para o login app customizado (porta 5174) e o frontend principal (5173)
+      ZITADEL_HTTP_CORS_ALLOWEDORIGINS: "http://localhost:5173,http://localhost:5174"
+      ZITADEL_HTTP_CORS_ALLOWCREDENTIALS: "true"
       ZITADEL_FIRSTINSTANCE_ORG_HUMAN_USERNAME: admin@tkws.local
       ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORD: "Admin@123456"
       ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORDCHANGEREQUIRED: "false"
-    ports:
-      - "8088:8088"
+      # Login V2 (obrigatório no Zitadel 4.x) — UI customizada em login/ (porta 5174 em dev)
+      ZITADEL_FIRSTINSTANCE_LOGINCLIENTPATPATH: /zitadel/bootstrap/login-client.pat
+      ZITADEL_FIRSTINSTANCE_ORG_LOGINCLIENT_MACHINE_USERNAME: login-client
+      ZITADEL_FIRSTINSTANCE_ORG_LOGINCLIENT_MACHINE_NAME: TKWS Login Client
+      ZITADEL_FIRSTINSTANCE_ORG_LOGINCLIENT_PAT_EXPIRATIONDATE: "2099-01-01T00:00:00Z"
+      ZITADEL_DEFAULTINSTANCE_FEATURES_LOGINV2_REQUIRED: "true"
+      ZITADEL_DEFAULTINSTANCE_FEATURES_LOGINV2_BASEURI: http://localhost:5174/
+      # Zitadel appende o authRequestId diretamente após o '=' — o parâmetro deve chamar authRequestId
+      ZITADEL_OIDC_DEFAULTLOGINURLV2: http://localhost:5174/login?authRequestId=
+      ZITADEL_OIDC_DEFAULTLOGOUTURLV2: http://localhost:5174/logout?post_logout_redirect=
+    volumes:
+      - zitadel-bootstrap:/zitadel/bootstrap:rw
+    # "zitadel ready" exige Login V2 + PAT; em instâncias já existentes use /debug/healthz.
+    healthcheck:
+      test: ["CMD", "/app/zitadel", "ready"]
+      interval: 10s
+      timeout: 30s
+      retries: 30
+      start_period: 120s
     depends_on:
       postgres:
         condition: service_healthy
+    networks:
+      - tkws
+
+  zitadel-login:
+    image: ghcr.io/zitadel/zitadel-login:${ZITADEL_VERSION:-v4.15.0}
+    container_name: tkws-zitadel-login
+    environment:
+      ZITADEL_API_URL: http://zitadel:8088
+      NEXT_PUBLIC_BASE_PATH: /ui/v2/login
+      ZITADEL_SERVICE_USER_TOKEN_FILE: /zitadel/bootstrap/login-client.pat
+      CUSTOM_REQUEST_HEADERS: Host:localhost,X-Forwarded-Proto:http
+    volumes:
+      - zitadel-bootstrap:/zitadel/bootstrap:ro
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "/bin/sh",
+          "-c",
+          "node /app/healthcheck.mjs http://localhost:3000/ui/v2/login/healthy",
+        ]
+      interval: 10s
+      timeout: 30s
+      retries: 12
+      start_period: 30s
+    depends_on:
+      zitadel:
+        condition: service_started
+    networks:
+      - tkws
+
+  zitadel-gateway:
+    image: caddy:2-alpine
+    container_name: tkws-zitadel-gateway
+    ports:
+      - "8088:8088"
+    volumes:
+      - ./docker/zitadel/Caddyfile:/etc/caddy/Caddyfile:ro
+    depends_on:
+      zitadel:
+        condition: service_started
+      zitadel-login:
+        condition: service_started
     networks:
       - tkws
 
@@ -115,6 +180,7 @@ services:
 volumes:
   postgres-data:
   redis-data:
+  zitadel-bootstrap:
 
 networks:
   tkws:

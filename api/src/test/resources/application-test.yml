@@ -2,22 +2,24 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate
-  data:
-    redis:
-      host: localhost
-      port: 6379
+
+  # Cache usa Caffeine (in-memory) nos testes — sem necessidade de Redis real.
+  # A auto-configuração do Redis é desabilitada para evitar falha de conexão.
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisReactiveAutoConfiguration
 
   flyway:
     # Em testes, environment=test bloqueia execução do seed de dev
     placeholders:
       environment: test
 
-  # Em testes, mockamos OIDC. JwtDecoder bean é substituído via @MockBean.
+  # Em testes, OIDC é mockado. JwtDecoder bean é substituído via MockJwtConfig.
   security:
     oauth2:
       resourceserver:
         jwt:
-          # Não usado em testes (substituído via DynamicPropertyRegistry/MockBean)
           issuer-uri: http://localhost:9999/mock-zitadel
 
 tkws:

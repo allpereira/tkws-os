@@ -22,9 +22,30 @@ class TenantJpaRepositoryAdapter implements TenantRepository {
         this.jpaRepository = jpaRepository;
     }
 
+    /**
+     * Salva o tenant preservando campos de V3 (status, requester data, etc.)
+     * que ainda não existem no Aggregate Root.
+     *
+     * Estratégia: se a entidade já existir no banco (update), carregamos o registro
+     * existente e atualizamos APENAS os campos que o domínio atual conhece, evitando
+     * sobrescrever colunas do workflow de aprovação (status, requested_at, etc.).
+     *
+     * Quando a feature `onboarding-v1` mapear esses campos no Aggregate Root,
+     * este merge pode ser simplificado para um `toEntity()` direto.
+     */
     @Override
     public Tenant save(Tenant tenant) {
-        TenantJpaEntity entity = toEntity(tenant);
+        TenantJpaEntity entity = jpaRepository.findById(tenant.id().value())
+            .map(existing -> {
+                // Update: atualiza apenas campos conhecidos pelo domínio atual
+                existing.name      = tenant.name();
+                existing.slug      = tenant.slug();
+                existing.active    = tenant.active();
+                existing.updatedAt = tenant.updatedAt();
+                return existing;
+            })
+            .orElseGet(() -> toEntity(tenant)); // Insert: cria entidade nova
+
         TenantJpaEntity saved = jpaRepository.save(entity);
         return toDomain(saved);
     }

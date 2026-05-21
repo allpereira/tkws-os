@@ -29,6 +29,7 @@ com/groupws/tkws/features/users/domain/port/UserRepository.class
 com/groupws/tkws/features/users/domain/model/User.class
 com/groupws/tkws/features/tenants/domain/exception/TenantNotFoundException.class
 com/groupws/tkws/features/tenants/domain/exception/InvalidTenantSlugException.class
+com/groupws/tkws/features/users/web/ZitadelJwtClaimsMapper.class
 com/groupws/tkws/features/users/application/dto/ZitadelUserData.class
 com/groupws/tkws/features/tenants/domain/port/TenantRepository.class
 com/groupws/tkws/features/tenants/domain/exception/TenantSlugAlreadyTakenException.class

@@ -41,7 +41,10 @@ git clone https://github.com/groupws/tkws-os.git
 cd tkws-os
 docker compose up -d
 # Aguarda Zitadel inicializar (1-3 min): docker compose logs -f zitadel
-# Segue setup em docs/04-AUTH.md
+# Segue setup em docs/04-AUTH.md (app Web + Client ID)
+cp frontend/.env.example frontend/.env.local
+# Edite VITE_ZITADEL_CLIENT_ID em frontend/.env.local
+cd frontend && npm install && npm run dev
 # Acessa http://localhost:5173
 ```
 

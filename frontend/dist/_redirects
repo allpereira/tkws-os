@@ -1,0 +1,3 @@
+# SPA fallback — toda rota não-asset retorna index.html
+# TanStack Router cuida do roteamento client-side
+/*    /index.html   200

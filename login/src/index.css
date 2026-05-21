@@ -1,0 +1,108 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Surfaces */
+    --bg: #061828;
+    --surface-1: #08263F;
+    --surface-2: #0A2F4D;
+    --surface-3: #0E3A5E;
+
+    /* Brand */
+    --brand: #74C7E4;
+    --brand-hover: #7FD3F0;
+    --brand-press: #5BA5C2;
+    --brand-soft: rgba(116, 199, 228, 0.14);
+
+    /* Ink */
+    --ink-1: #F5FAFC;
+    --ink-2: #E1ECF2;
+    --ink-3: #B6C5D4;
+    --ink-4: #7F94A8;
+    --ink-5: #4A5E72;
+
+    /* Lines */
+    --line-1: rgba(157, 200, 222, 0.10);
+    --line-2: rgba(157, 200, 222, 0.20);
+    --line-3: rgba(157, 200, 222, 0.32);
+
+    /* Semantic */
+    --success: #5FD9A5;
+    --warning: #F2C94C;
+    --danger: #EB5757;
+
+    /* Shadows */
+    --shadow-card: 0 4px 12px rgba(0, 0, 0, 0.28);
+    --shadow-card-lg: 0 12px 32px rgba(0, 0, 0, 0.32);
+  }
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+    border-color: rgba(157, 200, 222, 0.16);
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    background-color: #061828;
+    color: #F5FAFC;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+    min-height: 100dvh;
+  }
+
+  /* Remove number input arrows */
+  input[type='number']::-webkit-inner-spin-button,
+  input[type='number']::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type='number'] {
+    -moz-appearance: textfield;
+  }
+}
+
+@layer utilities {
+  .font-editorial {
+    font-family: 'Fraunces', Georgia, serif;
+  }
+
+  .text-gradient-brand {
+    background: linear-gradient(135deg, #74C7E4 0%, #7FD3F0 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .bg-noise {
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  }
+
+  .card-glass {
+    background: rgba(8, 38, 63, 0.72);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(157, 200, 222, 0.14);
+  }
+
+  .input-focus {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 focus-visible:border-brand/60;
+  }
+
+  /* OTP digit box */
+  .otp-digit {
+    @apply w-12 h-14 text-center text-xl font-semibold tracking-widest
+           bg-surface-2 border border-line-2 rounded-md
+           text-ink-1 caret-brand
+           focus:outline-none focus:ring-2 focus:ring-brand/50 focus:border-brand/60
+           transition-all duration-150;
+  }
+}

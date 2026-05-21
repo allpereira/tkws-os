@@ -29,6 +29,7 @@
 /Users/allpereira/Documents/GitHub/TKWS/tkws-os/api/src/main/java/com/groupws/tkws/features/users/infrastructure/persistence/UserJpaRepository.java
 /Users/allpereira/Documents/GitHub/TKWS/tkws-os/api/src/main/java/com/groupws/tkws/features/users/infrastructure/persistence/UserJpaRepositoryAdapter.java
 /Users/allpereira/Documents/GitHub/TKWS/tkws-os/api/src/main/java/com/groupws/tkws/features/users/web/UserController.java
+/Users/allpereira/Documents/GitHub/TKWS/tkws-os/api/src/main/java/com/groupws/tkws/features/users/web/ZitadelJwtClaimsMapper.java
 /Users/allpereira/Documents/GitHub/TKWS/tkws-os/api/src/main/java/com/groupws/tkws/shared/domain/AggregateRoot.java
 /Users/allpereira/Documents/GitHub/TKWS/tkws-os/api/src/main/java/com/groupws/tkws/shared/domain/DomainEvent.java
 /Users/allpereira/Documents/GitHub/TKWS/tkws-os/api/src/main/java/com/groupws/tkws/shared/domain/DomainException.java

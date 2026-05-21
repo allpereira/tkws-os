@@ -14,14 +14,16 @@ export const currentUserSchema = z.object({
 
 export type CurrentUser = z.infer<typeof currentUserSchema>;
 
-export function useCurrentUser(enabled = true) {
+export function useCurrentUser(accessToken?: string | null) {
   return useQuery({
-    queryKey: ['users', 'me'],
+    queryKey: ['users', 'me', accessToken],
     queryFn: async () => {
-      const { data } = await api.get('/api/v1/users/me');
+      const { data } = await api.get('/api/v1/users/me', {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
       return currentUserSchema.parse(data);
     },
-    enabled,
+    enabled: Boolean(accessToken),
     staleTime: 1000 * 60 * 10,
   });
 }

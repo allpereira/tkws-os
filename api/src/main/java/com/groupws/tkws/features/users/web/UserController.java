@@ -22,12 +22,6 @@ class UserController {
 
     @GetMapping("/me")
     public ResponseEntity<UserView> me(@AuthenticationPrincipal Jwt jwt) {
-        ZitadelUserData data = new ZitadelUserData(
-            jwt.getSubject(),
-            jwt.getClaimAsString("email"),
-            jwt.getClaimAsString("name"),
-            jwt.getClaimAsString("picture")
-        );
-        return ResponseEntity.ok(syncUseCase.execute(data));
+        return ResponseEntity.ok(syncUseCase.execute(ZitadelJwtClaimsMapper.toUserData(jwt)));
     }
 }

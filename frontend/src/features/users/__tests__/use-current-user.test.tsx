@@ -15,7 +15,7 @@ function wrapper({ children }: { children: ReactNode }) {
 
 describe('useCurrentUser', () => {
   it('deve retornar dados do usuário autenticado', async () => {
-    const { result } = renderHook(() => useCurrentUser(), { wrapper });
+    const { result } = renderHook(() => useCurrentUser('test-access-token'), { wrapper });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
@@ -30,13 +30,13 @@ describe('useCurrentUser', () => {
       })
     );
 
-    const { result } = renderHook(() => useCurrentUser(), { wrapper });
+    const { result } = renderHook(() => useCurrentUser('test-access-token'), { wrapper });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
   });
 
   it('não deve fazer fetch quando enabled=false', () => {
-    const { result } = renderHook(() => useCurrentUser(false), { wrapper });
+    const { result } = renderHook(() => useCurrentUser(null), { wrapper });
     expect(result.current.fetchStatus).toBe('idle');
   });
 });

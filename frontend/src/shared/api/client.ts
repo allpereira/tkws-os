@@ -1,9 +1,8 @@
 import axios, { AxiosError } from 'axios';
 import { User } from 'oidc-client-ts';
+import { ZITADEL_AUTHORITY, ZITADEL_CLIENT_ID } from '@/features/auth/api/oidc-config';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
-const ZITADEL_AUTHORITY = import.meta.env.VITE_ZITADEL_AUTHORITY || 'http://localhost:8088';
-const ZITADEL_CLIENT_ID = import.meta.env.VITE_ZITADEL_CLIENT_ID || '';
 
 function getStoredUser(): User | null {
   try {
@@ -31,9 +30,10 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
-    if (error.response?.status === 401 && typeof window !== 'undefined') {
-      window.location.href = '/login';
-    }
+    // NOTE: Do NOT redirect on 401 here. Doing window.location.assign('/') creates
+    // an infinite loop: 401 → reload '/' → same token → 401 → ...
+    // The route component (route-tree.tsx) handles 401 with a proper error message
+    // and lets the user retry or re-authenticate via the OIDC flow.
     return Promise.reject(error);
   }
 );
