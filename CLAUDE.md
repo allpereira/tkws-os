@@ -13,6 +13,15 @@ respiro visual e materialidade importam tanto quanto funcionalidade.
 **Módulos previstos:** CRM, Orçamento, Suprimentos, Catálogo de Produtos, Projetos.
 **Escala alvo:** 300+ usuários simultâneos, multi-tenant (cada escritório é um tenant).
 
+## Topologia da aplicação
+
+- **`frontend/`** (porta 5173) — app principal React 19. Faz OIDC PKCE com o Zitadel via `react-oidc-context`.
+- **`login/`** (porta 5174) — SPA custom de login (também React 19 + TanStack Router). Substitui a UI nativa do Zitadel (Login V2). Conversa com a Session API via Vite proxy `/zitadel-api/*` que injeta Bearer do `login-client` PAT (ver [ADR-015](docs/adr/ADR-015-custom-login-v2.md)).
+- **`api/`** (porta 8080) — Spring Boot, valida JWT do Zitadel, espelha usuários localmente. Quando o JWT não traz `email`, faz fallback para `/oidc/v1/userinfo` (ver `ZitadelUserInfoClient`).
+- **`docker/zitadel/Caddyfile`** — gateway Caddy na 8088 que roteia entre Zitadel core e a UI nativa.
+
+Fluxo de login: `5173 → Zitadel /oauth/v2/authorize → 5174/login?authRequestId=V2_xxx → Session API → 5173/callback → JWT`. Detalhes em [docs/04-AUTH.md](docs/04-AUTH.md).
+
 ## Stack técnica (autoritativa)
 
 ### Backend
@@ -111,7 +120,7 @@ Para CADA feature nova, a ordem é:
 | `docs/01-DEVELOPMENT.md` | Workflow diário, setup, padrões de código |
 | `docs/02-TESTING.md` | Como escrever cada tipo de teste |
 | `docs/03-DEPLOY.md` | Pra qualquer dúvida sobre infra/deploy |
-| `docs/04-AUTH.md` | Mexer em autenticação/autorização |
+| `docs/04-AUTH.md` | Mexer em autenticação/autorização, custom login V2, Session API |
 | `docs/05-DESIGN-SYSTEM.md` | **Antes de criar QUALQUER componente visual** |
 | `docs/06-BACKUP-RECOVERY.md` | Estratégia de backup, DR, runbook de restore |
 | `docs/07-OBSERVABILITY.md` | Logs, métricas, troubleshooting |
@@ -194,6 +203,8 @@ Use esta ordem de fallback:
 | **Architect** | Membro de equipe técnica dentro de um tenant |
 | **Viewer** | Cliente final que apenas consulta status do seu projeto |
 | **Turnkey** | Projeto "chave na mão" — escritório entrega obra completa |
+| **Login V2** | Tela de login do Zitadel 4.x. O TKWS OS substitui por uma SPA própria em `login/` (porta 5174) |
+| **login-client** | Machine user do Zitadel cujo PAT autoriza chamadas à Session API |
 | **Aggregate Root** | Entidade de entrada de um agregado DDD |
 | **Port** | Interface que o domínio define para infraestrutura implementar |
 | **Adapter** | Implementação concreta de um port (ex.: `TenantJpaRepositoryAdapter`) |

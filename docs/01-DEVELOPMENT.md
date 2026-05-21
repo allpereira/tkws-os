@@ -12,44 +12,56 @@
 
 ## Setup inicial
 
+Caminho rápido — um único script sobe tudo (Docker + login app + frontend + API):
+
 ```bash
-# 1. Clone
 git clone https://github.com/groupws/tkws-os.git
 cd tkws-os
-
-# 2. Sobe ambiente local completo (Zitadel inclui login V2 + gateway na 8088)
-docker compose pull zitadel zitadel-login
-docker compose up -d
-
-# 3. Aguarda Zitadel inicializar (1-3 min na primeira vez)
-docker compose logs -f zitadel zitadel-login
-# Quando ver "starting server", Ctrl+C
-
-# 4. Configura Zitadel (uma vez)
-# Acessa http://localhost:8088
-# Login: admin@tkws.local / Admin@123456
-# Segue docs/04-AUTH.md seção "Setup inicial"
-# Copia Client ID que gerou
-
-# 5a. Frontend via Docker Compose (imagem nginx na porta 5173)
-echo "ZITADEL_CLIENT_ID=cole_o_client_id_real" > .env
-docker compose up -d --build frontend
-
-# 5b. Frontend via Vite local (recomendado para HMR — npm run dev)
-cp frontend/.env.example frontend/.env.local
-# Edite frontend/.env.local e defina VITE_ZITADEL_CLIENT_ID=<client_id>
-cd frontend && npm install && npm run dev
+bash scripts/dev-start.sh
 ```
 
-> **Importante:** `ZITADEL_CLIENT_ID` na raiz alimenta só o build do container `frontend`.
-> O Vite (`npm run dev`) lê **`frontend/.env.local`** (`VITE_ZITADEL_CLIENT_ID`). Sem isso,
-> a tela fica em "Redirecionando para login..." ou mostra "Autenticação não configurada".
+O script faz: `docker compose up -d` da infra (postgres, redis, zitadel,
+zitadel-gateway), espera o Zitadel ficar healthy, ativa Login V2 apontando para
+a SPA custom em `:5174`, extrai o PAT do `login-client` para
+`docker/zitadel/login-client.pat` (o Vite proxy precisa dele), e sobe os três
+processos Vite/Maven em background com logs em `/tmp/tkws-*.log`.
+
+**Setup manual** (quando o script falhar ou você quiser controlar passo a passo):
+
+```bash
+# 1. Infra Docker (Zitadel + Postgres + Redis + Caddy gateway)
+docker compose pull zitadel zitadel-login
+docker compose up -d postgres redis zitadel zitadel-gateway
+
+# 2. Aguarda Zitadel ficar healthy (1-3 min na primeira vez)
+docker compose ps   # zitadel deve estar "healthy"
+
+# 3. Setup do Zitadel (uma vez por instância)
+#    Veja docs/04-AUTH.md → "Setup inicial" e "Configurar Login V2 customizado".
+#    Pega: Client ID do app web + PAT do login-client.
+#    Salva PAT em docker/zitadel/login-client.pat (gitignored).
+
+# 4. Configura envs
+cp frontend/.env.example frontend/.env.local   # cola VITE_ZITADEL_CLIENT_ID
+cp login/.env.example login/.env.local         # cola o mesmo VITE_ZITADEL_CLIENT_ID
+
+# 5. Sobe os três processos em terminais separados
+cd login && npm install && npm run dev          # :5174 — custom login SPA
+cd frontend && npm install && npm run dev       # :5173 — app principal
+cd api && mvn spring-boot:run                   # :8080 — Spring Boot API
+```
+
+> **Importante:**
+> - `ZITADEL_CLIENT_ID` na raiz é só para o build do container `frontend` em Docker Compose.
+> - `VITE_ZITADEL_CLIENT_ID` em `frontend/.env.local` E em `login/.env.local` deve ter o mesmo valor (o login app usa pra detectar auth requests do console e redirecionar pro V1 nativo).
+> - Sem `docker/zitadel/login-client.pat`, o custom login retorna 401 "auth header missing" em todas as requests. Rode `bash scripts/extract-login-pat.sh` ou recrie o stack com `docker compose down -v && docker compose up -d` (perde dados do Zitadel).
 
 ### URLs locais
 
 | Serviço | URL | Credenciais |
 |---|---|---|
 | Frontend | http://localhost:5173 | (via Zitadel) |
+| **Custom Login (SPA)** | http://localhost:5174/login?authRequestId=… | `preferred_username` + senha |
 | API | http://localhost:8080 | Bearer JWT |
 | Swagger UI | http://localhost:8080/swagger-ui.html | público |
 | Zitadel | http://localhost:8088 | admin@tkws.local / Admin@123456 |

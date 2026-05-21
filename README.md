@@ -30,6 +30,7 @@ Outros arquivos relevantes:
 
 - **Backend:** Java 21 + Spring Boot 3.3+ + PostgreSQL 16 + Redis + Zitadel
 - **Frontend:** React 19 + TypeScript + Vite + TanStack Router/Query + shadcn/ui + Tailwind
+- **Custom login:** SPA dedicada (`login/`) consumindo a Session API do Zitadel — ver [ADR-015](docs/adr/ADR-015-custom-login-v2.md)
 - **Infra backend:** AWS sa-east-1 + Docker Compose + Caddy + GitHub Actions
 - **Infra frontend:** Cloudflare Pages (free pra uso comercial, preview deploys)
 - **DNS/CDN:** Cloudflare
@@ -39,14 +40,14 @@ Outros arquivos relevantes:
 ```bash
 git clone https://github.com/groupws/tkws-os.git
 cd tkws-os
-docker compose up -d
-# Aguarda Zitadel inicializar (1-3 min): docker compose logs -f zitadel
-# Segue setup em docs/04-AUTH.md (app Web + Client ID)
-cp frontend/.env.example frontend/.env.local
-# Edite VITE_ZITADEL_CLIENT_ID em frontend/.env.local
-cd frontend && npm install && npm run dev
-# Acessa http://localhost:5173
+bash scripts/dev-start.sh
+# Acessa http://localhost:5173 — redireciona para o custom login em :5174
 ```
+
+O script sobe Docker (Postgres, Redis, Zitadel, gateway), extrai o PAT do
+`login-client` necessário pro custom login, e inicia os três processos
+(login app :5174, frontend :5173, API :8080) com logs em `/tmp/tkws-*.log`.
+Setup manual ou troubleshooting: [`docs/01-DEVELOPMENT.md`](docs/01-DEVELOPMENT.md).
 
 ## Comandos úteis
 
@@ -85,9 +86,9 @@ docs/
 ├── 11-SECRETS-VAULT.md      # Cofre de segredos críticos (Zitadel masterkey, etc)
 ├── 12-FEATURE-FLAGS.md      # Sistema de feature flags
 ├── 13-ONBOARDING.md         # Fluxo de onboarding de tenants
-└── adr/                     # Architecture Decision Records (14 ADRs)
+└── adr/                     # Architecture Decision Records (15 ADRs)
     ├── README.md
-    └── ADR-001..014.md
+    └── ADR-001..015.md
 ```
 
 ## Princípios

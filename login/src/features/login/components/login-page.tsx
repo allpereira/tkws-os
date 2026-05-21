@@ -16,15 +16,17 @@ import { Logo } from '@/shared/ui/logo';
 
 export function LoginPage() {
   const search = useSearch({ from: '/login' });
-  const store = useLoginFlowStore();
+  // Selector granular — evita recriar o objeto inteiro do store a cada render,
+  // o que causaria um loop infinito no useEffect abaixo.
+  const setAuthRequestId = useLoginFlowStore((s) => s.setAuthRequestId);
   const { status, errorMessage, submit } = useLoginFlow();
   const [showPassword, setShowPassword] = useState(false);
 
   // Persiste o authRequestId no store assim que a página carrega.
   // `search.authRequestId` já é `string | undefined` graças ao validateSearch da rota.
   useEffect(() => {
-    if (search.authRequestId) store.setAuthRequestId(search.authRequestId);
-  }, [search.authRequestId, store]);
+    if (search.authRequestId) setAuthRequestId(search.authRequestId);
+  }, [search.authRequestId, setAuthRequestId]);
 
   const {
     register,

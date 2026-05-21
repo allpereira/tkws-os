@@ -1,4 +1,20 @@
+# Build artifacts
 /api/target
 /frontend/node_modules
 /login/node_modules
-/api/target
+/frontend/dist
+/login/dist
+
+# TypeScript incremental compile state
+**/*.tsbuildinfo
+
+# Vite cache
+**/.vite
+
+# Local env (NUNCA commitar — credenciais/segredos)
+.env
+.env.local
+.env.*.local
+
+# macOS
+.DS_Store

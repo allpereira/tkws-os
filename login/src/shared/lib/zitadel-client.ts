@@ -12,7 +12,12 @@
  *  6. Redirecionamos o browser para a callbackUrl
  */
 
-const BASE_URL = import.meta.env.VITE_ZITADEL_AUTHORITY ?? 'http://localhost:8088';
+// Base same-origin para que o Vite dev proxy (ou o gateway em prod) injete o
+// Bearer do login-client PAT antes de bater no Zitadel. Não use a URL direta
+// do Zitadel aqui — a Session API exige IAM_LOGIN_CLIENT e o navegador não
+// pode segurar PAT. Sobrescreva via VITE_ZITADEL_API_BASE só se você tiver
+// outro gateway autenticando por você.
+const BASE_URL = import.meta.env.VITE_ZITADEL_API_BASE ?? '/zitadel-api';
 
 // ---------------------------------------------------------------------------
 // Tipos da API
@@ -34,6 +39,8 @@ export interface ZitadelSession {
 
 export interface AuthRequestInfo {
   authRequestId: string;
+  clientId?: string;
+  redirectUri?: string;
   loginName?: string;
   prompt?: string[];
 }
@@ -99,6 +106,8 @@ export async function getAuthRequest(authRequestId: string): Promise<AuthRequest
   const data = await apiFetch<{
     authRequest: {
       id: string;
+      clientId?: string;
+      redirectUri?: string;
       loginName?: string;
       prompt?: string[];
     };
@@ -106,6 +115,8 @@ export async function getAuthRequest(authRequestId: string): Promise<AuthRequest
 
   return {
     authRequestId: data.authRequest.id,
+    clientId: data.authRequest.clientId,
+    redirectUri: data.authRequest.redirectUri,
     loginName: data.authRequest.loginName,
     prompt: data.authRequest.prompt,
   };
@@ -224,11 +235,15 @@ export async function createOidcCallback(
   sessionId: string,
   sessionToken: string,
 ): Promise<CallbackResult> {
+  // No Zitadel 4.x o gRPC-transcoding para POST
+  // /v2/oidc/auth_requests/{id}/callback responde 404. Chamamos o método
+  // Connect-RPC direto, que é o caminho oficial dessa versão.
   const data = await apiFetch<{ callbackUrl: string }>(
-    `/v2/oidc/auth_requests/${authRequestId}/callback`,
+    `/zitadel.oidc.v2.OIDCService/CreateCallback`,
     {
       method: 'POST',
       body: JSON.stringify({
+        authRequestId,
         session: { sessionId, sessionToken },
       }),
     },

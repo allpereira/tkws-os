@@ -8,7 +8,6 @@ import java.time.Instant;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class ZitadelJwtClaimsMapperTest {
 
@@ -39,12 +38,15 @@ class ZitadelJwtClaimsMapperTest {
     }
 
     @Test
-    void shouldFailWhenNoEmailLikeClaimExists() {
+    void shouldReturnNullEmailWhenNoEmailLikeClaimExists() {
+        // Quando nenhum claim do JWT tem formato de email, o mapper retorna null
+        // sem lançar exceção — o controller deve enriquecer via /oidc/v1/userinfo.
         Jwt jwt = jwt(Map.of("sub", "zitadel-3"));
 
-        assertThatThrownBy(() -> ZitadelJwtClaimsMapper.toUserData(jwt))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessageContaining("JWT sem email");
+        ZitadelUserData data = ZitadelJwtClaimsMapper.toUserData(jwt);
+
+        assertThat(data.email()).isNull();
+        assertThat(data.zitadelId()).isEqualTo("zitadel-3");
     }
 
     private static Jwt jwt(Map<String, Object> claims) {

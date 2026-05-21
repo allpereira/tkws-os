@@ -5,23 +5,36 @@ import org.springframework.security.oauth2.jwt.Jwt;
 
 /**
  * Maps Zitadel JWT claims to {@link ZitadelUserData}.
- * Access tokens often omit {@code email}; {@code preferred_username} is used as fallback (login name).
+ *
+ * <p>Zitadel access tokens frequentemente omitem o claim {@code email};
+ * {@code preferred_username} é usado como fallback (login name com domínio).
+ * Quando nenhum claim do JWT resolve o email, {@link #toUserData} retorna um
+ * registro com email {@code null} — o chamador deve enriquecer via UserInfo endpoint.
  */
 final class ZitadelJwtClaimsMapper {
 
     private ZitadelJwtClaimsMapper() {
     }
 
+    /**
+     * Converte claims do JWT em {@link ZitadelUserData}.
+     * O campo {@code email} pode ser {@code null} quando nenhum claim tem formato de e-mail;
+     * nesse caso o controller deve chamar o UserInfo endpoint como fallback.
+     */
     static ZitadelUserData toUserData(Jwt jwt) {
         return new ZitadelUserData(
             jwt.getSubject(),
-            resolveEmail(jwt),
+            resolveEmailOrNull(jwt),
             resolveFullName(jwt),
             blankToNull(jwt.getClaimAsString("picture"))
         );
     }
 
-    private static String resolveEmail(Jwt jwt) {
+    /**
+     * Tenta extrair email dos claims do JWT. Retorna {@code null} se nenhum claim
+     * disponível tiver formato de email — não lança exceção.
+     */
+    static String resolveEmailOrNull(Jwt jwt) {
         for (String candidate : new String[] {
             jwt.getClaimAsString("email"),
             jwt.getClaimAsString("preferred_username"),
@@ -31,9 +44,7 @@ final class ZitadelJwtClaimsMapper {
                 return candidate.trim().toLowerCase();
             }
         }
-        throw new IllegalArgumentException(
-            "JWT sem email. Confirme o scope 'email' no app Zitadel e faça login novamente."
-        );
+        return null;
     }
 
     private static String resolveFullName(Jwt jwt) {
@@ -57,11 +68,11 @@ final class ZitadelJwtClaimsMapper {
         return null;
     }
 
-    private static boolean looksLikeEmail(String value) {
+    static boolean looksLikeEmail(String value) {
         return value != null && !value.isBlank() && value.contains("@");
     }
 
-    private static String blankToNull(String value) {
+    static String blankToNull(String value) {
         return value == null || value.isBlank() ? null : value.trim();
     }
 }
