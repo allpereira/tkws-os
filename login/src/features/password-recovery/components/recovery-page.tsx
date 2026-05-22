@@ -48,7 +48,6 @@ export function RecoveryPage() {
           <em>linguagem.</em>"
         </>
       }
-      quoteCite="· princípio P · 05"
       metaLeft="Recuperação"
       metaRight="token expira em 24h"
     >

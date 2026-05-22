@@ -48,8 +48,6 @@ export function LoginPage() {
         </>
       }
       quoteCite="· The TKWS OS Manifesto"
-      metaLeft="São Paulo · Brasil"
-      metaRight="2026 · v1.0"
     >
       <p className="mb-[22px] font-mono text-[10px] uppercase tracking-[0.15em] text-ink-4">
         Entrar · TKWS OS
@@ -59,8 +57,7 @@ export function LoginPage() {
         Bem-vindo <em className="font-light italic text-ink-3">de volta.</em>
       </h1>
       <p className="mb-[30px] max-w-[360px] text-[14px] leading-[1.55] text-ink-3">
-        Acesse o cockpit do seu workspace. Se for sua primeira vez, peça convite
-        ao admin.
+        Se for sua primeira vez, peça convite ao admin.
       </p>
 
       <form onSubmit={handleSubmit(submit)} noValidate className="space-y-3.5">
@@ -78,7 +75,7 @@ export function LoginPage() {
             autoCapitalize="none"
             autoCorrect="off"
             spellCheck={false}
-            placeholder="você@empresa.com.br"
+            placeholder="seumail@groupws.com.br"
             error={!!errors.loginName}
             disabled={isLoading}
             {...register('loginName')}
