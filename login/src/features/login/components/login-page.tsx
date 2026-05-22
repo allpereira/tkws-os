@@ -1,9 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useSearch } from '@tanstack/react-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Eye, EyeOff, ArrowRight } from 'lucide-react';
-import { useState } from 'react';
 
 import { loginSchema, type LoginFormValues } from '@/features/login/types/auth';
 import { useLoginFlowStore } from '@/features/login/store/login-flow-store';
@@ -12,7 +11,7 @@ import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { Field } from '@/shared/ui/field';
 import { Alert } from '@/shared/ui/alert';
-import { Logo } from '@/shared/ui/logo';
+import { AuthStage } from '@/shared/ui/auth-stage';
 
 export function LoginPage() {
   const search = useSearch({ from: '/login' });
@@ -40,139 +39,106 @@ export function LoginPage() {
   const isLoading = status === 'loading';
 
   return (
-    <AuthLayout>
-      <div className="w-full max-w-sm space-y-8 animate-fade-in">
-        {/* Logo */}
-        <div className="flex flex-col items-center gap-3 text-center">
-          <Logo size="lg" />
-          <p className="text-sm text-ink-4 leading-relaxed">
-            Acesse seu escritório
-          </p>
-        </div>
+    <AuthStage
+      quote={
+        <>
+          "Para arquitetos.
+          <br />
+          <em>Não para back-office.</em>"
+        </>
+      }
+      quoteCite="· The TKWS OS Manifesto"
+      metaLeft="São Paulo · Brasil"
+      metaRight="2026 · v1.0"
+    >
+      <p className="mb-[22px] font-mono text-[10px] uppercase tracking-[0.15em] text-ink-4">
+        Entrar · TKWS OS
+      </p>
 
-        {/* Card */}
-        <div className="card-glass rounded-xl p-8 space-y-6">
-          <form
-            onSubmit={handleSubmit(submit)}
-            noValidate
-            className="space-y-5"
+      <h1 className="mb-3 font-editorial text-[38px] font-light leading-[1.05] tracking-[-0.03em] text-ink-1">
+        Bem-vindo <em className="font-light italic text-ink-3">de volta.</em>
+      </h1>
+      <p className="mb-[30px] max-w-[360px] text-[14px] leading-[1.55] text-ink-3">
+        Acesse o cockpit do seu workspace. Se for sua primeira vez, peça convite
+        ao admin.
+      </p>
+
+      <form onSubmit={handleSubmit(submit)} noValidate className="space-y-3.5">
+        {errorMessage && <Alert variant="error" message={errorMessage} />}
+
+        <Field
+          label="Email corporativo"
+          htmlFor="loginName"
+          error={errors.loginName?.message}
+        >
+          <Input
+            id="loginName"
+            type="text"
+            autoComplete="username"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            placeholder="você@empresa.com.br"
+            error={!!errors.loginName}
+            disabled={isLoading}
+            {...register('loginName')}
+          />
+        </Field>
+
+        <Field label="Senha" htmlFor="password" error={errors.password?.message}>
+          <div className="relative">
+            <Input
+              id="password"
+              type={showPassword ? 'text' : 'password'}
+              autoComplete="current-password"
+              placeholder="••••••••"
+              error={!!errors.password}
+              disabled={isLoading}
+              className="pr-11"
+              {...register('password')}
+            />
+            <button
+              type="button"
+              tabIndex={-1}
+              aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+              onClick={() => setShowPassword((v) => !v)}
+              className="absolute inset-y-0 right-0 flex items-center px-3 text-ink-4 transition-colors hover:text-ink-2"
+            >
+              {showPassword ? (
+                <EyeOff className="h-4 w-4" />
+              ) : (
+                <Eye className="h-4 w-4" />
+              )}
+            </button>
+          </div>
+        </Field>
+
+        <div className="-mt-1 flex justify-end">
+          <a
+            href="/recovery"
+            className="text-xs font-semibold text-brand underline-offset-[3px] hover:underline"
           >
-            {/* Feedback de erro */}
-            {errorMessage && (
-              <Alert variant="error" message={errorMessage} />
-            )}
-
-            {/* E-mail / Login Name */}
-            <Field
-              label="E-mail"
-              htmlFor="loginName"
-              error={errors.loginName?.message}
-            >
-              <Input
-                id="loginName"
-                type="email"
-                autoComplete="username email"
-                autoCapitalize="none"
-                autoCorrect="off"
-                spellCheck={false}
-                placeholder="voce@escritorio.com.br"
-                error={!!errors.loginName}
-                disabled={isLoading}
-                {...register('loginName')}
-              />
-            </Field>
-
-            {/* Senha */}
-            <Field
-              label="Senha"
-              htmlFor="password"
-              error={errors.password?.message}
-            >
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  autoComplete="current-password"
-                  placeholder="••••••••"
-                  error={!!errors.password}
-                  disabled={isLoading}
-                  className="pr-10"
-                  {...register('password')}
-                />
-                <button
-                  type="button"
-                  tabIndex={-1}
-                  aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
-                  onClick={() => setShowPassword((v) => !v)}
-                  className="absolute inset-y-0 right-0 flex items-center px-3 text-ink-4 hover:text-ink-2 transition-colors"
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
-                </button>
-              </div>
-            </Field>
-
-            {/* Link recuperação */}
-            <div className="flex justify-end">
-              <a
-                href="/recovery"
-                className="text-xs text-ink-4 hover:text-brand transition-colors"
-              >
-                Esqueceu a senha?
-              </a>
-            </div>
-
-            {/* Botão */}
-            <Button
-              type="submit"
-              size="lg"
-              loading={isLoading}
-              className="w-full mt-1"
-            >
-              {isLoading ? 'Entrando…' : 'Entrar'}
-              {!isLoading && <ArrowRight className="h-4 w-4" />}
-            </Button>
-          </form>
+            Esqueci minha senha
+          </a>
         </div>
 
-        {/* Footer */}
-        <p className="text-center text-xs text-ink-5">
-          TKWS OS · Group WS &copy; {new Date().getFullYear()}
-        </p>
-      </div>
-    </AuthLayout>
+        <div className="pt-1">
+          <Button type="submit" size="lg" loading={isLoading}>
+            {isLoading ? 'Entrando…' : 'Entrar'}
+            {!isLoading && <ArrowRight className="h-4 w-4" />}
+          </Button>
+        </div>
+      </form>
+
+      <p className="mt-7 text-center text-[12.5px] text-ink-4">
+        Ainda não tem conta?{' '}
+        <a
+          href="mailto:contato@grupows.com.br"
+          className="font-semibold text-brand underline-offset-[3px] hover:underline"
+        >
+          Solicitar convite
+        </a>
+      </p>
+    </AuthStage>
   );
 }
-
-// ---------------------------------------------------------------------------
-// Layout de autenticação — fundo navy + grid sutil
-// ---------------------------------------------------------------------------
-
-function AuthLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="relative min-h-dvh bg-bg flex items-center justify-center px-4 py-12 overflow-hidden">
-      {/* Grid de fundo */}
-      <div
-        className="pointer-events-none absolute inset-0 opacity-[0.03]"
-        style={{
-          backgroundImage: `
-            linear-gradient(rgba(116,199,228,1) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(116,199,228,1) 1px, transparent 1px)
-          `,
-          backgroundSize: '48px 48px',
-        }}
-      />
-      {/* Glow central */}
-      <div className="pointer-events-none absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[600px] w-[600px] rounded-full bg-brand/5 blur-[120px]" />
-
-      <div className="relative z-10 w-full flex justify-center">
-        {children}
-      </div>
-    </div>
-  );
-}
-
-export { AuthLayout };

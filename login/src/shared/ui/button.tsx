@@ -2,33 +2,40 @@ import { forwardRef } from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/shared/lib/utils';
 
+// Espelha o `.ds-btn` do design system: rounded 10px, font 13px semibold,
+// gap 6px entre ícone e label, padding 10/16. Tamanho `lg` cobre o submit
+// principal das telas de auth (full-width + padding 12px + 14px).
 const buttonVariants = cva(
   [
-    'inline-flex items-center justify-center gap-2 whitespace-nowrap',
-    'rounded-md font-medium text-sm',
-    'transition-all duration-150',
-    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50',
+    'inline-flex items-center justify-center gap-1.5 whitespace-nowrap',
+    'rounded-[10px] font-semibold',
+    'transition-[background-color,border-color,color] duration-150',
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40',
     'disabled:pointer-events-none disabled:opacity-40',
     'select-none',
+    'border border-transparent',
   ],
   {
     variants: {
       variant: {
         primary: [
-          'bg-brand text-bg font-semibold',
+          'bg-brand text-bg',
           'hover:bg-brand-hover active:bg-brand-press',
-          'shadow-sm hover:shadow-glow',
         ],
         secondary: [
-          'bg-surface-2 text-ink-2 border border-line-2',
-          'hover:bg-surface-3 hover:border-line-3 active:bg-surface-3',
+          'bg-transparent text-brand border-brand',
+          'hover:bg-brand-soft',
         ],
         ghost: [
-          'bg-transparent text-ink-3',
-          'hover:bg-brand-soft hover:text-ink-1',
+          'bg-transparent text-ink-1',
+          'hover:bg-brand-soft',
+        ],
+        outline: [
+          'bg-transparent text-ink-1 border-line-2',
+          'hover:bg-surface-2 hover:border-line-3',
         ],
         danger: [
-          'bg-danger/10 text-danger border border-danger/30',
+          'bg-danger/10 text-danger border-danger/30',
           'hover:bg-danger/20 hover:border-danger/50',
         ],
         link: [
@@ -38,10 +45,10 @@ const buttonVariants = cva(
         ],
       },
       size: {
-        sm: 'h-8 px-3 text-xs rounded',
-        md: 'h-10 px-4 text-sm',
-        lg: 'h-12 px-6 text-base',
-        icon: 'h-10 w-10',
+        sm: 'px-3 py-[7px] text-xs',
+        md: 'px-4 py-[10px] text-[13px]',
+        lg: 'w-full px-4 py-3 text-sm',
+        icon: 'h-10 w-10 p-0',
       },
     },
     defaultVariants: {

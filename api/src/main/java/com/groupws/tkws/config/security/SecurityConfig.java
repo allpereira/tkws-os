@@ -44,6 +44,10 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/actuator/health/**").permitAll()
                 .requestMatchers("/actuator/prometheus").permitAll()
                 .requestMatchers("/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                // Tela /accept-invite consome esses dois — não exigem JWT
+                // (o token do invite faz o papel de autenticação one-shot).
+                .requestMatchers(HttpMethod.GET, "/api/v1/invites/by-token").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/v1/invites/accept").permitAll()
                 .anyRequest().authenticated()
             )
             .oauth2ResourceServer(oauth2 -> oauth2

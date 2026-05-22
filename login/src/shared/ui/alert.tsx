@@ -27,8 +27,8 @@ export function Alert({ variant = 'error', message, className }: AlertProps) {
     <div
       role="alert"
       className={cn(
-        'flex items-start gap-2.5 rounded-md border px-3.5 py-3',
-        'text-sm leading-snug',
+        'flex items-start gap-2.5 rounded-[10px] border px-3.5 py-3',
+        'text-[13px] leading-snug',
         styles[variant],
         className,
       )}

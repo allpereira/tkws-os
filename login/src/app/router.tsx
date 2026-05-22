@@ -11,6 +11,7 @@ import { useEffect, useState } from 'react';
 import { LoginPage } from '@/features/login/components/login-page';
 import { RecoveryPage } from '@/features/password-recovery/components/recovery-page';
 import { MfaPage } from '@/features/mfa/components/mfa-page';
+import { AcceptInvitePage } from '@/features/accept-invite/components/accept-invite-page';
 import { getAuthRequest } from '@/shared/lib/zitadel-client';
 
 // ---------------------------------------------------------------------------
@@ -63,6 +64,19 @@ const mfaRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/mfa',
   component: MfaPage,
+});
+
+// ---------------------------------------------------------------------------
+// /accept-invite — convidado clica no magic link recebido por email
+// ---------------------------------------------------------------------------
+
+const acceptInviteRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/accept-invite',
+  validateSearch: (search: Record<string, unknown>) => ({
+    token: typeof search.token === 'string' ? search.token : undefined,
+  }),
+  component: AcceptInvitePage,
 });
 
 // ---------------------------------------------------------------------------
@@ -144,6 +158,7 @@ export const routeTree = rootRoute.addChildren([
   loginRoute,
   recoveryRoute,
   mfaRoute,
+  acceptInviteRoute,
 ]);
 
 export const router = createRouter({ routeTree });

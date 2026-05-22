@@ -25,6 +25,21 @@ services:
     networks:
       - tkws
 
+  # Mailpit — SMTP catch-all em dev. Inbox web em http://localhost:8025.
+  # Usado pelos convites (feature invites/, ADR-016). Em prod usar SES/SendGrid.
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: tkws-mailpit
+    ports:
+      - "1025:1025"  # SMTP — Spring Mail aponta pra cá
+      - "8025:8025"  # UI web
+    environment:
+      MP_MAX_MESSAGES: 500
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+    networks:
+      - tkws
+
   redis:
     image: redis:7-alpine
     container_name: tkws-redis

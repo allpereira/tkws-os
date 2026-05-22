@@ -72,37 +72,16 @@
 }
 
 @layer utilities {
+  /* Tipografia editorial (Fraunces) — usada nos headings das telas de auth. */
   .font-editorial {
     font-family: 'Fraunces', Georgia, serif;
   }
 
-  .text-gradient-brand {
-    background: linear-gradient(135deg, #74C7E4 0%, #7FD3F0 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-
+  /*
+   * Noise sutil sobreposto ao gradient navy do painel esquerdo (auth-art).
+   * Espelha o `.auth-art::after` do design system — turbulence SVG inline.
+   */
   .bg-noise {
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
-  }
-
-  .card-glass {
-    background: rgba(8, 38, 63, 0.72);
-    backdrop-filter: blur(12px);
-    border: 1px solid rgba(157, 200, 222, 0.14);
-  }
-
-  .input-focus {
-    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 focus-visible:border-brand/60;
-  }
-
-  /* OTP digit box */
-  .otp-digit {
-    @apply w-12 h-14 text-center text-xl font-semibold tracking-widest
-           bg-surface-2 border border-line-2 rounded-md
-           text-ink-1 caret-brand
-           focus:outline-none focus:ring-2 focus:ring-brand/50 focus:border-brand/60
-           transition-all duration-150;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.06 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
   }
 }

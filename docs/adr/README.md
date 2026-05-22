@@ -46,3 +46,4 @@ Use o template em `_template.md` ao criar um novo ADR. Numeração sequencial: `
 | 013 | Feature flags via tabela + Caffeine | Accepted | 2025-05 |
 | 014 | Auto-cadastro com aprovação manual | Accepted | 2025-05 |
 | 015 | Custom Login V2 (SPA própria) | Accepted | 2026-05 |
+| 016 | Cadastro de membros via convite por email | Accepted | 2026-05 |

@@ -47,6 +47,20 @@ spring:
         jwt:
           issuer-uri: ${ZITADEL_ISSUER:http://localhost:8088}
 
+  # SMTP — em dev local apontamos pro Mailpit (UI http://localhost:8025).
+  # Em staging/prod, configurar via env vars (SMTP_HOST/PORT/USER/PASS).
+  mail:
+    host: ${SMTP_HOST:localhost}
+    port: ${SMTP_PORT:1025}
+    username: ${SMTP_USER:}
+    password: ${SMTP_PASS:}
+    properties:
+      mail:
+        smtp:
+          auth: ${SMTP_AUTH:false}
+          starttls:
+            enable: ${SMTP_STARTTLS:false}
+
 server:
   port: 8080
   shutdown: graceful
@@ -75,4 +89,23 @@ logging:
 
 tkws:
   cors:
-    allowed-origins: ${CORS_ORIGINS:http://localhost:5173}
+    allowed-origins: ${CORS_ORIGINS:http://localhost:5173,http://localhost:5174}
+
+  zitadel:
+    issuer: ${ZITADEL_ISSUER:http://localhost:8088}
+    # PAT do machine user `login-client` (mesmo arquivo usado pelo Vite proxy do login app).
+    # Extrair via `bash scripts/extract-login-pat.sh`.
+    login-client-pat-path: ${ZITADEL_LOGIN_CLIENT_PAT_PATH:/zitadel/bootstrap/login-client.pat}
+    # Project ID do app TKWS OS no Zitadel (usado pra atribuir role do convidado).
+    # Em dev, pegar via `Console → Projects → TKWS OS`.
+    project-id: ${ZITADEL_PROJECT_ID:}
+
+  invites:
+    # Janela de validade do convite (formato ISO-8601 Duration). Default 7 dias.
+    ttl: ${INVITE_TTL:P7D}
+    # URL base da tela /accept-invite na SPA login.
+    accept-base-url: ${INVITE_ACCEPT_URL:http://localhost:5174/accept-invite}
+    mail:
+      from: ${INVITE_MAIL_FROM:no-reply@tkws.com.br}
+    admin:
+      log-tag: ${INVITE_ADMIN_LOG_TAG:[INVITE-ADMIN-NOTIFY]}

@@ -306,6 +306,33 @@ qualquer setup padrão do Zitadel.
 **Vantagem do mirror local:** JOINs e FKs com `user_id` local, sem chamar Zitadel
 a cada query.
 
+## Convite de membros para tenants existentes
+
+Admins adicionam membros ao tenant via convite com magic link enviado por email.
+A spec completa está em [ADR-016](adr/ADR-016-invite-by-email.md); resumo:
+
+- `POST /api/v1/invites` (autenticado, `org_admin` ou `system_admin`) cria o
+  invite, cria um user shell no Zitadel via Admin API, gera token (32 bytes,
+  Base64URL), persiste o **hash SHA-256** do token e dispara email + log
+  estruturado pro operador.
+- O convidado clica no link e cai em `localhost:5174/accept-invite?token=...`
+  (SPA `login/`). A tela espelha `09.6 · Aceitar convite` do design system V1.
+- `POST /api/v1/invites/accept` (público — o token autentica) define a senha
+  no Zitadel, atribui o role do projeto no `zitadel_org_id` do tenant, marca
+  o invite como ACCEPTED e redireciona para `/login?loginNameHint=<email>`.
+
+Estados do invite: `PENDING → ACCEPTED | EXPIRED | REVOKED` (terminais). TTL
+default 7 dias (`tkws.invites.ttl` em `application.yml`).
+
+**Email em dev local:** o `docker-compose.yml` sobe **Mailpit** —
+inbox web em <http://localhost:8025>, SMTP em `:1025`. Spring Mail já aponta
+pra lá via `application.yml`. Em prod, configurar `SMTP_HOST/PORT/USER/PASS` no
+ambiente.
+
+**Pré-requisito:** `tkws.zitadel.project-id` precisa estar configurado para a
+atribuição de role funcionar — pegue em Console → Projects → TKWS OS → Detail.
+Sem ele, o invite é aceito mas o role não é atribuído (warn no log).
+
 ## Multi-tenancy
 
 Cada escritório cliente é uma **organização** no Zitadel:

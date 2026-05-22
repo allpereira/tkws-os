@@ -11,6 +11,8 @@ interface ImportMetaEnv {
   readonly VITE_ZITADEL_CLIENT_ID?: string;
   readonly VITE_ZITADEL_ORG_ID?: string;
   readonly VITE_LOGIN_BASE_URL?: string;
+  /** URL base da API TKWS (Spring Boot) — usada pela tela /accept-invite. */
+  readonly VITE_API_URL?: string;
 }
 
 interface ImportMeta {

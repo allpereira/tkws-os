@@ -15,22 +15,24 @@ interface FieldProps {
 }
 
 export function Field({ label, htmlFor, error, hint, className, children }: FieldProps) {
+  // Espelha o par `.ds-field` + `.ds-label` do design system:
+  // label monospaced 10.5px uppercase com tracking 1.2px, gap 6px label/input.
   return (
-    <div className={cn('space-y-1.5', className)}>
+    <div className={cn('flex flex-col gap-1.5', className)}>
       <label
         htmlFor={htmlFor}
-        className="block text-xs font-medium text-ink-3 tracking-wide uppercase leading-none"
+        className="block font-mono text-[10.5px] font-semibold uppercase leading-none tracking-[0.12em] text-ink-4"
       >
         {label}
       </label>
       {children}
       {error && (
-        <p role="alert" className="text-xs text-danger leading-snug">
+        <p role="alert" className="text-xs leading-snug text-danger">
           {error}
         </p>
       )}
       {!error && hint && (
-        <p className="text-xs text-ink-4 leading-snug">{hint}</p>
+        <p className="text-xs leading-snug text-ink-4">{hint}</p>
       )}
     </div>
   );

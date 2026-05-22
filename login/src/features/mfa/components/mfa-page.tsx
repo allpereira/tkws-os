@@ -1,36 +1,38 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { ArrowLeft, ShieldCheck } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 
 import { useMfa } from '@/features/mfa/hooks/use-mfa';
 import { useLoginFlowStore } from '@/features/login/store/login-flow-store';
 import { Button } from '@/shared/ui/button';
 import { Alert } from '@/shared/ui/alert';
-import { Logo } from '@/shared/ui/logo';
-import { AuthLayout } from '@/features/login/components/login-page';
+import { AuthStage } from '@/shared/ui/auth-stage';
 import { cn } from '@/shared/lib/utils';
 
 const CODE_LENGTH = 6;
 
 export function MfaPage() {
   const navigate = useNavigate();
-  const store = useLoginFlowStore();
+  const sessionId = useLoginFlowStore((s) => s.sessionId);
+  const loginName = useLoginFlowStore((s) => s.loginName);
   const { status, errorMessage, submit, goBack } = useMfa();
 
   const [digits, setDigits] = useState<string[]>(Array(CODE_LENGTH).fill(''));
-  const inputRefs = useRef<Array<HTMLInputElement | null>>(Array(CODE_LENGTH).fill(null));
+  const inputRefs = useRef<Array<HTMLInputElement | null>>(
+    Array(CODE_LENGTH).fill(null),
+  );
 
   const isLoading = status === 'loading';
   const code = digits.join('');
 
-  // Redireciona se não houver sessão (acesso direto à rota)
+  // Redireciona se não houver sessão (acesso direto à rota).
   useEffect(() => {
-    if (!store.sessionId) {
+    if (!sessionId) {
       void navigate({ to: '/login', search: { authRequestId: undefined } });
     }
-  }, [store.sessionId, navigate]);
+  }, [sessionId, navigate]);
 
-  // Auto-submit quando todos os dígitos forem preenchidos
+  // Auto-submit quando os 6 dígitos estiverem preenchidos.
   useEffect(() => {
     if (code.length === CODE_LENGTH && !digits.includes('') && !isLoading) {
       void submit(code);
@@ -38,14 +40,10 @@ export function MfaPage() {
   }, [code, digits, isLoading, submit]);
 
   function handleDigitChange(index: number, value: string) {
-    // Aceita só dígito
     const digit = value.replace(/\D/g, '').slice(-1);
-
     const next = [...digits];
     next[index] = digit;
     setDigits(next);
-
-    // Avança o foco para o próximo campo
     if (digit && index < CODE_LENGTH - 1) {
       inputRefs.current[index + 1]?.focus();
     }
@@ -54,16 +52,13 @@ export function MfaPage() {
   function handleKeyDown(index: number, e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'Backspace') {
       if (digits[index]) {
-        // Limpa o campo atual
         const next = [...digits];
         next[index] = '';
         setDigits(next);
       } else if (index > 0) {
-        // Retrocede o foco
         inputRefs.current[index - 1]?.focus();
       }
     }
-
     if (e.key === 'ArrowLeft' && index > 0) {
       inputRefs.current[index - 1]?.focus();
     }
@@ -74,61 +69,61 @@ export function MfaPage() {
 
   function handlePaste(e: React.ClipboardEvent) {
     e.preventDefault();
-    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, CODE_LENGTH);
+    const pasted = e.clipboardData
+      .getData('text')
+      .replace(/\D/g, '')
+      .slice(0, CODE_LENGTH);
     if (!pasted) return;
-
     const next = [...digits];
     for (let i = 0; i < pasted.length; i++) {
       next[i] = pasted[i] ?? '';
     }
     setDigits(next);
-
-    // Foca o último campo preenchido
     const lastIndex = Math.min(pasted.length, CODE_LENGTH - 1);
     inputRefs.current[lastIndex]?.focus();
   }
 
   return (
-    <AuthLayout>
-      <div className="w-full max-w-sm space-y-8 animate-fade-in">
-        {/* Logo */}
-        <div className="flex flex-col items-center gap-3 text-center">
-          <Logo size="lg" />
-        </div>
+    <AuthStage
+      quote={
+        <>
+          "Anos
+          <br />
+          <em>à frente.</em>"
+        </>
+      }
+      quoteCite="· Years Ahead"
+      metaLeft="2FA · obrigatório p/ admin"
+      metaRight="código expira em 10min"
+    >
+      <p className="mb-[22px] font-mono text-[10px] uppercase tracking-[0.15em] text-ink-4">
+        Verificação em dois passos
+      </p>
 
-        <div className="card-glass rounded-xl p-8 space-y-6">
-          {/* Ícone + título */}
-          <div className="flex flex-col items-center gap-3 text-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-soft border border-brand/20">
-              <ShieldCheck className="h-6 w-6 text-brand" />
-            </div>
-            <div className="space-y-1">
-              <h1 className="text-lg font-semibold text-ink-1 tracking-tight">
-                Verificação em duas etapas
-              </h1>
-              <p className="text-sm text-ink-4 leading-relaxed">
-                Abra o aplicativo autenticador e informe
-                o código de 6 dígitos.
-              </p>
-            </div>
-          </div>
+      <h1 className="mb-3 font-editorial text-[38px] font-light leading-[1.05] tracking-[-0.03em] text-ink-1">
+        Insira o código <em className="font-light italic text-ink-3">de 6 dígitos.</em>
+      </h1>
+      <p className="mb-[30px] max-w-[360px] text-[14px] leading-[1.55] text-ink-3">
+        Abra o app autenticador (1Password, Authy, Google Authenticator) e
+        digite o código que aparece para "TKWS OS".
+      </p>
 
-          {/* Erro */}
-          {errorMessage && (
-            <Alert variant="error" message={errorMessage} />
-          )}
+      <div className="space-y-5">
+        {errorMessage && <Alert variant="error" message={errorMessage} />}
 
-          {/* Input OTP */}
-          <div
-            className="flex justify-center gap-2"
-            onPaste={handlePaste}
-            role="group"
-            aria-label="Código de verificação"
-          >
-            {digits.map((digit, index) => (
+        <div
+          className="flex items-center justify-center gap-2"
+          onPaste={handlePaste}
+          role="group"
+          aria-label="Código de verificação"
+        >
+          {digits.flatMap((digit, index) => {
+            const input = (
               <input
-                key={index}
-                ref={(el) => { inputRefs.current[index] = el; }}
+                key={`digit-${index}`}
+                ref={(el) => {
+                  inputRefs.current[index] = el;
+                }}
                 type="text"
                 inputMode="numeric"
                 pattern="[0-9]"
@@ -140,56 +135,66 @@ export function MfaPage() {
                 disabled={isLoading}
                 aria-label={`Dígito ${index + 1} de ${CODE_LENGTH}`}
                 className={cn(
-                  'otp-digit',
-                  isLoading && 'opacity-50 cursor-not-allowed',
+                  'h-14 w-11 rounded-[10px] border border-line-2 bg-surface-2',
+                  'text-center font-editorial text-2xl font-light text-ink-1',
+                  'caret-brand transition-[border-color,background-color] duration-150',
+                  'focus:outline-none focus:border-brand focus:bg-surface-1',
+                  isLoading && 'cursor-not-allowed opacity-40',
                 )}
               />
-            ))}
-          </div>
+            );
+            // Separador "·" no meio dos 6 dígitos (entre o 3º e o 4º).
+            if (index === 2) {
+              return [
+                input,
+                <span
+                  key="sep"
+                  aria-hidden="true"
+                  className="select-none text-ink-4"
+                >
+                  ·
+                </span>,
+              ];
+            }
+            return [input];
+          })}
+        </div>
 
-          {/* Loading indicator */}
-          {isLoading && (
-            <div className="flex justify-center">
-              <div className="flex items-center gap-2 text-sm text-ink-4">
-                <span className="h-4 w-4 rounded-full border-2 border-brand border-t-transparent animate-spin" />
-                Verificando…
-              </div>
+        {isLoading && (
+          <div className="flex justify-center">
+            <div className="flex items-center gap-2 text-sm text-ink-4">
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-brand border-t-transparent" />
+              Verificando…
             </div>
-          )}
+          </div>
+        )}
 
-          {/* Botão manual (caso auto-submit não dispare) */}
-          {!isLoading && code.length === CODE_LENGTH && (
-            <Button
-              onClick={() => submit(code)}
-              size="lg"
-              className="w-full"
-              loading={isLoading}
-            >
-              Verificar
-            </Button>
-          )}
-        </div>
-
-        {/* Voltar */}
-        <div className="flex justify-center">
-          <button
-            type="button"
-            onClick={goBack}
-            className="inline-flex items-center gap-1.5 text-xs text-ink-4 hover:text-brand transition-colors"
+        {!isLoading && code.length === CODE_LENGTH && (
+          <Button
+            onClick={() => submit(code)}
+            size="lg"
+            loading={isLoading}
           >
-            <ArrowLeft className="h-3 w-3" />
-            Voltar para o login
-          </button>
-        </div>
-
-        {/* Login name hint */}
-        {store.loginName && (
-          <p className="text-center text-xs text-ink-5">
-            Entrando como{' '}
-            <span className="text-ink-4">{store.loginName}</span>
-          </p>
+            Verificar e entrar
+            <ArrowRight className="h-4 w-4" />
+          </Button>
         )}
       </div>
-    </AuthLayout>
+
+      <div className="mt-7 flex flex-col items-center gap-2 text-[12.5px] text-ink-4">
+        <button
+          type="button"
+          onClick={goBack}
+          className="font-semibold text-brand underline-offset-[3px] hover:underline"
+        >
+          ← Voltar para entrar com senha
+        </button>
+        {loginName && (
+          <span className="text-ink-5">
+            Entrando como <span className="text-ink-4">{loginName}</span>
+          </span>
+        )}
+      </div>
+    </AuthStage>
   );
 }
