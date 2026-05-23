@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { AuthProvider } from 'react-oidc-context';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider, createRouter } from '@tanstack/react-router';
-import { oidcConfig } from '@/features/auth/api/oidc-config';
+import { oidcConfig } from '@/modules/plataforma/auth/api/oidc-config';
 import { routeTree } from '@/app/route-tree';
 import '@/index.css';
 
