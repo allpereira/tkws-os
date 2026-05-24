@@ -2,28 +2,532 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================================================
+   TKWS OS · Design Tokens
+   Fiel ao design-system/src/styles/globals.css
+   ============================================================================ */
+
 @layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
-    --primary: 240 5.9% 10%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 240 5.9% 10%;
-    --radius: 0.5rem;
+  :root,
+  [data-theme='dark'] {
+    /* Surfaces · base navy do Group WS */
+    --bg: #061828;
+    --canvas: #061828;
+    --surface-1: #08263f;
+    --surface-2: #0a2f4d;
+    --surface-3: #0e3a5e;
+    --surface-4: #103e66;
+
+    /* Brand · cyan TKWS */
+    --brand: #74c7e4;
+    --brand-h: #7fd3f0;
+    --brand-p: #5ba5c2;
+    --brand-soft: rgba(116, 199, 228, 0.14);
+    --accent: #74c7e4;
+
+    /* Ink */
+    --text: #f5fafc;
+    --text-soft: #b6c5d4;
+    --text-mute: #7f94a8;
+
+    /* Overlay */
+    --overlay-strong: rgba(6, 24, 40, 0.78);
+    --overlay-med: rgba(6, 24, 40, 0.65);
+    --overlay-soft: rgba(6, 24, 40, 0.4);
+    --overlay-blur: blur(8px);
+
+    /* Lines */
+    --line-1: rgba(157, 200, 222, 0.1);
+    --line-2: rgba(157, 200, 222, 0.2);
+    --line-3: rgba(157, 200, 222, 0.32);
+    --rule: rgba(157, 200, 222, 0.1);
+    --rule-strong: rgba(157, 200, 222, 0.2);
+
+    /* Semantic palette */
+    --success: #5fd9a5;
+    --warning: #f2c94c;
+    --alert: #f2994a;
+    --danger: #eb5757;
+    --purple: #bb6bd9;
+    --pink: #f178b6;
+
+    /* Shadows */
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.18);
+    --shadow-2: 0 4px 12px rgba(0, 0, 0, 0.28);
+    --shadow-3: 0 12px 32px rgba(0, 0, 0, 0.32);
+    --shadow-4: 0 24px 64px rgba(0, 0, 0, 0.5);
+
+    /* Spacing · gutters editoriais */
+    --gutter-lg: 140px;
+    --gutter-md: 100px;
+    --gutter-sm: 60px;
+
+    /* Radius */
+    --radius: 10px;
+    --radius-pill: 999px;
+
+    /* Aliases shadcn (compat) */
+    --background: 211 79% 9%;
+    --foreground: 200 38% 97%;
+    --card: 209 65% 14%;
+    --card-foreground: 200 38% 97%;
+    --popover: 209 65% 14%;
+    --popover-foreground: 200 38% 97%;
+    --primary: 195 67% 67%;
+    --primary-foreground: 211 79% 9%;
+    --secondary: 209 65% 18%;
+    --secondary-foreground: 200 38% 97%;
+    --muted: 209 65% 18%;
+    --muted-foreground: 210 18% 65%;
+    --accent-hsl: 195 67% 67%;
+    --accent-foreground: 211 79% 9%;
+    --destructive: 0 81% 63%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 207 39% 75%;
+    --input: 207 39% 75%;
+    --ring: 195 67% 67%;
+  }
+
+  [data-theme='light'] {
+    --bg: #f7fafc;
+    --canvas: #f7fafc;
+    --surface-1: #ffffff;
+    --surface-2: #f1f5f9;
+    --surface-3: #e7eef5;
+    --surface-4: #d8e3ed;
+
+    --brand: #2f8fb3;
+    --brand-h: #3ca3ca;
+    --brand-p: #1f6e8a;
+    --brand-soft: rgba(47, 143, 179, 0.12);
+    --accent: #2f8fb3;
+
+    --text: #0e2a41;
+    --text-soft: #3f5670;
+    --text-mute: #6b7e91;
+
+    --overlay-strong: rgba(14, 42, 65, 0.55);
+    --overlay-med: rgba(14, 42, 65, 0.4);
+    --overlay-soft: rgba(14, 42, 65, 0.2);
+
+    --line-1: rgba(14, 42, 65, 0.08);
+    --line-2: rgba(14, 42, 65, 0.14);
+    --line-3: rgba(14, 42, 65, 0.22);
+    --rule: rgba(14, 42, 65, 0.08);
+    --rule-strong: rgba(14, 42, 65, 0.14);
+
+    --success: #2ba371;
+    --warning: #b98e1a;
+    --alert: #c77027;
+    --danger: #c4373a;
+    --purple: #8e4eaa;
+    --pink: #c84e8a;
+
+    --shadow-1: 0 1px 2px rgba(8, 38, 63, 0.06);
+    --shadow-2: 0 4px 12px rgba(8, 38, 63, 0.08);
+    --shadow-3: 0 8px 24px rgba(8, 38, 63, 0.1);
+    --shadow-4: 0 16px 48px rgba(8, 38, 63, 0.16);
   }
 }
 
+/* ============================================================================
+   Base
+   ============================================================================ */
+
 @layer base {
-  * { @apply border-border; }
-  body { @apply bg-background text-foreground; }
+  * {
+    border-color: var(--line-1);
+  }
+
+  ::selection {
+    background: var(--brand);
+    color: var(--bg);
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', -apple-system, system-ui, sans-serif;
+    font-size: 15px;
+    font-weight: 400;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    transition:
+      background 0.4s ease,
+      color 0.4s ease;
+    overflow-x: hidden;
+  }
+
+  /* Grain noise · materialidade editorial */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 100;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="220" height="220"><filter id="n"><feTurbulence baseFrequency="0.85" numOctaves="2" stitchTiles="stitch"/><feColorMatrix values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.035 0"/></filter><rect width="100%" height="100%" filter="url(%23n)"/></svg>');
+    opacity: 0.45;
+    mix-blend-mode: overlay;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Fraunces', Georgia, serif;
+    font-feature-settings: 'ss01' on;
+    color: var(--text);
+    line-height: 1.1;
+  }
+
+  /* Scrollbars */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--line-2);
+    border-radius: 999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--line-3);
+  }
+}
+
+/* ============================================================================
+   Type utility classes
+   ============================================================================ */
+
+@layer utilities {
+  .serif {
+    font-family: 'Fraunces', Georgia, serif;
+    font-feature-settings: 'ss01' on;
+  }
+  .mono {
+    font-family: 'JetBrains Mono', 'SF Mono', Menlo, monospace;
+    font-feature-settings: 'liga' on;
+  }
+  .num-tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .text-text       { color: var(--text); }
+  .text-soft       { color: var(--text-soft); }
+  .text-mute       { color: var(--text-mute); }
+  .text-brand      { color: var(--brand); }
+  .text-success    { color: var(--success); }
+  .text-warning    { color: var(--warning); }
+  .text-alert      { color: var(--alert); }
+  .text-danger     { color: var(--danger); }
+  .text-purple     { color: var(--purple); }
+  .text-pink       { color: var(--pink); }
+
+  .bg-surface-1 { background: var(--surface-1); }
+  .bg-surface-2 { background: var(--surface-2); }
+  .bg-surface-3 { background: var(--surface-3); }
+  .bg-surface-4 { background: var(--surface-4); }
+  .bg-brand-soft { background: var(--brand-soft); }
+
+  .border-line-1 { border-color: var(--line-1); }
+  .border-line-2 { border-color: var(--line-2); }
+  .border-line-3 { border-color: var(--line-3); }
+
+  .overlay-strong { background: var(--overlay-strong); backdrop-filter: var(--overlay-blur); }
+  .overlay-med    { background: var(--overlay-med); backdrop-filter: var(--overlay-blur); }
+  .overlay-soft   { background: var(--overlay-soft); }
+
+  .label-mono {
+    font-family: 'JetBrains Mono', 'SF Mono', Menlo, monospace;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.3px;
+    text-transform: uppercase;
+    color: var(--text-mute);
+  }
+
+  .display-1 {
+    font-family: 'Fraunces', Georgia, serif;
+    font-weight: 300;
+    letter-spacing: -0.04em;
+    line-height: 1.02;
+  }
+  .display-2 {
+    font-family: 'Fraunces', Georgia, serif;
+    font-weight: 400;
+    letter-spacing: -0.025em;
+    line-height: 1.08;
+  }
+
+  @keyframes alive-breathe {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.55; transform: scale(0.85); }
+  }
+  .pulse-dot::before {
+    content: '';
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    margin-right: 6px;
+    animation: alive-breathe 2.2s ease-in-out infinite;
+  }
+
+  /* Gutters editoriais · espaço entre seções */
+  .gutter-md { padding: 100px 0; }
+  .gutter-sm { padding: 60px 0; }
+
+  @media (max-width: 900px) {
+    .gutter-md { padding: 60px 0; }
+    .gutter-sm { padding: 40px 0; }
+  }
+}
+
+/* ============================================================================
+   Animations
+   ============================================================================ */
+
+@keyframes accordion-down {
+  from { height: 0; }
+  to { height: var(--radix-accordion-content-height); }
+}
+@keyframes accordion-up {
+  from { height: var(--radix-accordion-content-height); }
+  to { height: 0; }
+}
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+@keyframes dot-bounce {
+  0%, 60%, 100% { opacity: 0.3; transform: translateY(0) scale(0.85); }
+  30% { opacity: 1; transform: translateY(-4px) scale(1); }
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.animate-accordion-down { animation: accordion-down 0.2s cubic-bezier(0.4, 0.2, 0.2, 1); }
+.animate-accordion-up { animation: accordion-up 0.2s cubic-bezier(0.4, 0.2, 0.2, 1); }
+.animate-fade-in { animation: fade-in 0.3s ease-out; }
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--surface-2) 0%,
+    var(--surface-3) 50%,
+    var(--surface-2) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+   react-day-picker v9 · sobreposição com tokens TKWS
+   ============================================================================ */
+
+.tkws-calendar.rdp-root {
+  --rdp-accent-color: var(--brand);
+  --rdp-accent-background-color: var(--brand-soft);
+  --rdp-today-color: var(--brand);
+
+  --rdp-day-height: 36px;
+  --rdp-day-width: 36px;
+  --rdp-day_button-height: 34px;
+  --rdp-day_button-width: 34px;
+  --rdp-day_button-border-radius: 8px;
+  --rdp-day_button-border: 1.5px solid transparent;
+
+  --rdp-selected-border: 1.5px solid var(--brand);
+
+  --rdp-range_start-color: var(--bg);
+  --rdp-range_start-date-background-color: var(--brand);
+  --rdp-range_end-color: var(--bg);
+  --rdp-range_end-date-background-color: var(--brand);
+  --rdp-range_middle-background-color: var(--brand-soft);
+  --rdp-range_middle-color: var(--brand);
+
+  --rdp-nav_button-height: 28px;
+  --rdp-nav_button-width: 28px;
+  --rdp-nav-height: 36px;
+
+  --rdp-weekday-padding: 6px 0;
+  --rdp-weekday-opacity: 1;
+  --rdp-outside-opacity: 0.45;
+  --rdp-disabled-opacity: 0.3;
+
+  padding: 4px;
+  background: transparent;
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+}
+
+/* Standalone · com border + bg (uso fora de Popover) */
+.tkws-calendar--standalone.rdp-root {
+  padding: 12px;
+  background: var(--surface-1);
+  border: 1px solid var(--line-2);
+  border-radius: 12px;
+}
+
+/* Caption (mês/ano) */
+.tkws-calendar .rdp-month_caption,
+.tkws-calendar .rdp-caption_label {
+  font-family: 'Fraunces', serif;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  text-transform: capitalize;
+  padding: 4px 0;
+}
+
+/* Botões de navegação · setas */
+.tkws-calendar .rdp-nav button,
+.tkws-calendar .rdp-button_previous,
+.tkws-calendar .rdp-button_next {
+  background: transparent;
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  color: var(--text-soft);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.tkws-calendar .rdp-nav button:hover:not(:disabled),
+.tkws-calendar .rdp-button_previous:hover:not(:disabled),
+.tkws-calendar .rdp-button_next:hover:not(:disabled) {
+  background: var(--surface-2);
+  border-color: var(--line-3);
+  color: var(--text);
+}
+.tkws-calendar .rdp-chevron {
+  fill: currentColor;
+}
+
+/* Weekdays · D S T Q Q S S */
+.tkws-calendar .rdp-weekday {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--text-mute);
+  padding: 6px 0;
+}
+
+/* Day buttons */
+.tkws-calendar .rdp-day_button {
+  font-family: 'Inter', sans-serif;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text);
+  background: transparent;
+  border: 1.5px solid transparent;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+.tkws-calendar .rdp-day_button:hover:not([disabled]) {
+  background: var(--surface-3);
+  color: var(--text);
+}
+
+/* Day · selected */
+.tkws-calendar .rdp-selected .rdp-day_button {
+  background: var(--brand);
+  color: var(--bg);
+  font-weight: 700;
+  border-color: var(--brand);
+}
+.tkws-calendar .rdp-selected .rdp-day_button:hover:not([disabled]) {
+  background: var(--brand-h);
+  color: var(--bg);
+}
+
+/* Day · today */
+.tkws-calendar .rdp-today:not(.rdp-selected) .rdp-day_button {
+  color: var(--brand);
+  font-weight: 700;
+  border-color: var(--brand);
+  background: transparent;
+}
+.tkws-calendar .rdp-today.rdp-selected .rdp-day_button {
+  color: var(--bg);
+}
+
+/* Day · outside (mês adjacente) */
+.tkws-calendar .rdp-outside .rdp-day_button {
+  color: var(--text-mute);
+  opacity: 0.45;
+}
+
+/* Day · disabled */
+.tkws-calendar .rdp-disabled .rdp-day_button {
+  color: var(--text-mute);
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* Range middle · entre range start e end */
+.tkws-calendar .rdp-range_middle .rdp-day_button {
+  background: var(--brand-soft);
+  color: var(--brand);
+  border-radius: 0;
+  border-color: transparent;
+  font-weight: 600;
+}
+
+/* Range start · arredondar à esquerda */
+.tkws-calendar .rdp-range_start .rdp-day_button {
+  background: var(--brand);
+  color: var(--bg);
+  font-weight: 700;
+}
+
+/* Range end · arredondar à direita */
+.tkws-calendar .rdp-range_end .rdp-day_button {
+  background: var(--brand);
+  color: var(--bg);
+  font-weight: 700;
+}
+
+/* Months wrapper · dois meses lado a lado em range */
+.tkws-calendar .rdp-months {
+  gap: 24px;
+}
+
+/* Container do month */
+.tkws-calendar .rdp-month {
+  margin: 0;
+}
+
+/* Grid de dias */
+.tkws-calendar .rdp-month_grid {
+  border-collapse: collapse;
+  margin: 0;
+}
+
+/* Months wrapper · respiro inicial padronizado */
+.tkws-calendar .rdp-months_dropdown,
+.tkws-calendar .rdp-years_dropdown {
+  background: var(--surface-2);
+  border: 1px solid var(--line-2);
+  color: var(--text);
+  font-family: inherit;
+  padding: 4px 8px;
+  border-radius: 6px;
 }

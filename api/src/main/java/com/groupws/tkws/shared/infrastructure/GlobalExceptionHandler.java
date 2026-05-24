@@ -1,6 +1,8 @@
 package com.groupws.tkws.shared.infrastructure;
 
 import com.groupws.tkws.shared.domain.DomainException;
+import com.groupws.tkws.shared.web.tenant.MissingTenantContextException;
+import com.groupws.tkws.shared.web.tenant.TenantAccessDeniedException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -14,6 +16,22 @@ import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(TenantAccessDeniedException.class)
+    public ProblemDetail handleTenantAccessDenied(TenantAccessDeniedException ex) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, ex.getMessage());
+        problem.setType(URI.create("https://errors.tkws.com.br/" + ex.code().toLowerCase()));
+        problem.setTitle(ex.code());
+        return problem;
+    }
+
+    @ExceptionHandler(MissingTenantContextException.class)
+    public ProblemDetail handleMissingTenantContext(MissingTenantContextException ex) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage());
+        problem.setType(URI.create("https://errors.tkws.com.br/" + ex.code().toLowerCase()));
+        problem.setTitle(ex.code());
+        return problem;
+    }
 
     @ExceptionHandler(DomainException.class)
     public ProblemDetail handleDomain(DomainException ex) {

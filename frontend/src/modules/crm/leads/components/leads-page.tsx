@@ -1,142 +1,114 @@
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { CrudPage, FormDialogFooter } from '@/components/tkws/crud-page'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
-import { Field, FieldHint, Input, Label, Textarea } from '@/components/ui/input'
-import { Select } from '@/components/ui/select'
-import { useEmpreendimentos } from '@/modules/empresa/configuracoes/empreendimentos/api'
-import { useSetores } from '@/modules/empresa/configuracoes/setores/api'
-import { useTiposProjeto } from '@/modules/empresa/configuracoes/tipos-projetos/api'
-import { useCreateLead, useLeads, useRemoveLead, useUpdateLead } from '../api'
-import { LEAD_ORIGEM, createLeadSchema, type CreateLead, type Lead } from '../schema'
+import { Field, FieldHint, Input, Label } from '@/components/ui/input'
+import { SelectField } from '@/components/ui/select-field'
+import { useCreatePessoa, usePessoas, useUpdatePessoa } from '@/modules/crm/pessoas/api'
+import {
+  createPessoaSchema,
+  type CreatePessoa,
+  type Pessoa,
+} from '@/modules/crm/pessoas/schema'
 
-const origemLabel: Record<typeof LEAD_ORIGEM[number], string> = {
-  indicacao: 'Indicação',
-  site: 'Site',
-  instagram: 'Instagram',
-  whatsapp: 'WhatsApp',
-  evento: 'Evento',
-  outro: 'Outro',
-}
+/**
+ * Tela "Leads" · view sobre `Pessoa` filtrada por status=LEAD.
+ *
+ * Pessoa unifica Lead e Cliente (ADR-018). Quando uma Oportunidade entra
+ * em etapa que converte, o backend promove a Pessoa automaticamente.
+ */
 
-function LeadForm({ initial, onSuccess }: { initial?: Lead; onSuccess: () => void }) {
+function LeadForm({ initial, onSuccess }: { initial?: Pessoa; onSuccess: () => void }) {
   const isEdit = !!initial
-  const setores = useSetores()
-  const tiposProjeto = useTiposProjeto()
-  const empreendimentos = useEmpreendimentos()
-  const createMut = useCreateLead()
-  const updateMut = useUpdateLead()
+  const createMut = useCreatePessoa()
+  const updateMut = useUpdatePessoa()
   const mutation = isEdit ? updateMut : createMut
 
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<CreateLead>({
-    resolver: zodResolver(createLeadSchema),
+  const {
+    register,
+    handleSubmit,
+    control,
+    watch,
+    formState: { errors, isSubmitting },
+  } = useForm<CreatePessoa>({
+    resolver: zodResolver(createPessoaSchema),
     defaultValues: {
-      nome: initial?.nome ?? '',
-      email: initial?.email ?? '',
-      telefone: initial?.telefone ?? '',
-      empresa: initial?.empresa ?? '',
-      cargo: initial?.cargo ?? '',
-      origem: initial?.origem ?? 'outro',
-      setorInteresseId: initial?.setorInteresseId ?? null,
-      tipoProjetoId: initial?.tipoProjetoId ?? null,
-      empreendimentoId: initial?.empreendimentoId ?? null,
-      responsavelId: initial?.responsavelId ?? null,
-      notas: initial?.notas ?? '',
-      qualificado: initial?.qualificado ?? false,
+      tipoPessoa: initial?.tipoPessoa ?? 'PF',
+      documento: initial?.documento ?? '',
+      nomeContato: initial?.nomeContato ?? '',
+      emailContato: initial?.emailContato ?? '',
+      celularContato: initial?.celularContato ?? '',
+      nomeEmpresa: initial?.nomeEmpresa ?? '',
     },
   })
 
+  const tipo = watch('tipoPessoa')
+
   const onSubmit = handleSubmit(async (data) => {
-    const payload = {
-      ...data,
-      setorInteresseId: data.setorInteresseId || null,
-      tipoProjetoId: data.tipoProjetoId || null,
-      empreendimentoId: data.empreendimentoId || null,
-      responsavelId: data.responsavelId || null,
-    }
-    if (isEdit && initial) await updateMut.mutateAsync({ id: initial.id, input: payload })
-    else await createMut.mutateAsync(payload)
+    if (isEdit && initial) await updateMut.mutateAsync({ id: initial.id, input: data })
+    else await createMut.mutateAsync(data)
     onSuccess()
   })
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-4">
-      <Field>
-        <Label htmlFor="nome" required>Nome completo</Label>
-        <Input id="nome" state={errors.nome ? 'error' : 'default'} {...register('nome')} />
-        {errors.nome && <FieldHint state="error">{errors.nome.message}</FieldHint>}
-      </Field>
-
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-[140px_1fr] gap-3">
         <Field>
-          <Label htmlFor="email">Email</Label>
-          <Input id="email" type="email" state={errors.email ? 'error' : 'default'} {...register('email')} />
-          {errors.email && <FieldHint state="error">{errors.email.message}</FieldHint>}
+          <Label required>Tipo</Label>
+          <SelectField
+            control={control}
+            name="tipoPessoa"
+            placeholder="Selecione"
+            options={[
+              { value: 'PF', label: 'Pessoa Física' },
+              { value: 'PJ', label: 'Pessoa Jurídica' },
+            ]}
+          />
         </Field>
         <Field>
-          <Label htmlFor="telefone">Telefone</Label>
-          <Input id="telefone" type="tel" placeholder="(47) 98xxx-xxxx" {...register('telefone')} />
-        </Field>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <Field>
-          <Label htmlFor="empresa">Empresa</Label>
-          <Input id="empresa" {...register('empresa')} />
-        </Field>
-        <Field>
-          <Label htmlFor="cargo">Cargo</Label>
-          <Input id="cargo" {...register('cargo')} />
-        </Field>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <Field>
-          <Label htmlFor="origem">Origem</Label>
-          <Select id="origem" {...register('origem')}>
-            {LEAD_ORIGEM.map((o) => <option key={o} value={o}>{origemLabel[o]}</option>)}
-          </Select>
-        </Field>
-        <Field>
-          <Label htmlFor="empreendimentoId">Empreendimento de interesse</Label>
-          <Select id="empreendimentoId" {...register('empreendimentoId')}>
-            <option value="">Nenhum</option>
-            {empreendimentos.data?.map((e) => <option key={e.id} value={e.id}>{e.nome} · {e.cidade}/{e.uf}</option>)}
-          </Select>
-        </Field>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <Field>
-          <Label htmlFor="setorInteresseId">Setor de interesse</Label>
-          <Select id="setorInteresseId" {...register('setorInteresseId')}>
-            <option value="">Não definido</option>
-            {setores.data?.map((s) => <option key={s.id} value={s.id}>{s.nome}</option>)}
-          </Select>
-        </Field>
-        <Field>
-          <Label htmlFor="tipoProjetoId">Tipo de projeto</Label>
-          <Select id="tipoProjetoId" {...register('tipoProjetoId')}>
-            <option value="">Não definido</option>
-            {tiposProjeto.data?.map((t) => <option key={t.id} value={t.id}>{t.nome}</option>)}
-          </Select>
+          <Label htmlFor="documento">{tipo === 'PJ' ? 'CNPJ' : 'CPF'}</Label>
+          <Input
+            id="documento"
+            placeholder={tipo === 'PJ' ? '00.000.000/0000-00' : '000.000.000-00'}
+            {...register('documento')}
+          />
         </Field>
       </div>
 
       <Field>
-        <Label htmlFor="notas">Notas</Label>
-        <Textarea id="notas" rows={3} {...register('notas')} placeholder="Histórico, expectativas, observações…" />
+        <Label htmlFor="nomeContato" required>Nome do contato</Label>
+        <Input
+          id="nomeContato"
+          state={errors.nomeContato ? 'error' : 'default'}
+          {...register('nomeContato')}
+        />
+        {errors.nomeContato && <FieldHint state="error">{errors.nomeContato.message}</FieldHint>}
       </Field>
 
-      <label className="text-sm flex items-center gap-2">
-        <input type="checkbox" {...register('qualificado')} className="h-4 w-4" />
-        Qualificado (pronto para virar oportunidade)
-      </label>
+      {tipo === 'PJ' && (
+        <Field>
+          <Label htmlFor="nomeEmpresa">Nome da empresa</Label>
+          <Input id="nomeEmpresa" {...register('nomeEmpresa')} />
+        </Field>
+      )}
+
+      <div className="grid grid-cols-2 gap-3">
+        <Field>
+          <Label htmlFor="emailContato">Email</Label>
+          <Input id="emailContato" type="email" {...register('emailContato')} />
+        </Field>
+        <Field>
+          <Label htmlFor="celularContato">Celular</Label>
+          <Input id="celularContato" placeholder="(47) 98xxx-xxxx" {...register('celularContato')} />
+        </Field>
+      </div>
 
       {mutation.isError && (
-        <div className="bg-destructive/10 text-destructive rounded-md border border-destructive/30 px-3 py-2 text-xs">
-          Erro · {mutation.error?.message}
-        </div>
+        <Alert tone="danger">
+          <AlertTitle>Não foi possível salvar</AlertTitle>
+          <AlertDescription>{mutation.error?.message ?? 'Erro inesperado.'}</AlertDescription>
+        </Alert>
       )}
       <FormDialogFooter onCancel={onSuccess} loading={isSubmitting || mutation.isPending} />
     </form>
@@ -144,63 +116,54 @@ function LeadForm({ initial, onSuccess }: { initial?: Lead; onSuccess: () => voi
 }
 
 export function LeadsPage() {
-  const listQuery = useLeads()
-  const removeMut = useRemoveLead()
+  const listQuery = usePessoas('LEAD')
 
   return (
-    <CrudPage<Lead>
+    <CrudPage<Pessoa>
       crumb="CRM"
       title="Leads"
-      description="Contatos iniciais · ainda não viraram clientes. Qualifique antes de mover para Atendimento."
+      description="Contatos iniciais · ainda não fecharam proposta. Convertem para Cliente automaticamente quando uma Oportunidade atinge etapa de fechamento."
       newButtonLabel="+ Novo lead"
       listQuery={listQuery}
-      removeMutation={removeMut}
+      removeMutation={{ mutateAsync: async () => undefined, isPending: false, error: null } as never}
       columns={[
-        { key: 'nome', header: 'Nome', cell: (r) => <span className="font-medium">{r.nome}</span> },
         {
-          key: 'empresa',
-          header: 'Empresa · Cargo',
-          cell: (r) => (
-            <span className="text-muted-foreground">
-              {r.empresa ?? '—'}
-              {r.cargo ? ` · ${r.cargo}` : ''}
-            </span>
-          ),
+          key: 'tipoPessoa',
+          header: '',
+          width: 'w-12',
+          cell: (r) => <Badge variant="outline">{r.tipoPessoa}</Badge>,
         },
         {
-          key: 'telefone',
+          key: 'nomeContato',
+          header: 'Nome',
+          cell: (r) => <span className="font-medium">{r.nomeContato}</span>,
+        },
+        {
+          key: 'nomeEmpresa',
+          header: 'Empresa',
+          cell: (r) => <span className="text-muted-foreground">{r.nomeEmpresa ?? '—'}</span>,
+        },
+        {
+          key: 'celularContato',
           header: 'Contato',
           cell: (r) => (
             <span className="text-muted-foreground text-xs">
-              {r.email ?? '—'}
+              {r.emailContato ?? '—'}
               <br />
-              {r.telefone ?? ''}
+              {r.celularContato ?? ''}
             </span>
           ),
         },
         {
-          key: 'origem',
-          header: 'Origem',
-          width: 'w-28',
-          cell: (r) => <Badge variant="outline">{origemLabel[r.origem]}</Badge>,
-        },
-        {
-          key: 'qualificado',
-          header: 'Status',
-          width: 'w-32',
-          cell: (r) =>
-            r.clienteConvertidoId ? (
-              <Badge variant="success">Convertido</Badge>
-            ) : r.qualificado ? (
-              <Badge variant="default">Qualificado</Badge>
-            ) : (
-              <Badge variant="secondary">Novo</Badge>
-            ),
+          key: 'documento',
+          header: 'Documento',
+          width: 'w-44',
+          cell: (r) => <span className="font-mono text-xs">{r.documento ?? '—'}</span>,
         },
       ]}
       getRowKey={(r) => r.id}
-      getRowLabel={(r) => r.nome}
-      formDialogTitle={(item) => (item ? `Editar · ${item.nome}` : 'Novo lead')}
+      getRowLabel={(r) => r.nomeContato}
+      formDialogTitle={(item) => (item ? `Editar · ${item.nomeContato}` : 'Novo lead')}
       renderForm={(item, close) => <LeadForm initial={item} onSuccess={close} />}
     />
   )

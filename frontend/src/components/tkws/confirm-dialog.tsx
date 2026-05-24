@@ -33,10 +33,13 @@ export function ConfirmDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             {variant === 'danger' && (
-              <span className="bg-destructive/10 text-destructive inline-flex h-7 w-7 items-center justify-center rounded-md">
-                <AlertTriangle size={14} />
+              <span
+                className="inline-flex h-8 w-8 items-center justify-center rounded-[10px]"
+                style={{ background: 'rgba(235, 87, 87, 0.14)', color: 'var(--danger)' }}
+              >
+                <AlertTriangle size={15} />
               </span>
             )}
             <DialogTitle>{title}</DialogTitle>
@@ -44,13 +47,13 @@ export function ConfirmDialog({
           {description && <DialogDescription>{description}</DialogDescription>}
         </DialogHeader>
         <DialogBody>
-          <p className="text-muted-foreground text-sm">
+          <p className="text-[13px]" style={{ color: 'var(--text-soft)' }}>
             Essa ação não pode ser desfeita. Confirme apenas se tem certeza.
           </p>
         </DialogBody>
         <DialogFooter>
           <Button
-            variant={variant === 'danger' ? 'destructive' : 'default'}
+            variant={variant === 'danger' ? 'danger' : 'default'}
             disabled={loading}
             onClick={() => void onConfirm()}
           >

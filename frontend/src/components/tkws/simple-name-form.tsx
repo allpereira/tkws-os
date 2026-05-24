@@ -3,7 +3,9 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import type { UseMutationResult } from '@tanstack/react-query'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Field, FieldHint, Input, Label, Textarea } from '@/components/ui/input'
+import { SwitchField } from '@/components/ui/switch-field'
 import { FormDialogFooter } from './crud-page'
 
 /**
@@ -57,6 +59,7 @@ export function SimpleNomeForm<T extends { id: string } & SimpleNomeData>({
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors, isSubmitting },
   } = form
 
@@ -84,21 +87,21 @@ export function SimpleNomeForm<T extends { id: string } & SimpleNomeData>({
 
       {renderExtras?.(form)}
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 items-end gap-3">
         <Field>
           <Label htmlFor="ordem">Ordem</Label>
           <Input id="ordem" type="number" min={0} {...register('ordem', { valueAsNumber: true })} />
         </Field>
-        <label className="text-sm mt-7 flex items-center gap-2">
-          <input type="checkbox" {...register('ativo')} className="h-4 w-4" />
-          Ativo
-        </label>
+        <div className="pb-2">
+          <SwitchField control={control} name="ativo" />
+        </div>
       </div>
 
       {mutation.isError && (
-        <div className="bg-destructive/10 text-destructive rounded-md border border-destructive/30 px-3 py-2 text-xs">
-          Erro · {mutation.error?.message}
-        </div>
+        <Alert tone="danger">
+          <AlertTitle>Não foi possível salvar</AlertTitle>
+          <AlertDescription>{mutation.error?.message ?? 'Erro inesperado.'}</AlertDescription>
+        </Alert>
       )}
 
       <FormDialogFooter onCancel={onSuccess} loading={isSubmitting || mutation.isPending} />

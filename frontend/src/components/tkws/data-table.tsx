@@ -66,39 +66,44 @@ export function DataTable<T>({
   }
 
   return (
-    <div className="bg-card overflow-hidden rounded-lg border">
-      <Table>
-        <TableHeader>
-          <TableRow>
+    <Table>
+      <TableHeader>
+        <TableRow>
+          {columns.map((col) => (
+            <TableHead
+              key={col.key}
+              className={cn(
+                col.width,
+                col.align === 'right' && 'text-right',
+                col.align === 'center' && 'text-center',
+              )}
+            >
+              {col.header}
+            </TableHead>
+          ))}
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {data.map((row) => (
+          <TableRow
+            key={getRowKey(row)}
+            onClick={onRowClick ? () => onRowClick(row) : undefined}
+            className={cn(onRowClick && 'cursor-pointer')}
+          >
             {columns.map((col) => (
-              <TableHead
+              <TableCell
                 key={col.key}
-                className={cn(col.width, col.align === 'right' && 'text-right', col.align === 'center' && 'text-center')}
+                className={cn(
+                  col.align === 'right' && 'text-right',
+                  col.align === 'center' && 'text-center',
+                )}
               >
-                {col.header}
-              </TableHead>
+                {col.cell ? col.cell(row) : ((row as Record<string, unknown>)[col.key] as React.ReactNode)}
+              </TableCell>
             ))}
           </TableRow>
-        </TableHeader>
-        <TableBody>
-          {data.map((row) => (
-            <TableRow
-              key={getRowKey(row)}
-              onClick={onRowClick ? () => onRowClick(row) : undefined}
-              className={cn(onRowClick && 'cursor-pointer')}
-            >
-              {columns.map((col) => (
-                <TableCell
-                  key={col.key}
-                  className={cn(col.align === 'right' && 'text-right', col.align === 'center' && 'text-center')}
-                >
-                  {col.cell ? col.cell(row) : ((row as Record<string, unknown>)[col.key] as React.ReactNode)}
-                </TableCell>
-              ))}
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
+        ))}
+      </TableBody>
+    </Table>
   )
 }

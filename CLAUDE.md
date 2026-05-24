@@ -130,6 +130,7 @@ Para CADA feature nova, a ordem é:
 | `docs/11-SECRETS-VAULT.md` | Política de gestão de segredos críticos |
 | `docs/12-FEATURE-FLAGS.md` | Como usar feature flags |
 | `docs/13-ONBOARDING.md` | Fluxo de onboarding de tenants (com aprovação manual) |
+| `docs/14-DESIGN-SYSTEM-SYNC.md` | **Antes de copiar/atualizar qualquer componente do `design-system/` para o `frontend/`** — runbook + lista de arquivos preservados |
 | `.ai/CODING-RULES.md` | Regras de código que a IA deve seguir |
 | `.ai/FEATURE-TEMPLATE.md` | Template de prompt para gerar feature nova |
 | `.ai/REVIEW-CHECKLIST.md` | Auto-review antes de propor PR |

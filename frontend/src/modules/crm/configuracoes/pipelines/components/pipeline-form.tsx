@@ -1,7 +1,9 @@
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Field, FieldHint, Input, Label, Textarea } from '@/components/ui/input'
-import { Select } from '@/components/ui/select'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { SelectField } from '@/components/ui/select-field'
+import { SwitchField } from '@/components/ui/switch-field'
 import { FormDialogFooter } from '@/components/tkws/crud-page'
 import { useCreatePipeline, useUpdatePipeline } from '../api'
 import { createPipelineSchema, type CreatePipeline, type Pipeline } from '../schema'
@@ -15,6 +17,7 @@ export function PipelineForm({ initial, onSuccess }: { initial?: Pipeline; onSuc
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<CreatePipeline>({
     resolver: zodResolver(createPipelineSchema),
@@ -41,31 +44,36 @@ export function PipelineForm({ initial, onSuccess }: { initial?: Pipeline; onSuc
         {errors.nome && <FieldHint state="error">{errors.nome.message}</FieldHint>}
       </Field>
       <Field>
-        <Label htmlFor="modulo" required>Módulo</Label>
-        <Select id="modulo" {...register('modulo')}>
-          <option value="atendimento">Atendimento</option>
-          <option value="proposta">Proposta</option>
-        </Select>
+        <Label required>Módulo</Label>
+        <SelectField
+          control={control}
+          name="modulo"
+          placeholder="Selecione o módulo"
+          options={[
+            { value: 'atendimento', label: 'Atendimento' },
+            { value: 'proposta', label: 'Proposta' },
+          ]}
+        />
         <FieldHint>Determina onde o pipeline aparece no CRM.</FieldHint>
       </Field>
       <Field>
         <Label htmlFor="descricao">Descrição</Label>
         <Textarea id="descricao" rows={2} {...register('descricao')} />
       </Field>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 items-end gap-3">
         <Field>
           <Label htmlFor="ordem">Ordem</Label>
           <Input id="ordem" type="number" min={0} {...register('ordem', { valueAsNumber: true })} />
         </Field>
-        <label className="text-sm mt-7 flex items-center gap-2">
-          <input type="checkbox" {...register('ativo')} className="h-4 w-4" />
-          Ativo
-        </label>
+        <div className="pb-2">
+          <SwitchField control={control} name="ativo" />
+        </div>
       </div>
       {mutation.isError && (
-        <div className="bg-destructive/10 text-destructive rounded-md border border-destructive/30 px-3 py-2 text-xs">
-          Erro · {mutation.error?.message}
-        </div>
+        <Alert tone="danger">
+          <AlertTitle>Não foi possível salvar</AlertTitle>
+          <AlertDescription>{mutation.error?.message ?? 'Erro inesperado.'}</AlertDescription>
+        </Alert>
       )}
       <FormDialogFooter onCancel={onSuccess} loading={isSubmitting || mutation.isPending} />
     </form>

@@ -7,27 +7,14 @@ import { z } from 'zod'
 export const tipoPagamentoSchema = z.object({
   id: z.string().uuid(),
   tenantId: z.string().uuid(),
+  codigo: z.string().min(1).max(40),
   nome: z.string().min(1, 'Nome obrigatório').max(80),
-  descricao: z.string().max(280).optional().nullable(),
-  parcelas: z.number().int().min(1, 'Mínimo 1 parcela').max(48, 'Máximo 48').default(1),
-  jurosMes: z.number().min(0).max(20).default(0),
-  descontoVista: z.number().min(0).max(50).default(0),
   ativo: z.boolean().default(true),
-  ordem: z.number().int().min(0).default(0),
   createdAt: z.string().datetime({ offset: true }),
   updatedAt: z.string().datetime({ offset: true }),
 })
 
-export const createTipoPagamentoSchema = tipoPagamentoSchema.pick({
-  nome: true,
-  descricao: true,
-  parcelas: true,
-  jurosMes: true,
-  descontoVista: true,
-  ativo: true,
-  ordem: true,
-})
-
+export const createTipoPagamentoSchema = tipoPagamentoSchema.pick({ codigo: true, nome: true, ativo: true })
 export const updateTipoPagamentoSchema = createTipoPagamentoSchema.partial()
 
 export type TipoPagamento = z.infer<typeof tipoPagamentoSchema>

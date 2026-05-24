@@ -1,11 +1,13 @@
 import * as React from 'react'
-import { Pencil, Plus, Trash2 } from 'lucide-react'
+import { Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import type { UseMutationResult, UseQueryResult } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
+import { formatApiErrorInfo, parseApiError, toneForStatus } from '@/lib/api-error'
 import { DataTable, type DataTableColumn } from './data-table'
 import { PageHeader } from './page-header'
 import { ConfirmDialog } from './confirm-dialog'
+import { SystemFrame } from './system-frame'
 import {
   Dialog,
   DialogBody,
@@ -116,7 +118,7 @@ export function CrudPage<T>({
               setToDelete(row)
             }}
           >
-            <Trash2 size={14} className="text-destructive" />
+            <Trash2 size={14} style={{ color: 'var(--danger)' }} />
           </Button>
         </div>
       ),
@@ -137,12 +139,26 @@ export function CrudPage<T>({
       />
 
       {listQuery.isError ? (
-        <div className="bg-destructive/10 text-destructive rounded-md border border-destructive/30 px-4 py-3 text-sm">
-          Erro ao carregar dados · {listQuery.error?.message}
-          <Button variant="ghost" size="sm" className="ml-2" onClick={() => listQuery.refetch()}>
-            Tentar novamente
-          </Button>
-        </div>
+        (() => {
+          const err = parseApiError(listQuery.error)
+          const big = err.status ? String(err.status) : err.isNetworkError ? '⚡' : '!'
+          return (
+            <SystemFrame
+              bigNum={big}
+              bigEmTone={toneForStatus(err)}
+              label={`${err.statusText ?? 'Erro'} · ${title}`}
+              title="Não conseguimos carregar"
+              italic={`os dados de ${title.toLowerCase()}.`}
+              description={err.message}
+              info={formatApiErrorInfo(err)}
+              actions={
+                <Button onClick={() => listQuery.refetch()}>
+                  <RefreshCw size={14} /> Tentar novamente
+                </Button>
+              }
+            />
+          )
+        })()
       ) : (
         <DataTable
           data={listQuery.data}
@@ -195,7 +211,10 @@ export function FormDialogFooter({
   submitLabel?: string
 }) {
   return (
-    <div className="-mx-6 -mb-5 mt-5 flex flex-row-reverse items-center gap-2 border-t px-6 py-4">
+    <div
+      className="-mx-6 -mb-5 mt-5 flex flex-row-reverse items-center gap-2 border-t px-6 py-4"
+      style={{ borderColor: 'var(--line-1)' }}
+    >
       <Button type="submit" disabled={loading}>
         {loading ? <Spinner size={12} /> : null}
         {loading ? 'Salvando…' : submitLabel}

@@ -5,8 +5,11 @@ import {
   createRoute,
   useNavigate,
 } from '@tanstack/react-router'
+import { Home, Search } from 'lucide-react'
 import { useAuth } from 'react-oidc-context'
 import { AppShell } from '@/components/tkws/app-shell'
+import { SystemFrame } from '@/components/tkws/system-frame'
+import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { useRequireAuth } from '@/modules/plataforma/auth/hooks/use-require-auth'
 import {
@@ -25,10 +28,6 @@ const lazyPage = <K extends string>(
 ) => lazy(() => importer().then((m) => ({ default: m[key] })))
 
 // Settings · CRM
-const TiposPropostaPage = lazyPage(
-  () => import('@/modules/crm/configuracoes/tipos-propostas/components/tipos-proposta-page'),
-  'TiposPropostaPage',
-)
 const TiposPagamentoPage = lazyPage(
   () => import('@/modules/crm/configuracoes/tipos-pagamentos/components/tipos-pagamento-page'),
   'TiposPagamentoPage',
@@ -42,25 +41,33 @@ const EtapasPage = lazyPage(
   'EtapasPage',
 )
 
-// Settings · Empresa
-const ProdutosPage = lazyPage(
-  () => import('@/modules/empresa/configuracoes/produtos/components/produtos-page'),
-  'ProdutosPage',
+// Settings · Organização
+const OfertasPage = lazyPage(
+  () => import('@/modules/organizacao/configuracoes/ofertas/components/ofertas-page'),
+  'OfertasPage',
+)
+const TiposEmpresaPage = lazyPage(
+  () => import('@/modules/organizacao/configuracoes/tipos-empresa/components/tipos-empresa-page'),
+  'TiposEmpresaPage',
+)
+const UnidadesPage = lazyPage(
+  () => import('@/modules/organizacao/configuracoes/unidades/components/unidades-page'),
+  'UnidadesPage',
 )
 const SetoresPage = lazyPage(
-  () => import('@/modules/empresa/configuracoes/setores/components/setores-page'),
+  () => import('@/modules/organizacao/configuracoes/setores/components/setores-page'),
   'SetoresPage',
 )
 const TiposProjetoPage = lazyPage(
-  () => import('@/modules/empresa/configuracoes/tipos-projetos/components/tipos-projeto-page'),
+  () => import('@/modules/organizacao/configuracoes/tipos-projetos/components/tipos-projeto-page'),
   'TiposProjetoPage',
 )
 const FuncoesPessoasPage = lazyPage(
-  () => import('@/modules/empresa/configuracoes/funcoes-pessoas/components/funcoes-pessoas-page'),
+  () => import('@/modules/organizacao/configuracoes/funcoes-pessoas/components/funcoes-pessoas-page'),
   'FuncoesPessoasPage',
 )
 const EmpreendimentosPage = lazyPage(
-  () => import('@/modules/empresa/configuracoes/empreendimentos/components/empreendimentos-page'),
+  () => import('@/modules/organizacao/configuracoes/empreendimentos/components/empreendimentos-page'),
   'EmpreendimentosPage',
 )
 
@@ -94,6 +101,18 @@ function PageFallback() {
   )
 }
 
+function FullPageSpinner({ label }: { label: string }) {
+  return (
+    <div
+      className="flex min-h-screen items-center justify-center"
+      style={{ background: 'var(--bg)' }}
+      aria-live="polite"
+    >
+      <Spinner size={22} label={label} />
+    </div>
+  )
+}
+
 function AuthenticatedShell({ children }: { children: React.ReactNode }) {
   const { auth, configured, blockingError, isRedirecting } = useRequireAuth()
   const me = useCurrentUser(auth.user?.access_token)
@@ -109,10 +128,10 @@ function AuthenticatedShell({ children }: { children: React.ReactNode }) {
     )
   }
   if (auth.isLoading || me.isLoading) {
-    return <div className="text-muted-foreground p-8">Carregando…</div>
+    return <FullPageSpinner label="Carregando…" />
   }
   if (isRedirecting || !auth.isAuthenticated) {
-    return <div className="text-muted-foreground p-8">Redirecionando para login…</div>
+    return <FullPageSpinner label="Redirecionando para login…" />
   }
   if (me.isError) {
     const status =
@@ -149,6 +168,7 @@ const rootRoute = createRootRoute({
       <Outlet />
     </AuthenticatedShell>
   ),
+  notFoundComponent: NotFoundPage,
 })
 
 // =============================================================================
@@ -170,21 +190,76 @@ function OidcCallbackPage() {
       />
     )
   }
-  return <div className="text-muted-foreground p-8">Concluindo login…</div>
+  return <FullPageSpinner label="Concluindo login…" />
 }
 
 // =============================================================================
-// Home · dashboard simples por enquanto
+// Home · dashboard editorial simples
 // =============================================================================
+
+// =============================================================================
+// Página 404 · System pattern (SystemFrame)
+// =============================================================================
+
+function NotFoundPage() {
+  const path = typeof window !== 'undefined' ? window.location.pathname : ''
+  const timestamp =
+    typeof window !== 'undefined'
+      ? new Date().toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
+      : ''
+  return (
+    <SystemFrame
+      bigNum="404"
+      bigEmTone="brand"
+      label="Página não encontrada"
+      title="Esse caminho"
+      italic="não existe."
+      description="O link que você seguiu está quebrado, ou o recurso foi movido. Acontece. Volte para o início ou use a busca pra encontrar o que precisa."
+      info={`${path} · ${timestamp}`}
+      actions={
+        <>
+          <Button asChild>
+            <a href="/">
+              <Home size={14} /> Voltar ao início
+            </a>
+          </Button>
+          <Button variant="outline" onClick={() => alert('Em breve: busca global ⌘K')}>
+            <Search size={14} /> Buscar
+          </Button>
+        </>
+      }
+    />
+  )
+}
 
 function HomePage() {
   return (
-    <div className="space-y-4">
-      <h1 className="text-3xl font-semibold tracking-tight">Bem-vindo ao TKWS OS</h1>
-      <p className="text-muted-foreground">
-        Use a navegação à esquerda para acessar Configurações (CRM e Empresa) e o módulo CRM.
-      </p>
-    </div>
+    <>
+      <div className="mb-8">
+        <div
+          className="mono mb-2 text-[10.5px] font-semibold uppercase tracking-[1.4px]"
+          style={{ color: 'var(--text-mute)' }}
+        >
+          DASHBOARD · WS GROUP
+        </div>
+        <h1
+          className="serif text-[42px] font-light leading-[1.05]"
+          style={{ color: 'var(--text)', letterSpacing: '-0.025em' }}
+        >
+          Bem-vindo ao{' '}
+          <em className="italic font-normal" style={{ color: 'var(--brand)' }}>
+            TKWS OS
+          </em>
+        </h1>
+        <p
+          className="mt-3 max-w-2xl text-[14.5px] leading-relaxed"
+          style={{ color: 'var(--text-soft)' }}
+        >
+          Use a navegação à esquerda para acessar o módulo <strong>CRM</strong> (leads, clientes,
+          atendimento, propostas) e as <strong>Configurações</strong> de CRM e Organização.
+        </p>
+      </div>
+    </>
   )
 }
 
@@ -196,17 +271,18 @@ const indexRoute = createRoute({ getParentRoute: () => rootRoute, path: '/', com
 const callbackRoute = createRoute({ getParentRoute: () => rootRoute, path: '/callback', component: OidcCallbackPage })
 
 // Settings · CRM
-const settingsCrmTiposPropostasRoute = createRoute({ getParentRoute: () => rootRoute, path: '/settings/crm/tipos-propostas', component: TiposPropostaPage as any })
 const settingsCrmTiposPagamentosRoute = createRoute({ getParentRoute: () => rootRoute, path: '/settings/crm/tipos-pagamentos', component: TiposPagamentoPage as any })
 const settingsCrmPipelinesRoute = createRoute({ getParentRoute: () => rootRoute, path: '/settings/crm/pipelines', component: PipelinesPage as any })
 const settingsCrmEtapasRoute = createRoute({ getParentRoute: () => rootRoute, path: '/settings/crm/etapas', component: EtapasPage as any })
 
-// Settings · Empresa
-const settingsEmpresaProdutosRoute = createRoute({ getParentRoute: () => rootRoute, path: '/settings/empresa/produtos', component: ProdutosPage as any })
-const settingsEmpresaSetoresRoute = createRoute({ getParentRoute: () => rootRoute, path: '/settings/empresa/setores', component: SetoresPage as any })
-const settingsEmpresaTiposProjetosRoute = createRoute({ getParentRoute: () => rootRoute, path: '/settings/empresa/tipos-projetos', component: TiposProjetoPage as any })
-const settingsEmpresaFuncoesPessoasRoute = createRoute({ getParentRoute: () => rootRoute, path: '/settings/empresa/funcoes-pessoas', component: FuncoesPessoasPage as any })
-const settingsEmpresaEmpreendimentosRoute = createRoute({ getParentRoute: () => rootRoute, path: '/settings/empresa/empreendimentos', component: EmpreendimentosPage as any })
+// Settings · Organização
+const settingsOrgOfertasRoute = createRoute({ getParentRoute: () => rootRoute, path: '/settings/organizacao/ofertas', component: OfertasPage as any })
+const settingsOrgTiposEmpresaRoute = createRoute({ getParentRoute: () => rootRoute, path: '/settings/organizacao/tipos-empresa', component: TiposEmpresaPage as any })
+const settingsOrgUnidadesRoute = createRoute({ getParentRoute: () => rootRoute, path: '/settings/organizacao/unidades', component: UnidadesPage as any })
+const settingsOrgSetoresRoute = createRoute({ getParentRoute: () => rootRoute, path: '/settings/organizacao/setores', component: SetoresPage as any })
+const settingsOrgTiposProjetosRoute = createRoute({ getParentRoute: () => rootRoute, path: '/settings/organizacao/tipos-projetos', component: TiposProjetoPage as any })
+const settingsOrgFuncoesPessoasRoute = createRoute({ getParentRoute: () => rootRoute, path: '/settings/organizacao/funcoes-pessoas', component: FuncoesPessoasPage as any })
+const settingsOrgEmpreendimentosRoute = createRoute({ getParentRoute: () => rootRoute, path: '/settings/organizacao/empreendimentos', component: EmpreendimentosPage as any })
 
 // CRM
 const crmLeadsRoute = createRoute({ getParentRoute: () => rootRoute, path: '/crm/leads', component: LeadsPage as any })
@@ -218,15 +294,16 @@ export const routeTree = rootRoute.addChildren([
   indexRoute,
   callbackRoute,
   // Settings
-  settingsCrmTiposPropostasRoute,
   settingsCrmTiposPagamentosRoute,
   settingsCrmPipelinesRoute,
   settingsCrmEtapasRoute,
-  settingsEmpresaProdutosRoute,
-  settingsEmpresaSetoresRoute,
-  settingsEmpresaTiposProjetosRoute,
-  settingsEmpresaFuncoesPessoasRoute,
-  settingsEmpresaEmpreendimentosRoute,
+  settingsOrgOfertasRoute,
+  settingsOrgTiposEmpresaRoute,
+  settingsOrgUnidadesRoute,
+  settingsOrgSetoresRoute,
+  settingsOrgTiposProjetosRoute,
+  settingsOrgFuncoesPessoasRoute,
+  settingsOrgEmpreendimentosRoute,
   // CRM
   crmLeadsRoute,
   crmClientesRoute,

@@ -19,6 +19,9 @@
         <java.version>21</java.version>
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
+        <!-- Spring Boot 3.3.5 traz Lombok 1.18.34 que tem incompatibilidade
+             com builds da JDK 21 que mudaram TypeTag. Forçamos versão recente. -->
+        <lombok.version>1.18.46</lombok.version>
         <mapstruct.version>1.6.3</mapstruct.version>
         <springdoc.version>2.6.0</springdoc.version>
         <testcontainers.version>1.20.3</testcontainers.version>

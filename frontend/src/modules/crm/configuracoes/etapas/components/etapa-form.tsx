@@ -1,7 +1,9 @@
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Field, FieldHint, Input, Label, Textarea } from '@/components/ui/input'
-import { Select } from '@/components/ui/select'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { SelectField } from '@/components/ui/select-field'
+import { SwitchField } from '@/components/ui/switch-field'
 import { FormDialogFooter } from '@/components/tkws/crud-page'
 import { usePipelines } from '@/modules/crm/configuracoes/pipelines/api'
 import { useCreateEtapa, useUpdateEtapa } from '../api'
@@ -17,6 +19,7 @@ export function EtapaForm({ initial, onSuccess }: { initial?: Etapa; onSuccess: 
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<CreateEtapa>({
     resolver: zodResolver(createEtapaSchema),
@@ -41,15 +44,17 @@ export function EtapaForm({ initial, onSuccess }: { initial?: Etapa; onSuccess: 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-4">
       <Field>
-        <Label htmlFor="pipelineId" required>Pipeline</Label>
-        <Select id="pipelineId" state={errors.pipelineId ? 'error' : 'default'} {...register('pipelineId')}>
-          <option value="">Selecione um pipeline…</option>
-          {pipelines.data?.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.nome} · {p.modulo}
-            </option>
-          ))}
-        </Select>
+        <Label required>Pipeline</Label>
+        <SelectField
+          control={control}
+          name="pipelineId"
+          placeholder="Selecione um pipeline…"
+          state={errors.pipelineId ? 'error' : 'default'}
+          options={(pipelines.data ?? []).map((p) => ({
+            value: p.id,
+            label: `${p.nome} · ${p.modulo}`,
+          }))}
+        />
         {errors.pipelineId && <FieldHint state="error">Pipeline obrigatório</FieldHint>}
       </Field>
 
@@ -66,12 +71,17 @@ export function EtapaForm({ initial, onSuccess }: { initial?: Etapa; onSuccess: 
 
       <div className="grid grid-cols-2 gap-3">
         <Field>
-          <Label htmlFor="tipo">Tipo</Label>
-          <Select id="tipo" {...register('tipo')}>
-            <option value="aberta">Em andamento</option>
-            <option value="ganha">Ganha (terminal)</option>
-            <option value="perdida">Perdida (terminal)</option>
-          </Select>
+          <Label>Tipo</Label>
+          <SelectField
+            control={control}
+            name="tipo"
+            placeholder="Selecione o tipo"
+            options={[
+              { value: 'aberta', label: 'Em andamento' },
+              { value: 'ganha', label: 'Ganha (terminal)' },
+              { value: 'perdida', label: 'Perdida (terminal)' },
+            ]}
+          />
         </Field>
         <Field>
           <Label htmlFor="probabilidade">Probabilidade %</Label>
@@ -79,7 +89,7 @@ export function EtapaForm({ initial, onSuccess }: { initial?: Etapa; onSuccess: 
         </Field>
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-3 items-end gap-3">
         <Field>
           <Label htmlFor="cor">Cor</Label>
           <Input id="cor" type="color" className="h-10 cursor-pointer p-1" {...register('cor')} />
@@ -88,16 +98,16 @@ export function EtapaForm({ initial, onSuccess }: { initial?: Etapa; onSuccess: 
           <Label htmlFor="ordem">Ordem</Label>
           <Input id="ordem" type="number" min={0} {...register('ordem', { valueAsNumber: true })} />
         </Field>
-        <label className="text-sm mt-7 flex items-center gap-2">
-          <input type="checkbox" {...register('ativo')} className="h-4 w-4" />
-          Ativo
-        </label>
+        <div className="pb-2">
+          <SwitchField control={control} name="ativo" />
+        </div>
       </div>
 
       {mutation.isError && (
-        <div className="bg-destructive/10 text-destructive rounded-md border border-destructive/30 px-3 py-2 text-xs">
-          Erro · {mutation.error?.message}
-        </div>
+        <Alert tone="danger">
+          <AlertTitle>Não foi possível salvar</AlertTitle>
+          <AlertDescription>{mutation.error?.message ?? 'Erro inesperado.'}</AlertDescription>
+        </Alert>
       )}
       <FormDialogFooter onCancel={onSuccess} loading={isSubmitting || mutation.isPending} />
     </form>

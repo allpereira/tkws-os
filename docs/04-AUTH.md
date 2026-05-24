@@ -104,6 +104,73 @@ Cole Client ID em:
 
 Após mudar variáveis no Cloudflare, **trigger novo deploy** (Deployments → Retry).
 
+### 4.1. Habilitar `org_id` no JWT (multi-tenancy)
+
+A API resolve o tenant a partir do claim `urn:zitadel:iam:user:resourceowner:id`
+no JWT (ver [ADR-019](adr/ADR-019-tenant-context-from-jwt.md)). Esse claim
+exige **duas configurações combinadas** — uma no Zitadel (app) e outra no
+cliente OIDC (frontend):
+
+#### A) No Zitadel — habilitar emissão dos claims
+
+1. Console Zitadel (`http://localhost:8088`) → **Projects** → TKWS OS → **Applications** → **TKWS Web**
+2. Aba **Token Settings**
+3. Marque **"User Info inside Access Token"** ✓ (libera o `org_id` no JWT)
+4. Marque também **"User Roles inside ID Token"** + **"User Roles inside Access Token"** ✓
+   (necessário para o `@PreAuthorize` enxergar as roles)
+5. **Save**
+
+#### B) No frontend — pedir o scope correto
+
+O Zitadel só inclui o claim se o cliente OIDC **pedir** explicitamente via scope.
+Configure em `frontend/src/modules/plataforma/auth/api/oidc-config.ts`:
+
+```ts
+scope: [
+  'openid',
+  'profile',
+  'email',
+  'offline_access',
+  'urn:zitadel:iam:user:resourceowner',  // ← obrigatório para o org_id
+].join(' ')
+```
+
+Sem esse scope, mesmo com a opção habilitada no app, o JWT virá apenas com
+`[sub, aud, iss, exp, iat, client_id, jti]`.
+
+#### Depois das duas mudanças
+
+**Logout + login** dos usuários afetados — tokens antigos continuam sem o claim;
+só os emitidos depois da mudança recebem.
+
+Como confirmar:
+
+```bash
+# Pegue um JWT depois de logar e cole em https://jwt.io
+# No payload, procure: "urn:zitadel:iam:user:resourceowner:id": "<UUID da org>"
+```
+
+**Sem essa configuração**, a API ainda funciona via fallback automático que chama
+`/oidc/v1/userinfo` com o token do usuário (uma round-trip extra por request ·
+resultado é cacheado em memória). Habilitar o claim no JWT evita a round-trip e
+é o caminho recomendado para produção.
+
+**Se você está vendo este erro:**
+
+```json
+{
+  "status": 422,
+  "title": "tenant.context_missing",
+  "detail": "JWT não traz claim '...resourceowner:id' e /userinfo também não devolveu..."
+}
+```
+
+Checklist:
+- "User Info inside Access Token" está habilitada no app?
+- Você fez logout+login depois de habilitar?
+- O usuário pertence a uma organização (Zitadel) que existe na tabela `tenants` da API?
+  (`tenants.zitadel_org_id` precisa bater com o id da org do Zitadel)
+
 ### 5. Configurar roles do projeto
 
 Project → Roles → New:

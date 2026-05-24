@@ -1,12 +1,15 @@
 import * as React from 'react'
 import { KanbanSquare, List, Plus } from 'lucide-react'
+import { RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DataTable } from '@/components/tkws/data-table'
 import { Badge } from '@/components/ui/badge'
+import { SystemFrame } from '@/components/tkws/system-frame'
+import { formatApiErrorInfo, parseApiError, toneForStatus } from '@/lib/api-error'
 import { Dialog, DialogBody, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { EmptyState } from '@/components/ui/empty-state'
 import { PageHeader } from '@/components/tkws/page-header'
-import { Select } from '@/components/ui/select'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Spinner } from '@/components/ui/spinner'
 import { useEtapas } from '@/modules/crm/configuracoes/etapas/api'
 import { usePipelines } from '@/modules/crm/configuracoes/pipelines/api'
@@ -94,12 +97,17 @@ export function PipelineView({ modulo, title, description }: PipelineViewProps) 
         description={description}
         actions={
           <div className="flex items-center gap-2">
-            <Select value={pipelineId} onChange={(e) => setPipelineId(e.target.value)} className="h-9 max-w-xs">
-              {pipelinesModulo.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.nome}
-                </option>
-              ))}
+            <Select value={pipelineId} onValueChange={setPipelineId}>
+              <SelectTrigger className="!h-9 max-w-xs">
+                <SelectValue placeholder="Selecione um pipeline" />
+              </SelectTrigger>
+              <SelectContent>
+                {pipelinesModulo.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.nome}
+                  </SelectItem>
+                ))}
+              </SelectContent>
             </Select>
             <div className="bg-muted inline-flex items-center rounded-md p-0.5">
               <Button
@@ -126,13 +134,27 @@ export function PipelineView({ modulo, title, description }: PipelineViewProps) 
         }
       />
 
-      {oportunidadesQuery.isError && (
-        <div className="bg-destructive/10 text-destructive mb-3 rounded-md border border-destructive/30 px-3 py-2 text-sm">
-          Erro ao carregar · {oportunidadesQuery.error?.message}
-        </div>
-      )}
-
-      {view === 'kanban' ? (
+      {oportunidadesQuery.isError ? (
+        (() => {
+          const err = parseApiError(oportunidadesQuery.error)
+          return (
+            <SystemFrame
+              bigNum={err.status ? String(err.status) : err.isNetworkError ? '⚡' : '!'}
+              bigEmTone={toneForStatus(err)}
+              label={`${err.statusText ?? 'Erro'} · Oportunidades`}
+              title="Não conseguimos carregar"
+              italic="as oportunidades."
+              description={err.message}
+              info={formatApiErrorInfo(err)}
+              actions={
+                <Button onClick={() => oportunidadesQuery.refetch()}>
+                  <RefreshCw size={14} /> Tentar novamente
+                </Button>
+              }
+            />
+          )
+        })()
+      ) : view === 'kanban' ? (
         oportunidadesQuery.isLoading ? (
           <div className="flex items-center justify-center py-12">
             <Spinner size={20} label="Carregando oportunidades" />
@@ -175,17 +197,19 @@ export function PipelineView({ modulo, title, description }: PipelineViewProps) 
               cell: (r) => (r.prazoFechamento ? formatDate(r.prazoFechamento) : '—'),
             },
             {
-              key: 'status',
-              header: 'Status',
-              width: 'w-28',
-              cell: (r) =>
-                r.ganha ? (
-                  <Badge variant="success">Ganha</Badge>
-                ) : r.perdida ? (
-                  <Badge variant="destructive">Perdida</Badge>
+              key: 'etapaId',
+              header: 'Etapa',
+              width: 'w-32',
+              cell: (r) => {
+                const etapa = etapasDoPipeline.find((e) => e.id === r.etapaId)
+                return etapa ? (
+                  <Badge variant="outline" style={{ borderColor: etapa.cor }}>
+                    {etapa.nome}
+                  </Badge>
                 ) : (
-                  <Badge variant="secondary">Em aberto</Badge>
-                ),
+                  <span className="text-muted-foreground">—</span>
+                )
+              },
             },
           ]}
         />
