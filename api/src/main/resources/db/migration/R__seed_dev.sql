@@ -146,10 +146,10 @@ BEGIN
 
         -- Ofertas (catálogo do que a organização vende · ex-Tipos de Proposta)
         INSERT INTO ofertas (id, tenant_id, codigo, nome, ativo, created_at, updated_at) VALUES
-            ('00000000-0000-0000-0000-000000007001', tenant_dev_id, 'OFE-001', 'Decoração completa',           true, NOW(), NOW()),
-            ('00000000-0000-0000-0000-000000007002', tenant_dev_id, 'OFE-002', 'Reforma + Decoração',         true, NOW(), NOW()),
-            ('00000000-0000-0000-0000-000000007003', tenant_dev_id, 'OFE-003', 'Apenas Projeto Arquitetônico', true, NOW(), NOW()),
-            ('00000000-0000-0000-0000-000000007004', tenant_dev_id, 'OFE-004', 'TKWS Turnkey',                true, NOW(), NOW())
+            ('00000000-0000-0000-0000-000000007001', tenant_dev_id, 'OFE-TKWS-RISCO', 'TKWS Risco',           true, NOW(), NOW()),
+            ('00000000-0000-0000-0000-000000007002', tenant_dev_id, 'OFE-PMG', 'PMG',                   true, NOW(), NOW()),
+            ('00000000-0000-0000-0000-000000007003', tenant_dev_id, 'OFE-PE', 'Projeto Externo',        true, NOW(), NOW()),
+            ('00000000-0000-0000-0000-000000007004', tenant_dev_id, 'OFE-PC', 'Projeto Criativo',                true, NOW(), NOW())
         ON CONFLICT (tenant_id, codigo) DO NOTHING;
 
         -- ====================================================================
