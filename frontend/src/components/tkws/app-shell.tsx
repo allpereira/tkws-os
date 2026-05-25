@@ -737,7 +737,7 @@ export function AppShell({ children, user }: AppShellProps) {
         <TopHeader user={user} onMobileMenuClick={() => setMobileOpen(true)} />
 
         <main className="flex-1 overflow-y-auto">
-          <div className="mx-auto w-full max-w-7xl px-4 py-6 md:px-8 md:py-8">{children}</div>
+          <div className="mx-auto w-full max-w-[95vw] px-4 py-6 md:px-8 md:py-8">{children}</div>
         </main>
 
         <StatusBar />
