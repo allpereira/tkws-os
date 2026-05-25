@@ -8,31 +8,55 @@
 
 DO $$
 DECLARE
-    tenant_dev_id      UUID := '00000000-0000-0000-0000-000000000001';
+    tenant_dev_id      BIGINT := 1;
+    tenant_test_id     BIGINT := 2;
     pipe_comercial_id  UUID := '00000000-0000-0000-0000-000000001001';
     pipe_proposta_id   UUID := '00000000-0000-0000-0000-000000001002';
+
+    -- Dados da Org "Group WS" no Zitadel local (Domain: group-ws.localhost).
+    -- O id Zitadel é gerado a cada bootstrap do container · atualize aqui
+    -- sempre que reiniciar o Zitadel com volume limpo. Veja em:
+    --   Console Zitadel → seu usuário → Organization → "ID"
+    -- ou no JWT que o frontend manda (claim
+    --   urn:zitadel:iam:user:resourceowner:id).
+    -- Default: id atual do dev (atualizado em 2026-05-24).
+    zitadel_org_dev    VARCHAR(255) := '373689462221242371';
+    tenant_dev_name    VARCHAR(255) := 'Group WS';
+    tenant_dev_slug    VARCHAR(100) := 'group-ws';
 BEGIN
     IF '${environment}' = 'dev' THEN
 
         -- ====================================================================
-        -- Tenants de desenvolvimento
+        -- Tenants de desenvolvimento (UPSERT no zitadel_org_id)
+        --
+        -- IDs locais fixos (1, 2) · BIGINT em vez de UUID porque tenantId
+        -- aparece em todas as FKs e responses · economia de espaço e index
+        -- reads mais rápidos. Ver V1__initial_schema.sql.
+        --
+        -- UPSERT garante: se o id Zitadel mudar (rebuild do container), o
+        -- tenant local sincroniza sem perder relacionamentos (FKs em
+        -- pessoas/oportunidades/etc preservados via tenant.id estável).
         -- ====================================================================
         INSERT INTO tenants (id, zitadel_org_id, name, slug, status, active, created_at, updated_at)
         VALUES (
             tenant_dev_id,
-            'dev-zitadel-org-id',
-            'Studio Dev',
-            'studio-dev',
+            zitadel_org_dev,
+            tenant_dev_name,
+            tenant_dev_slug,
             'ACTIVE',
             true,
             NOW(),
             NOW()
         )
-        ON CONFLICT (id) DO NOTHING;
+        ON CONFLICT (id) DO UPDATE
+            SET zitadel_org_id = EXCLUDED.zitadel_org_id,
+                name           = EXCLUDED.name,
+                slug           = EXCLUDED.slug,
+                updated_at     = NOW();
 
         INSERT INTO tenants (id, zitadel_org_id, name, slug, status, active, created_at, updated_at)
         VALUES (
-            '00000000-0000-0000-0000-000000000002',
+            tenant_test_id,
             'dev-zitadel-org-id-2',
             'Atelier Test',
             'atelier-test',
@@ -42,6 +66,10 @@ BEGIN
             NOW()
         )
         ON CONFLICT (id) DO NOTHING;
+
+        -- Avança a sequence do IDENTITY para que próximos tenants gerados
+        -- pela app não conflitem com os ids manuais acima.
+        PERFORM setval(pg_get_serial_sequence('tenants', 'id'), GREATEST(tenant_dev_id, tenant_test_id));
 
         -- ====================================================================
         -- Usuários de dev
@@ -62,9 +90,9 @@ BEGIN
         INSERT INTO users (id, zitadel_id, email, full_name, tenant_id, active, created_at, updated_at)
         VALUES (
             '00000000-0000-0000-0000-000000000011',
-            'dev-zitadel-user-architect',
-            'arquiteto@tkws.local',
-            'Arquiteto Teste',
+            'dev-zitadel-user-comercial-atendimento',
+            'atendimento@tkws.local',
+            'Atendimento Comercial · Dev',
             tenant_dev_id,
             true,
             NOW(),

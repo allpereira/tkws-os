@@ -11,7 +11,7 @@ import { z } from 'zod'
  */
 export const oportunidadeSchema = z.object({
   id: z.string().uuid(),
-  tenantId: z.string().uuid(),
+  tenantId: z.number().int().positive(),
   pipelineId: z.string().uuid(),
   etapaId: z.string().uuid(),
   pessoaId: z.string().uuid().optional().nullable(),

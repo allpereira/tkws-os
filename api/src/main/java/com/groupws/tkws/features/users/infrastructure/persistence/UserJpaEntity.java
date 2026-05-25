@@ -26,7 +26,7 @@ class UserJpaEntity {
     String avatarUrl;
 
     @Column(name = "tenant_id")
-    UUID tenantId;
+    Long tenantId;
 
     @Column(name = "active", nullable = false)
     boolean active;
@@ -43,7 +43,7 @@ class UserJpaEntity {
     protected UserJpaEntity() {}
 
     UserJpaEntity(UUID id, String zitadelId, String email, String fullName, String avatarUrl,
-                  UUID tenantId, boolean active, Instant createdAt, Instant updatedAt, Instant lastLoginAt) {
+                  Long tenantId, boolean active, Instant createdAt, Instant updatedAt, Instant lastLoginAt) {
         this.id = id;
         this.zitadelId = zitadelId;
         this.email = email;

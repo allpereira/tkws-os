@@ -21,7 +21,7 @@ class PessoaJpaEntity {
     UUID id;
 
     @Column(name = "tenant_id", nullable = false)
-    UUID tenantId;
+    Long tenantId;
 
     @Column(name = "tipo_pessoa", nullable = false, length = 2)
     String tipoPessoa;

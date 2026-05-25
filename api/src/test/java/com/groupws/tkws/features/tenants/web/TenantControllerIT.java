@@ -63,7 +63,7 @@ class TenantControllerIT extends AbstractIntegrationTest {
     @DisplayName("POST /api/v1/tenants — deve retornar 403 sem role system_admin")
     void deveNegarSemRoleAdmin() {
         given()
-            .auth().oauth2(MockJwtConfig.tokenForArchitect())
+            .auth().oauth2(MockJwtConfig.tokenForComercialAtendimento())
             .contentType(ContentType.JSON)
             .body(Map.of(
                 "zitadelOrgId", "zitadel-org-x",

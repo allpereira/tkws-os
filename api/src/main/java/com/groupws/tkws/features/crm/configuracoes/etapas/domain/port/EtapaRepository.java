@@ -6,13 +6,12 @@ import com.groupws.tkws.features.crm.configuracoes.pipelines.domain.model.Pipeli
 
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 public interface EtapaRepository {
     Etapa save(Etapa etapa);
-    Optional<Etapa> findById(UUID tenantId, EtapaId id);
-    List<Etapa> listByPipeline(UUID tenantId, PipelineId pipelineId);
-    List<Etapa> listAll(UUID tenantId);
-    boolean existsByCodigo(UUID tenantId, String codigo);
-    void delete(UUID tenantId, EtapaId id);
+    Optional<Etapa> findById(long tenantId, EtapaId id);
+    List<Etapa> listByPipeline(long tenantId, PipelineId pipelineId);
+    List<Etapa> listAll(long tenantId);
+    boolean existsByCodigo(long tenantId, String codigo);
+    void delete(long tenantId, EtapaId id);
 }

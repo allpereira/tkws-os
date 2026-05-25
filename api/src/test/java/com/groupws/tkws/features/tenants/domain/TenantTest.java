@@ -3,6 +3,7 @@ package com.groupws.tkws.features.tenants.domain;
 import com.groupws.tkws.features.tenants.domain.event.TenantCreatedEvent;
 import com.groupws.tkws.features.tenants.domain.exception.InvalidTenantSlugException;
 import com.groupws.tkws.features.tenants.domain.model.Tenant;
+import com.groupws.tkws.features.tenants.domain.model.TenantId;
 import com.groupws.tkws.shared.domain.DomainEvent;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -22,20 +23,29 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * - Testam invariantes do domínio sem subir Spring/banco/etc
  * - Rápidos (centenas por segundo)
  * - Cada teste tem um comportamento isolado
+ *
+ * Estado transiente: `Tenant.create()` retorna agregado sem id; o id é
+ * atribuído pelo adapter de persistência após o INSERT via
+ * {@link Tenant#assignIdIfTransient}. Eventos só são registrados nesse momento.
+ * Os testes que precisam validar id/evento de criação simulam o adapter
+ * chamando `assignIdIfTransient(TenantId.of(1L))` explicitamente.
  */
 @DisplayName("Tenant — Aggregate Root")
 class TenantTest {
+
+    private static final TenantId PERSIST_ID = TenantId.of(1L);
 
     @Nested
     @DisplayName("ao criar")
     class WhenCreating {
 
         @Test
-        @DisplayName("deve criar tenant válido com defaults corretos")
+        @DisplayName("deve criar tenant transiente com defaults corretos")
         void deveCriarTenantValido() {
             Tenant tenant = Tenant.create("zitadel-org-123", "Studio Arquitetura X", "studio-x");
 
-            assertThat(tenant.id()).isNotNull();
+            assertThat(tenant.isTransient()).isTrue();
+            assertThat(tenant.idOpt()).isEmpty();
             assertThat(tenant.zitadelOrgId()).isEqualTo("zitadel-org-123");
             assertThat(tenant.name()).isEqualTo("Studio Arquitetura X");
             assertThat(tenant.slug()).isEqualTo("studio-x");
@@ -45,18 +55,43 @@ class TenantTest {
         }
 
         @Test
-        @DisplayName("deve registrar TenantCreatedEvent")
+        @DisplayName("deve registrar TenantCreatedEvent após assignIdIfTransient")
         void deveRegistrarEventoDeCriacao() {
             Tenant tenant = Tenant.create("org-1", "Nome", "slug-valido");
+            // antes da atribuição de id (adapter ainda não rodou) · sem evento
+            assertThat(tenant.peekDomainEvents()).isEmpty();
+
+            tenant.assignIdIfTransient(PERSIST_ID);
 
             List<DomainEvent> events = tenant.peekDomainEvents();
-
             assertThat(events).hasSize(1);
             assertThat(events.get(0)).isInstanceOf(TenantCreatedEvent.class);
             TenantCreatedEvent event = (TenantCreatedEvent) events.get(0);
-            assertThat(event.tenantId()).isEqualTo(tenant.id());
+            assertThat(event.tenantId()).isEqualTo(PERSIST_ID);
             assertThat(event.name()).isEqualTo("Nome");
             assertThat(event.slug()).isEqualTo("slug-valido");
+        }
+
+        @Test
+        @DisplayName("assignIdIfTransient deve ser idempotente · segunda chamada é no-op")
+        void assignIdIdempotente() {
+            Tenant tenant = Tenant.create("org-1", "Nome", "slug");
+            tenant.assignIdIfTransient(PERSIST_ID);
+            assertThat(tenant.peekDomainEvents()).hasSize(1);
+
+            tenant.assignIdIfTransient(TenantId.of(2L));
+
+            assertThat(tenant.id()).isEqualTo(PERSIST_ID);
+            assertThat(tenant.peekDomainEvents()).hasSize(1);
+        }
+
+        @Test
+        @DisplayName("id() em tenant transiente deve lançar IllegalStateException")
+        void idTransienteLanca() {
+            Tenant tenant = Tenant.create("org-1", "Nome", "slug");
+            assertThatThrownBy(tenant::id)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("transiente");
         }
 
         @ParameterizedTest
@@ -143,9 +178,10 @@ class TenantTest {
         }
 
         @Test
-        @DisplayName("pullDomainEvents deve retornar e limpar eventos")
+        @DisplayName("pullDomainEvents deve retornar e limpar eventos após assignIdIfTransient")
         void pullDeveLimparEventos() {
             Tenant tenant = Tenant.create("org-1", "Nome", "slug");
+            tenant.assignIdIfTransient(PERSIST_ID);
             assertThat(tenant.peekDomainEvents()).hasSize(1);
 
             List<DomainEvent> pulled = tenant.pullDomainEvents();

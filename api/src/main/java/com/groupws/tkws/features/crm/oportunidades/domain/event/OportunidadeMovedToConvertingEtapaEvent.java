@@ -20,11 +20,11 @@ public record OportunidadeMovedToConvertingEtapaEvent(
     UUID eventId,
     OportunidadeId oportunidadeId,
     PessoaId pessoaId,
-    UUID tenantId,
+    long tenantId,
     Instant occurredOn
 ) implements DomainEvent {
     public OportunidadeMovedToConvertingEtapaEvent(OportunidadeId oportunidadeId,
-                                                   PessoaId pessoaId, UUID tenantId,
+                                                   PessoaId pessoaId, long tenantId,
                                                    Instant occurredOn) {
         this(UUID.randomUUID(), oportunidadeId, pessoaId, tenantId, occurredOn);
     }

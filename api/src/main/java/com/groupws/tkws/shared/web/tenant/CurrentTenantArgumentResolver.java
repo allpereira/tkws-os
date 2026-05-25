@@ -16,7 +16,6 @@ import org.springframework.web.method.support.ModelAndViewContainer;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.UUID;
 
 /**
  * Resolve o parâmetro anotado com {@link CurrentTenant} em controllers.
@@ -26,6 +25,7 @@ import java.util.UUID;
  * 1. **Header X-Tenant-Id override**: se a request traz esse header E o
  *    usuário tem role SYSTEM_ADMIN, usa o header. Permite system admin
  *    atuar em qualquer tenant sem precisar trocar de organização.
+ *    O header é um BIGINT (id local do tenant).
  *
  * 2. **JWT claim**: lê `urn:zitadel:iam:user:resourceowner:id` direto do JWT
  *    (situação ideal · requer "User Info inside Access Token" habilitado no
@@ -59,12 +59,12 @@ public class CurrentTenantArgumentResolver implements HandlerMethodArgumentResol
     /** Header opcional que SYSTEM_ADMIN pode usar para atuar em outro tenant. */
     public static final String HEADER_TENANT_ID = "X-Tenant-Id";
 
-    private final TenantUuidResolver tenantUuidResolver;
+    private final TenantIdResolver tenantIdResolver;
     private final ZitadelOrgIdFromUserInfoClient userInfoFallback;
 
-    public CurrentTenantArgumentResolver(TenantUuidResolver tenantUuidResolver,
+    public CurrentTenantArgumentResolver(TenantIdResolver tenantIdResolver,
                                          ZitadelOrgIdFromUserInfoClient userInfoFallback) {
-        this.tenantUuidResolver = tenantUuidResolver;
+        this.tenantIdResolver = tenantIdResolver;
         this.userInfoFallback = userInfoFallback;
     }
 
@@ -93,7 +93,7 @@ public class CurrentTenantArgumentResolver implements HandlerMethodArgumentResol
                 throw new TenantAccessDeniedException(
                     "Header " + HEADER_TENANT_ID + " só pode ser usado por SYSTEM_ADMIN");
             }
-            UUID parsed = parseUuidOrThrow(headerTenantId);
+            long parsed = parseLongOrThrow(headerTenantId);
             String jwtOrgId = jwt != null ? jwt.getClaimAsString(ZITADEL_ORG_CLAIM) : null;
             return new TenantContext(parsed, "system-admin-override:" + jwtOrgId);
         }
@@ -124,7 +124,7 @@ public class CurrentTenantArgumentResolver implements HandlerMethodArgumentResol
         }
 
         final String resolvedOrgId = orgId;
-        UUID tenantId = tenantUuidResolver.resolveByZitadelOrgId(resolvedOrgId)
+        long tenantId = tenantIdResolver.resolveByZitadelOrgId(resolvedOrgId)
             .orElseThrow(() -> new MissingTenantContextException(
                 "Tenant local não encontrado para zitadel_org_id=" + resolvedOrgId));
 
@@ -145,12 +145,17 @@ public class CurrentTenantArgumentResolver implements HandlerMethodArgumentResol
             .anyMatch(a -> "ROLE_SYSTEM_ADMIN".equals(a.getAuthority()));
     }
 
-    private static UUID parseUuidOrThrow(String raw) {
+    private static long parseLongOrThrow(String raw) {
         try {
-            return UUID.fromString(raw.trim());
-        } catch (IllegalArgumentException e) {
+            long v = Long.parseLong(raw.trim());
+            if (v <= 0) {
+                throw new TenantAccessDeniedException(
+                    "Header " + HEADER_TENANT_ID + " deve ser positivo: " + raw);
+            }
+            return v;
+        } catch (NumberFormatException e) {
             throw new TenantAccessDeniedException(
-                "Header " + HEADER_TENANT_ID + " com UUID inválido: " + raw);
+                "Header " + HEADER_TENANT_ID + " com valor inválido (esperado BIGINT): " + raw);
         }
     }
 

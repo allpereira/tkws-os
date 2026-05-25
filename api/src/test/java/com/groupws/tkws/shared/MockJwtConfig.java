@@ -36,8 +36,17 @@ public class MockJwtConfig {
         return buildToken(List.of("org_admin"));
     }
 
-    public static String tokenForArchitect() {
-        return buildToken(List.of("architect"));
+    public static String tokenForComercialAtendimento() {
+        return buildToken(List.of("comercial_atendimento"));
+    }
+
+    public static String tokenForComercialProposta() {
+        return buildToken(List.of("comercial_proposta"));
+    }
+
+    /** Role base · usuário convidado sem permissões específicas além de ver os próprios dados. */
+    public static String tokenForDefault() {
+        return buildToken(List.of("default"));
     }
 
     public static String tokenWithNoRoles() {
@@ -47,16 +56,16 @@ public class MockJwtConfig {
     private static String buildToken(List<String> roles) {
         // Formato simbólico que o MockJwtDecoder reconhece.
         // Em testes reais não precisamos assinar de verdade.
-        return "mock-jwt:" + String.join(",", roles);
+        return "mock-jwt-" + String.join(",", roles);
     }
 
     public static class MockJwtDecoder implements JwtDecoder {
         @Override
         public Jwt decode(String token) throws JwtException {
-            if (!token.startsWith("mock-jwt:")) {
+            if (!token.startsWith("mock-jwt-")) {
                 throw new JwtException("Token mock inválido");
             }
-            String rolesPart = token.substring("mock-jwt:".length());
+            String rolesPart = token.substring("mock-jwt-".length());
             List<String> roles = rolesPart.isBlank()
                 ? List.of()
                 : List.of(rolesPart.split(","));

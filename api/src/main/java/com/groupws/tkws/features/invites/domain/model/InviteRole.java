@@ -7,12 +7,17 @@ import java.util.Locale;
  *
  * Espelha o conjunto definido em docs/04-AUTH.md seção "Roles do projeto".
  * SYSTEM_ADMIN é excluído porque só Group WS atribui esse role.
+ *
+ * `default` é a role base atribuída a qualquer convidado · o usuário entra
+ * podendo ver os próprios dados (ex.: /users/me) mas sem permissão em rotas
+ * com `@PreAuthorize`. Funciona como gate de UI · o frontend usa pra ligar
+ * menus/funcionalidades conforme as outras roles que o usuário tiver.
  */
 public enum InviteRole {
     ORG_ADMIN("org_admin"),
-    PROJECT_MANAGER("project_manager"),
-    ARCHITECT("architect"),
-    VIEWER("viewer");
+    COMERCIAL_ATENDIMENTO("comercial_atendimento"),
+    COMERCIAL_PROPOSTA("comercial_proposta"),
+    DEFAULT("default");
 
     private final String key;
 

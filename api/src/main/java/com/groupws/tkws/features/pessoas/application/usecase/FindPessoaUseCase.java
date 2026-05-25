@@ -9,7 +9,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.UUID;
 
 /**
  * Use case · buscar Pessoas (por ID ou listagem filtrada).
@@ -27,14 +26,14 @@ public class FindPessoaUseCase {
     }
 
     @Transactional(readOnly = true)
-    public PessoaView byId(UUID tenantId, PessoaId id) {
+    public PessoaView byId(long tenantId, PessoaId id) {
         return repository.findById(tenantId, id)
             .map(PessoaView::from)
             .orElseThrow(() -> new PessoaNotFoundException(id));
     }
 
     @Transactional(readOnly = true)
-    public List<PessoaView> list(UUID tenantId, StatusPessoa statusOuNull, int limit, int offset) {
+    public List<PessoaView> list(long tenantId, StatusPessoa statusOuNull, int limit, int offset) {
         return repository.list(tenantId, statusOuNull, limit, offset).stream()
             .map(PessoaView::from)
             .toList();

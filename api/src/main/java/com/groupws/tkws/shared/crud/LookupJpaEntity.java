@@ -15,6 +15,8 @@ import java.util.UUID;
  * Cobre: ofertas · tipos_empresa · unidades · setores · tipos_projeto
  *      · funcoes_pessoas · empreendimentos · tipos_pagamento.
  *
+ * `tenant_id` é o BIGINT local (PK em tenants.id).
+ *
  * Por que não temos um Aggregate Root próprio para cada uma? Ver
  * `docs/adr/ADR-020-lookup-tables-sem-domain-layer.md`.
  *
@@ -29,7 +31,7 @@ public abstract class LookupJpaEntity {
     protected UUID id;
 
     @Column(name = "tenant_id", nullable = false)
-    protected UUID tenantId;
+    protected Long tenantId;
 
     @Column(name = "codigo", nullable = false, length = 40)
     protected String codigo;
@@ -49,7 +51,7 @@ public abstract class LookupJpaEntity {
     protected LookupJpaEntity() {}
 
     public UUID getId() { return id; }
-    public UUID getTenantId() { return tenantId; }
+    public Long getTenantId() { return tenantId; }
     public String getCodigo() { return codigo; }
     public String getNome() { return nome; }
     public boolean isAtivo() { return ativo; }
@@ -61,7 +63,7 @@ public abstract class LookupJpaEntity {
      * quanto pelo update do controller genérico — controllers não precisam
      * conhecer a forma interna da entidade.
      */
-    public final void applyRequest(UUID tenantId, LookupRequest request, Instant now, boolean isCreate) {
+    public final void applyRequest(long tenantId, LookupRequest request, Instant now, boolean isCreate) {
         if (isCreate) {
             this.id = UUID.randomUUID();
             this.tenantId = tenantId;

@@ -8,7 +8,7 @@ import { z } from 'zod'
  */
 export const unidadeSchema = z.object({
   id: z.string().uuid(),
-  tenantId: z.string().uuid(),
+  tenantId: z.number().int().positive(),
   codigo: z.string().min(1).max(40),
   nome: z.string().min(1).max(120),
   ativo: z.boolean().default(true),

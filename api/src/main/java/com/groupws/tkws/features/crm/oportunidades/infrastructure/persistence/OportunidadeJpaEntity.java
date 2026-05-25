@@ -14,7 +14,7 @@ import java.util.UUID;
 @Table(name = "oportunidades")
 class OportunidadeJpaEntity {
     @Id @Column(name = "id", nullable = false, updatable = false) UUID id;
-    @Column(name = "tenant_id", nullable = false) UUID tenantId;
+    @Column(name = "tenant_id", nullable = false) Long tenantId;
     @Column(name = "pipeline_id", nullable = false) UUID pipelineId;
     @Column(name = "etapa_id", nullable = false) UUID etapaId;
     @Column(name = "pessoa_id") UUID pessoaId;

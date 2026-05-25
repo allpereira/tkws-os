@@ -3,7 +3,6 @@ package com.groupws.tkws.features.crm.oportunidades.domain.port;
 import com.groupws.tkws.features.crm.configuracoes.etapas.domain.model.EtapaId;
 
 import java.util.Optional;
-import java.util.UUID;
 
 /**
  * Port que o módulo de Oportunidades usa para consultar a flag
@@ -16,7 +15,7 @@ import java.util.UUID;
  * conhece sua estrutura interna · só pergunta uma coisa específica.
  */
 public interface EtapaLookup {
-    Optional<EtapaInfo> findEtapa(UUID tenantId, EtapaId etapaId);
+    Optional<EtapaInfo> findEtapa(long tenantId, EtapaId etapaId);
 
     record EtapaInfo(EtapaId id, boolean converteLeadEmCliente) {}
 }

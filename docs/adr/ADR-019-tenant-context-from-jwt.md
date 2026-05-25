@@ -6,9 +6,14 @@
 
 ## Contexto
 
+> **Atualização 2026-05-24**: após [ADR-021](ADR-021-tenant-id-bigint.md), o
+> tipo do `tenantId` mudou de `UUID` para `long` (BIGINT). O resto desta ADR
+> permanece válido — só os tipos foram atualizados: `TenantContext(long, String)`,
+> port renomeado `TenantUuidResolver` → `TenantIdResolver`.
+
 A versão inicial da feature `pessoas` recebia `tenantId` como `@RequestParam UUID tenantId` em todos os endpoints. Isso é um anti-pattern de segurança:
 
-1. **Adulteração trivial**: o cliente controla o valor, pode passar UUID de outro tenant e tentar acesso cruzado. Sem validação extra, vira escalonamento.
+1. **Adulteração trivial**: o cliente controla o valor, pode passar id de outro tenant e tentar acesso cruzado. Sem validação extra, vira escalonamento.
 2. **Cache poisoning**: query params aparecem em logs/access logs/cache HTTP. Tenant identification não deveria vazar lá.
 3. **Duplicação**: 100% dos endpoints precisam repetir o mesmo parâmetro.
 4. **Confusão semântica**: tenantId é *contexto* da request (quem está chamando), não *input* da operação (o que está sendo feito).
@@ -21,7 +26,9 @@ Em multi-tenancy bem feita, o tenant é deduzido do **identity provider**, não 
 
 A resolução segue esta ordem:
 
-1. **JWT-first**: lê o claim `urn:zitadel:iam:user:resourceowner:id` (padrão do Zitadel para "organização do usuário"). Faz lookup `zitadel_org_id → tenant_id (UUID local)` via `TenantUuidResolver` (cacheado em memória).
+1. **JWT-first**: lê o claim `urn:zitadel:iam:user:resourceowner:id` (padrão do Zitadel para "organização do usuário"). Faz lookup `zitadel_org_id → tenant_id (BIGINT local)` via `TenantIdResolver` (cacheado em memória).
+
+   Como o claim pode não vir no JWT (depende do app Zitadel ter "User Info inside Access Token" habilitado), há fallback: se o JWT não trouxer, o backend consulta `/oidc/v1/userinfo` no Zitadel com o próprio access token do usuário (ver `ZitadelOrgIdFromUserInfoClient`).
 
 2. **Header `X-Tenant-Id` override**: se a request traz esse header E o usuário tem role `SYSTEM_ADMIN`, usa o header como fonte. Permite system admin atuar em qualquer tenant sem precisar trocar de organização no Zitadel.
 
@@ -46,11 +53,12 @@ O `CreatePessoaRequest` (body) **não tem campo `tenantId`** — ele é injetado
 
 | Tipo | Local | Responsabilidade |
 |---|---|---|
-| `TenantContext` (record) | `shared/web/tenant/` | `(tenantId UUID, zitadelOrgId String)` |
+| `TenantContext` (record) | `shared/web/tenant/` | `(tenantId long, zitadelOrgId String)` |
 | `@CurrentTenant` (annotation) | `shared/web/tenant/` | Marca parâmetro de controller |
-| `CurrentTenantArgumentResolver` | `shared/web/tenant/` | Resolve a partir do JWT/header |
-| `TenantUuidResolver` (port) | `shared/web/tenant/` | `zitadel_org_id → tenant_id` |
-| `TenantUuidResolverAdapter` | `features/tenants/infrastructure/web/` | Implementa o port via `TenantRepository` + cache |
+| `CurrentTenantArgumentResolver` | `shared/web/tenant/` | Resolve a partir do JWT/header (e fallback UserInfo) |
+| `TenantIdResolver` (port) | `shared/web/tenant/` | `zitadel_org_id → tenant_id (BIGINT)` |
+| `TenantIdResolverAdapter` | `features/tenants/infrastructure/web/` | Implementa o port via `TenantRepository` + cache |
+| `ZitadelOrgIdFromUserInfoClient` | `features/users/web/` | Fallback `/oidc/v1/userinfo` quando claim não vem no JWT |
 | `MissingTenantContextException` | `shared/web/tenant/` | 422 Unprocessable Entity |
 | `TenantAccessDeniedException` | `shared/web/tenant/` | 403 Forbidden |
 | `TenantWebMvcConfig` | `shared/web/tenant/` | Registra o resolver no Spring MVC |
@@ -58,7 +66,7 @@ O `CreatePessoaRequest` (body) **não tem campo `tenantId`** — ele é injetado
 ## Alternativas consideradas
 
 ### A) `@RequestParam UUID tenantId` (REJEITADO) ❌
-Anti-pattern já descrito. Era o estado inicial.
+Anti-pattern já descrito. Era o estado inicial. Hoje, com BIGINT (ADR-021), o tipo seria `long` mas o vetor de ataque é idêntico — não é o tipo do id, é o canal (query/body) que é o problema.
 
 ### B) `@RequestHeader X-Tenant-Id` sempre obrigatório (REJEITADO)
 - Cliente esquece, requests falham.
@@ -86,7 +94,8 @@ Anti-pattern já descrito. Era o estado inicial.
 - Quando rodar via `curl` sem JWT, precisa passar header `X-Tenant-Id` E ter role SYSTEM_ADMIN no SecurityContext (em testes/dev).
 
 ### Trade-offs
-- Cache em memória do `TenantUuidResolverAdapter` não tem TTL ou invalidação. Aceitável porque tenants não mudam de `zitadel_org_id`. Se for deletar tenant um dia, precisamos de bus de invalidação.
+- Cache em memória do `TenantIdResolverAdapter` não tem TTL ou invalidação. Aceitável porque tenants não mudam de `zitadel_org_id`. Se for deletar tenant um dia, precisamos de bus de invalidação.
+- O fallback `/userinfo` adiciona uma chamada HTTP extra ao Zitadel quando o claim não vem no JWT. Mitigação: cacheado por subject; resolução normal (JWT-first) não paga esse custo.
 
 ## Aplicação retroativa
 
@@ -96,7 +105,8 @@ Anti-pattern já descrito. Era o estado inicial.
 
 ## Relacionado
 
+- [ADR-021](ADR-021-tenant-id-bigint.md) · `tenants.id` como BIGINT (tipo do `tenantId`)
 - [ADR-018](ADR-018-pessoas-unificadas.md) · Pessoas unificadas
 - [ADR-004](ADR-004-zitadel-auth.md) · Zitadel como IdP
-- [docs/04-AUTH.md](../04-AUTH.md) · Fluxo de autenticação
+- [docs/04-AUTH.md](../04-AUTH.md) · Fluxo de autenticação (§ 4.1 traz o scope OIDC necessário para o claim)
 - [docs/08-SECURITY.md](../08-SECURITY.md) · Modelo de segurança

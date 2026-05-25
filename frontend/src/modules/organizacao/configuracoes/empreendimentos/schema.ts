@@ -3,7 +3,7 @@ import { z } from 'zod'
 /** Empreendimentos · prédios e condomínios onde projetos são executados. */
 export const empreendimentoSchema = z.object({
   id: z.string().uuid(),
-  tenantId: z.string().uuid(),
+  tenantId: z.number().int().positive(),
   codigo: z.string().min(1).max(40),
   nome: z.string().min(1).max(160),
   ativo: z.boolean().default(true),

@@ -7,7 +7,7 @@ export const tenantsApi = {
     return data;
   },
 
-  async findById(id: string): Promise<Tenant> {
+  async findById(id: number): Promise<Tenant> {
     const { data } = await api.get<Tenant>(`/api/v1/tenants/${id}`);
     return data;
   },

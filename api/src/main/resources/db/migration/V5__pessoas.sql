@@ -19,7 +19,7 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 CREATE TABLE pessoas (
     id               UUID PRIMARY KEY,
-    tenant_id        UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    tenant_id        BIGINT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
 
     tipo_pessoa      VARCHAR(2) NOT NULL,
     documento        VARCHAR(20),

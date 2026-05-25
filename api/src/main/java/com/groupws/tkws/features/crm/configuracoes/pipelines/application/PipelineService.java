@@ -10,7 +10,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.UUID;
 
 @Service
 public class PipelineService {
@@ -22,19 +21,19 @@ public class PipelineService {
     }
 
     @Transactional(readOnly = true)
-    public List<PipelineView> list(UUID tenantId, ModuloPipeline filtro) {
+    public List<PipelineView> list(long tenantId, ModuloPipeline filtro) {
         return repository.list(tenantId, filtro).stream().map(PipelineView::from).toList();
     }
 
     @Transactional(readOnly = true)
-    public PipelineView findById(UUID tenantId, PipelineId id) {
+    public PipelineView findById(long tenantId, PipelineId id) {
         return repository.findById(tenantId, id)
             .map(PipelineView::from)
             .orElseThrow(() -> new PipelineNotFoundException(id));
     }
 
     @Transactional
-    public PipelineView create(UUID tenantId, String codigo, String nome, String descricao,
+    public PipelineView create(long tenantId, String codigo, String nome, String descricao,
                                ModuloPipeline modulo, int ordem, boolean ativo) {
         if (repository.existsByCodigo(tenantId, codigo)) {
             throw new PipelineCodigoDuplicadoException(codigo);
@@ -44,7 +43,7 @@ public class PipelineService {
     }
 
     @Transactional
-    public PipelineView update(UUID tenantId, PipelineId id, String codigo, String nome,
+    public PipelineView update(long tenantId, PipelineId id, String codigo, String nome,
                                String descricao, ModuloPipeline modulo, int ordem, boolean ativo) {
         Pipeline pipeline = repository.findById(tenantId, id)
             .orElseThrow(() -> new PipelineNotFoundException(id));
@@ -56,7 +55,7 @@ public class PipelineService {
     }
 
     @Transactional
-    public void remove(UUID tenantId, PipelineId id) {
+    public void remove(long tenantId, PipelineId id) {
         repository.delete(tenantId, id);
     }
 }

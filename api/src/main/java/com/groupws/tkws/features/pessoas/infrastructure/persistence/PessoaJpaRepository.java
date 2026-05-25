@@ -11,11 +11,11 @@ import java.util.UUID;
 
 interface PessoaJpaRepository extends JpaRepository<PessoaJpaEntity, UUID> {
 
-    Optional<PessoaJpaEntity> findByIdAndTenantId(UUID id, UUID tenantId);
+    Optional<PessoaJpaEntity> findByIdAndTenantId(UUID id, Long tenantId);
 
-    Optional<PessoaJpaEntity> findByTenantIdAndDocumento(UUID tenantId, String documento);
+    Optional<PessoaJpaEntity> findByTenantIdAndDocumento(Long tenantId, String documento);
 
-    boolean existsByTenantIdAndDocumento(UUID tenantId, String documento);
+    boolean existsByTenantIdAndDocumento(Long tenantId, String documento);
 
     /**
      * Soft match · email OU celular (qualquer um). NULL não conta como match.
@@ -30,7 +30,7 @@ interface PessoaJpaRepository extends JpaRepository<PessoaJpaEntity, UUID> {
         ORDER BY p.createdAt DESC
     """)
     List<PessoaJpaEntity> findByEmailOrCelular(
-        @Param("tenantId") UUID tenantId,
+        @Param("tenantId") Long tenantId,
         @Param("email") String email,
         @Param("celular") String celular
     );
@@ -42,7 +42,7 @@ interface PessoaJpaRepository extends JpaRepository<PessoaJpaEntity, UUID> {
         ORDER BY p.createdAt DESC
     """)
     List<PessoaJpaEntity> list(
-        @Param("tenantId") UUID tenantId,
+        @Param("tenantId") Long tenantId,
         @Param("status") String status,
         Pageable pageable
     );

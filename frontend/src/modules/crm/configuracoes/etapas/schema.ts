@@ -3,7 +3,7 @@ import { z } from 'zod'
 /** Etapas · cada pipeline tem N etapas · representam colunas no Kanban. */
 export const etapaSchema = z.object({
   id: z.string().uuid(),
-  tenantId: z.string().uuid(),
+  tenantId: z.number().int().positive(),
   pipelineId: z.string().uuid(),
   nome: z.string().min(1).max(80),
   descricao: z.string().max(280).optional().nullable(),

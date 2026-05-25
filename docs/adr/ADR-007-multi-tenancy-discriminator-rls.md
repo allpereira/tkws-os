@@ -1,8 +1,14 @@
 # ADR-007: Multi-tenancy via discriminator + Row Level Security
 
-**Status:** Accepted
+**Status:** Accepted (tipo do discriminator atualizado em [ADR-021](ADR-021-tenant-id-bigint.md))
 **Data:** 2025-05
 **Decisores:** Allysson
+
+> **Atualização 2026-05-24**: o tipo do discriminator mudou de `UUID` para `BIGINT`
+> em [ADR-021](ADR-021-tenant-id-bigint.md). Os exemplos abaixo ainda mostram
+> `UUID` para preservar o registro histórico — em código novo use
+> `tenant_id BIGINT NOT NULL REFERENCES tenants(id)`. Quando o RLS for ativado
+> (ainda pendente), a session var será `BIGINT` também.
 
 ## Contexto
 

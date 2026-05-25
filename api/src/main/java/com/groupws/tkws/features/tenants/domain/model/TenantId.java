@@ -1,32 +1,28 @@
 package com.groupws.tkws.features.tenants.domain.model;
 
-import java.util.Objects;
-import java.util.UUID;
-
 /**
- * Value Object representando o identificador único de um Tenant.
- * Tipado fortemente para evitar confusão entre IDs de diferentes agregados.
+ * Value Object · identificador único de um Tenant.
+ *
+ * BIGINT local em vez de UUID porque tenantId aparece em todas as FKs e
+ * responses · economia de espaço + index reads mais rápidos. Ver
+ * `V1__initial_schema.sql` e ADR-019.
+ *
+ * O id externo (Zitadel `org_id`) fica em `Tenant.zitadelOrgId`, opaco.
  */
-public record TenantId(UUID value) {
+public record TenantId(long value) {
 
     public TenantId {
-        Objects.requireNonNull(value, "TenantId value");
+        if (value <= 0) {
+            throw new IllegalArgumentException("TenantId deve ser positivo · recebeu: " + value);
+        }
     }
 
-    public static TenantId generate() {
-        return new TenantId(UUID.randomUUID());
-    }
-
-    public static TenantId of(UUID uuid) {
-        return new TenantId(uuid);
-    }
-
-    public static TenantId of(String uuid) {
-        return new TenantId(UUID.fromString(uuid));
+    public static TenantId of(long v) {
+        return new TenantId(v);
     }
 
     @Override
     public String toString() {
-        return value.toString();
+        return Long.toString(value);
     }
 }

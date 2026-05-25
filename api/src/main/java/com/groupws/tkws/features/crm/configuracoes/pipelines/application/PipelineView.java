@@ -7,7 +7,7 @@ import java.util.UUID;
 
 public record PipelineView(
     UUID id,
-    UUID tenantId,
+    long tenantId,
     String codigo,
     String nome,
     String descricao,

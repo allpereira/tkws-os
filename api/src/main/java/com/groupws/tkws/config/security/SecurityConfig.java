@@ -3,6 +3,7 @@ package com.groupws.tkws.config.security;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -57,7 +58,16 @@ public class SecurityConfig {
         return http.build();
     }
 
+    /**
+     * Decoder real · roda em todos os profiles exceto `test`.
+     *
+     * `NimbusJwtDecoder.withIssuerLocation(...)` faz round-trip HTTP no
+     * startup para descobrir as chaves do issuer. Em testes isso falha
+     * (não há Zitadel real); por isso ITs ativam profile `test` e o bean é
+     * substituído por {@link com.groupws.tkws.shared.MockJwtConfig#mockJwtDecoder()}.
+     */
     @Bean
+    @Profile("!test")
     public JwtDecoder jwtDecoder() {
         return NimbusJwtDecoder.withIssuerLocation(issuerUri).build();
     }

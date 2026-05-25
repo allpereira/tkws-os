@@ -7,10 +7,12 @@ import com.groupws.tkws.shared.domain.AggregateRoot;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.UUID;
 
 /**
  * Aggregate Root · cadastro único de Pessoa (PF/PJ) no funil comercial.
+ *
+ * `tenantId` é o BIGINT local (PK em tenants.id · multi-tenancy resolvida via
+ * {@link com.groupws.tkws.shared.web.tenant.CurrentTenant}, nunca via payload).
  *
  * Estados:
  *   LEAD     · inicial · ainda não fechou proposta
@@ -18,19 +20,12 @@ import java.util.UUID;
  *              disparado quando uma Oportunidade entra em etapa marcada
  *              como conversão)
  *
- * Invariantes:
- *   - `nomeContato` não pode ser vazio
- *   - Se PJ, `nomeEmpresa` recomendado (não obrigatório no domínio · UI pede)
- *   - `documento` opcional · quando preenchido, deve casar com `tipoPessoa`
- *     (CPF=11 dígitos para PF, CNPJ=14 dígitos para PJ — validado pelo VO Documento)
- *   - `convertedoEm` só é preenchido quando `status == CLIENTE`
- *
  * Ver ADR-018.
  */
 public final class Pessoa extends AggregateRoot<PessoaId> {
 
     private final PessoaId id;
-    private final UUID tenantId;
+    private final long tenantId;
 
     private TipoPessoa tipoPessoa;
     private Documento documento;        // opcional · null quando ainda não informado
@@ -52,13 +47,16 @@ public final class Pessoa extends AggregateRoot<PessoaId> {
     private final Instant createdAt;
     private Instant updatedAt;
 
-    private Pessoa(PessoaId id, UUID tenantId, TipoPessoa tipoPessoa, Documento documento,
+    private Pessoa(PessoaId id, long tenantId, TipoPessoa tipoPessoa, Documento documento,
                    String nomeContato, String emailContato, String celularContato, String nomeEmpresa,
                    StatusPessoa status, Instant convertidoEm,
                    String endereco, String cidade, String uf, String cep, String notas,
                    Instant createdAt, Instant updatedAt) {
         this.id = Objects.requireNonNull(id, "id");
-        this.tenantId = Objects.requireNonNull(tenantId, "tenantId");
+        if (tenantId <= 0) {
+            throw new IllegalArgumentException("tenantId deve ser positivo · recebeu: " + tenantId);
+        }
+        this.tenantId = tenantId;
         this.tipoPessoa = Objects.requireNonNull(tipoPessoa, "tipoPessoa");
         this.documento = documento;
         this.nomeContato = validateNome(nomeContato);
@@ -80,7 +78,7 @@ public final class Pessoa extends AggregateRoot<PessoaId> {
      * Factory · cria uma Pessoa nova como LEAD.
      * Use case de criação deve verificar duplicidade de documento ANTES.
      */
-    public static Pessoa createLead(UUID tenantId, TipoPessoa tipoPessoa, Documento documento,
+    public static Pessoa createLead(long tenantId, TipoPessoa tipoPessoa, Documento documento,
                                     String nomeContato, String emailContato,
                                     String celularContato, String nomeEmpresa) {
         Instant now = Instant.now();
@@ -97,7 +95,7 @@ public final class Pessoa extends AggregateRoot<PessoaId> {
     }
 
     /** Factory de reconstrução · usado pelo adapter de persistência (não emite eventos). */
-    public static Pessoa reconstitute(PessoaId id, UUID tenantId, TipoPessoa tipoPessoa,
+    public static Pessoa reconstitute(PessoaId id, long tenantId, TipoPessoa tipoPessoa,
                                       Documento documento, String nomeContato, String emailContato,
                                       String celularContato, String nomeEmpresa,
                                       StatusPessoa status, Instant convertidoEm,
@@ -169,7 +167,7 @@ public final class Pessoa extends AggregateRoot<PessoaId> {
     // ============ Getters ============
 
     @Override public PessoaId id() { return id; }
-    public UUID tenantId() { return tenantId; }
+    public long tenantId() { return tenantId; }
     public TipoPessoa tipoPessoa() { return tipoPessoa; }
     public Optional<Documento> documento() { return Optional.ofNullable(documento); }
     public String nomeContato() { return nomeContato; }

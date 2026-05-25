@@ -10,7 +10,7 @@
 
 CREATE TABLE invites (
     id                  UUID PRIMARY KEY,
-    tenant_id           UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    tenant_id           BIGINT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     email               VARCHAR(255) NOT NULL,
     full_name           VARCHAR(255),
     role                VARCHAR(50) NOT NULL,
@@ -29,7 +29,7 @@ CREATE TABLE invites (
     -- o convidado aceitar.
     zitadel_user_id     VARCHAR(255),
     CONSTRAINT chk_invite_status CHECK (status IN ('PENDING','ACCEPTED','EXPIRED','REVOKED')),
-    CONSTRAINT chk_invite_role   CHECK (role IN ('org_admin','project_manager','architect','viewer'))
+    CONSTRAINT chk_invite_role   CHECK (role IN ('org_admin','comercial_atendimento','comercial_proposta','default'))
 );
 
 -- Um único invite PENDING por (tenant, email). Convites já aceitos/revogados não

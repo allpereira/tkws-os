@@ -4,7 +4,7 @@ import type { CreateTenantInput } from '@/modules/plataforma/tenants/types/tenan
 
 export const tenantKeys = {
   all: ['tenants'] as const,
-  detail: (id: string) => ['tenants', 'detail', id] as const,
+  detail: (id: number) => ['tenants', 'detail', id] as const,
   bySlug: (slug: string) => ['tenants', 'by-slug', slug] as const,
 };
 
@@ -16,11 +16,11 @@ export function useTenantBySlug(slug: string, enabled = true) {
   });
 }
 
-export function useTenantById(id: string, enabled = true) {
+export function useTenantById(id: number, enabled = true) {
   return useQuery({
     queryKey: tenantKeys.detail(id),
     queryFn: () => tenantsApi.findById(id),
-    enabled: enabled && id.length > 0,
+    enabled: enabled && id > 0,
   });
 }
 

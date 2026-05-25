@@ -20,11 +20,11 @@ import java.util.UUID;
 @NoRepositoryBean
 public interface LookupRepository<E extends LookupJpaEntity> extends JpaRepository<E, UUID> {
 
-    Optional<E> findByIdAndTenantId(UUID id, UUID tenantId);
+    Optional<E> findByIdAndTenantId(UUID id, Long tenantId);
 
-    List<E> findByTenantIdOrderByNomeAsc(UUID tenantId);
+    List<E> findByTenantIdOrderByNomeAsc(Long tenantId);
 
-    Optional<E> findByTenantIdAndCodigo(UUID tenantId, String codigo);
+    Optional<E> findByTenantIdAndCodigo(Long tenantId, String codigo);
 
-    boolean existsByTenantIdAndCodigo(UUID tenantId, String codigo);
+    boolean existsByTenantIdAndCodigo(Long tenantId, String codigo);
 }

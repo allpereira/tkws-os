@@ -6,12 +6,11 @@ import com.groupws.tkws.features.crm.configuracoes.pipelines.domain.model.Pipeli
 
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 public interface PipelineRepository {
     Pipeline save(Pipeline pipeline);
-    Optional<Pipeline> findById(UUID tenantId, PipelineId id);
-    List<Pipeline> list(UUID tenantId, ModuloPipeline filtro);
-    boolean existsByCodigo(UUID tenantId, String codigo);
-    void delete(UUID tenantId, PipelineId id);
+    Optional<Pipeline> findById(long tenantId, PipelineId id);
+    List<Pipeline> list(long tenantId, ModuloPipeline filtro);
+    boolean existsByCodigo(long tenantId, String codigo);
+    void delete(long tenantId, PipelineId id);
 }

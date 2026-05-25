@@ -3,7 +3,7 @@ import { z } from 'zod'
 /** Ofertas · catálogo de serviços/itens que a TKWS oferece aos clientes · usados em propostas e orçamentos. */
 export const ofertaSchema = z.object({
   id: z.string().uuid(),
-  tenantId: z.string().uuid(),
+  tenantId: z.number().int().positive(),
   codigo: z.string().min(1).max(40),
   nome: z.string().min(1).max(160),
   ativo: z.boolean().default(true),

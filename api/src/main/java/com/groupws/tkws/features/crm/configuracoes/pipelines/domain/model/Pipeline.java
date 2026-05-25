@@ -4,10 +4,12 @@ import com.groupws.tkws.shared.domain.AggregateRoot;
 
 import java.time.Instant;
 import java.util.Objects;
-import java.util.UUID;
 
 /**
  * Aggregate Root · Pipeline (funil) de Atendimento ou Proposta.
+ *
+ * `tenantId` é o BIGINT local (PK em tenants.id) · resolvido pelo
+ * {@link com.groupws.tkws.shared.web.tenant.CurrentTenant}.
  *
  * Tem `modulo` (define onde aparece na UI) + ordem + descricao + ativo.
  * Diferente das lookup tables (ADR-020) porque carrega comportamento e
@@ -17,7 +19,7 @@ import java.util.UUID;
 public final class Pipeline extends AggregateRoot<PipelineId> {
 
     private final PipelineId id;
-    private final UUID tenantId;
+    private final long tenantId;
     private String codigo;
     private String nome;
     private String descricao;
@@ -27,11 +29,14 @@ public final class Pipeline extends AggregateRoot<PipelineId> {
     private final Instant createdAt;
     private Instant updatedAt;
 
-    private Pipeline(PipelineId id, UUID tenantId, String codigo, String nome, String descricao,
+    private Pipeline(PipelineId id, long tenantId, String codigo, String nome, String descricao,
                      ModuloPipeline modulo, int ordem, boolean ativo,
                      Instant createdAt, Instant updatedAt) {
         this.id = Objects.requireNonNull(id);
-        this.tenantId = Objects.requireNonNull(tenantId);
+        if (tenantId <= 0) {
+            throw new IllegalArgumentException("tenantId deve ser positivo · recebeu: " + tenantId);
+        }
+        this.tenantId = tenantId;
         this.codigo = required(codigo, "codigo");
         this.nome = required(nome, "nome");
         this.descricao = blankToNull(descricao);
@@ -42,14 +47,14 @@ public final class Pipeline extends AggregateRoot<PipelineId> {
         this.updatedAt = Objects.requireNonNull(updatedAt);
     }
 
-    public static Pipeline create(UUID tenantId, String codigo, String nome, String descricao,
+    public static Pipeline create(long tenantId, String codigo, String nome, String descricao,
                                   ModuloPipeline modulo, int ordem, boolean ativo) {
         Instant now = Instant.now();
         return new Pipeline(PipelineId.generate(), tenantId, codigo, nome, descricao,
             modulo, ordem, ativo, now, now);
     }
 
-    public static Pipeline reconstitute(PipelineId id, UUID tenantId, String codigo, String nome,
+    public static Pipeline reconstitute(PipelineId id, long tenantId, String codigo, String nome,
                                         String descricao, ModuloPipeline modulo, int ordem,
                                         boolean ativo, Instant createdAt, Instant updatedAt) {
         return new Pipeline(id, tenantId, codigo, nome, descricao, modulo, ordem, ativo,
@@ -81,7 +86,7 @@ public final class Pipeline extends AggregateRoot<PipelineId> {
     }
 
     @Override public PipelineId id() { return id; }
-    public UUID tenantId() { return tenantId; }
+    public long tenantId() { return tenantId; }
     public String codigo() { return codigo; }
     public String nome() { return nome; }
     public String descricao() { return descricao; }

@@ -7,7 +7,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 interface OportunidadeJpaRepository extends JpaRepository<OportunidadeJpaEntity, UUID> {
-    Optional<OportunidadeJpaEntity> findByIdAndTenantId(UUID id, UUID tenantId);
-    List<OportunidadeJpaEntity> findByTenantIdAndPipelineIdOrderByUpdatedAtDesc(UUID tenantId, UUID pipelineId);
-    List<OportunidadeJpaEntity> findByTenantIdOrderByUpdatedAtDesc(UUID tenantId);
+    Optional<OportunidadeJpaEntity> findByIdAndTenantId(UUID id, Long tenantId);
+    List<OportunidadeJpaEntity> findByTenantIdAndPipelineIdOrderByUpdatedAtDesc(Long tenantId, UUID pipelineId);
+    List<OportunidadeJpaEntity> findByTenantIdOrderByUpdatedAtDesc(Long tenantId);
 }

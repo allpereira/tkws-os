@@ -8,7 +8,6 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 @Repository
 class PipelineJpaRepositoryAdapter implements PipelineRepository {
@@ -36,12 +35,12 @@ class PipelineJpaRepositoryAdapter implements PipelineRepository {
     }
 
     @Override
-    public Optional<Pipeline> findById(UUID tenantId, PipelineId id) {
+    public Optional<Pipeline> findById(long tenantId, PipelineId id) {
         return jpa.findByIdAndTenantId(id.value(), tenantId).map(this::toDomain);
     }
 
     @Override
-    public List<Pipeline> list(UUID tenantId, ModuloPipeline filtro) {
+    public List<Pipeline> list(long tenantId, ModuloPipeline filtro) {
         List<PipelineJpaEntity> entities = filtro == null
             ? jpa.findByTenantIdOrderByOrdemAscNomeAsc(tenantId)
             : jpa.findByTenantIdAndModuloOrderByOrdemAscNomeAsc(tenantId, filtro.dbValue());
@@ -49,12 +48,12 @@ class PipelineJpaRepositoryAdapter implements PipelineRepository {
     }
 
     @Override
-    public boolean existsByCodigo(UUID tenantId, String codigo) {
+    public boolean existsByCodigo(long tenantId, String codigo) {
         return jpa.existsByTenantIdAndCodigo(tenantId, codigo);
     }
 
     @Override
-    public void delete(UUID tenantId, PipelineId id) {
+    public void delete(long tenantId, PipelineId id) {
         jpa.findByIdAndTenantId(id.value(), tenantId).ifPresent(jpa::delete);
     }
 

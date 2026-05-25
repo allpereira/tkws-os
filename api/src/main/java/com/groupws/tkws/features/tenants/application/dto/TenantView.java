@@ -3,10 +3,9 @@ package com.groupws.tkws.features.tenants.application.dto;
 import com.groupws.tkws.features.tenants.domain.model.Tenant;
 
 import java.time.Instant;
-import java.util.UUID;
 
 public record TenantView(
-    UUID id,
+    long id,
     String zitadelOrgId,
     String name,
     String slug,

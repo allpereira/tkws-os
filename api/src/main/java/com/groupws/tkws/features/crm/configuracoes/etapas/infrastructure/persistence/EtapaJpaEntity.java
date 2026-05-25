@@ -12,7 +12,7 @@ import java.util.UUID;
 @Table(name = "etapas")
 class EtapaJpaEntity {
     @Id @Column(name = "id", nullable = false, updatable = false) UUID id;
-    @Column(name = "tenant_id", nullable = false) UUID tenantId;
+    @Column(name = "tenant_id", nullable = false) Long tenantId;
     @Column(name = "pipeline_id", nullable = false) UUID pipelineId;
     @Column(name = "codigo", nullable = false, length = 40) String codigo;
     @Column(name = "nome", nullable = false, length = 80) String nome;

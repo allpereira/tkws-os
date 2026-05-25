@@ -35,7 +35,9 @@ git checkout -b feature/orcamento-mvp
 ### 1. Migration Flyway
 
 - [ ] Cria `api/src/main/resources/db/migration/V{N}__orcamento.sql`
-- [ ] Inclui `tenant_id UUID NOT NULL` se for tabela multi-tenant
+- [ ] Inclui `tenant_id BIGINT NOT NULL REFERENCES tenants(id)` se for tabela
+      multi-tenant (ver [ADR-021](adr/ADR-021-tenant-id-bigint.md) — `tenants.id`
+      é BIGINT, não UUID)
 - [ ] Inclui `created_at`, `updated_at` TIMESTAMPTZ
 - [ ] Cria índices nas colunas filtradas (`tenant_id`, FKs, status, etc)
 - [ ] Sem `DROP` em migration nova (use anti-padrão)
@@ -44,7 +46,7 @@ git checkout -b feature/orcamento-mvp
 -- V2__orcamento.sql
 CREATE TABLE orcamentos (
     id          UUID PRIMARY KEY,
-    tenant_id   UUID NOT NULL REFERENCES tenants(id),
+    tenant_id   BIGINT NOT NULL REFERENCES tenants(id),
     name        VARCHAR(255) NOT NULL,
     status      VARCHAR(50) NOT NULL,
     total       NUMERIC(12,2) NOT NULL,

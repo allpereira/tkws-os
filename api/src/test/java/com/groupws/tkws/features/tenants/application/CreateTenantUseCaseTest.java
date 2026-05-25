@@ -6,6 +6,7 @@ import com.groupws.tkws.features.tenants.application.usecase.CreateTenantUseCase
 import com.groupws.tkws.features.tenants.domain.event.TenantCreatedEvent;
 import com.groupws.tkws.features.tenants.domain.exception.TenantSlugAlreadyTakenException;
 import com.groupws.tkws.features.tenants.domain.model.Tenant;
+import com.groupws.tkws.features.tenants.domain.model.TenantId;
 import com.groupws.tkws.features.tenants.domain.port.TenantRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -22,6 +23,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+/**
+ * Em produção o adapter de persistência chama `assignIdIfTransient` após o
+ * INSERT (quando o BIGINT IDENTITY é gerado). Os mocks aqui simulam isso —
+ * cada `save` atribui um id sintético e retorna o mesmo agregado.
+ */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("CreateTenantUseCase")
 class CreateTenantUseCaseTest {
@@ -38,24 +44,33 @@ class CreateTenantUseCaseTest {
         validCommand = new CreateTenantCommand("zitadel-org-123", "Studio X", "studio-x");
     }
 
+    private static Tenant simulateAdapterAssignsId(org.mockito.invocation.InvocationOnMock inv) {
+        Tenant t = inv.getArgument(0);
+        t.assignIdIfTransient(TenantId.of(1L));
+        return t;
+    }
+
     @Test
     @DisplayName("deve criar tenant quando slug não existir")
     void deveCriarTenant() {
         when(tenantRepository.existsBySlug("studio-x")).thenReturn(false);
-        when(tenantRepository.save(any(Tenant.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(tenantRepository.save(any(Tenant.class)))
+            .thenAnswer(CreateTenantUseCaseTest::simulateAdapterAssignsId);
 
         TenantView result = useCase.execute(validCommand);
 
         assertThat(result.slug()).isEqualTo("studio-x");
         assertThat(result.name()).isEqualTo("Studio X");
         assertThat(result.active()).isTrue();
+        assertThat(result.id()).isEqualTo(1L);
     }
 
     @Test
     @DisplayName("deve persistir o tenant via repository")
     void devePersistir() {
         when(tenantRepository.existsBySlug(any())).thenReturn(false);
-        when(tenantRepository.save(any(Tenant.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(tenantRepository.save(any(Tenant.class)))
+            .thenAnswer(CreateTenantUseCaseTest::simulateAdapterAssignsId);
 
         useCase.execute(validCommand);
 
@@ -68,7 +83,8 @@ class CreateTenantUseCaseTest {
     @DisplayName("deve publicar TenantCreatedEvent após persistir")
     void devePublicarEvento() {
         when(tenantRepository.existsBySlug(any())).thenReturn(false);
-        when(tenantRepository.save(any(Tenant.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(tenantRepository.save(any(Tenant.class)))
+            .thenAnswer(CreateTenantUseCaseTest::simulateAdapterAssignsId);
 
         useCase.execute(validCommand);
 

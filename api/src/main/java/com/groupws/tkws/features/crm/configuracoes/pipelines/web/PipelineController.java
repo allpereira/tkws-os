@@ -25,7 +25,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/crm/pipelines")
-@PreAuthorize("hasAnyRole('ORG_ADMIN', 'PROJECT_MANAGER', 'ARCHITECT')")
+@PreAuthorize("hasRole('ORG_ADMIN')")
 class PipelineController {
 
     private final PipelineService service;

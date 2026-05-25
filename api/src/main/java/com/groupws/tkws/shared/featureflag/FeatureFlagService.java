@@ -15,6 +15,8 @@ import java.util.UUID;
  * Cache em memória (Caffeine via Spring Cache) com TTL de 60s — flags raramente mudam,
  * e 60s de propagação após mudança no banco é aceitável.
  *
+ * `tenantId` é BIGINT local (PK em tenants.id).
+ *
  * Uso típico em controllers/use cases:
  *
  *   if (featureFlags.isEnabled("crm-leads-v1", tenantId)) {
@@ -43,8 +45,8 @@ public class FeatureFlagService {
                 rs.getString("name"),
                 rs.getString("description"),
                 rs.getBoolean("default_enabled"),
-                Arrays.asList((UUID[]) rs.getArray("enabled_for_tenants").getArray()),
-                Arrays.asList((UUID[]) rs.getArray("disabled_for_tenants").getArray())
+                Arrays.asList((Long[]) rs.getArray("enabled_for_tenants").getArray()),
+                Arrays.asList((Long[]) rs.getArray("disabled_for_tenants").getArray())
             ),
             name
         );
@@ -55,7 +57,7 @@ public class FeatureFlagService {
      * Checa se a feature está habilitada para o tenant.
      * Flag não encontrada = retorna false (fail-closed).
      */
-    public boolean isEnabled(String flagName, UUID tenantId) {
+    public boolean isEnabled(String flagName, Long tenantId) {
         return findByName(flagName)
             .map(flag -> flag.isEnabledFor(tenantId))
             .orElse(false);

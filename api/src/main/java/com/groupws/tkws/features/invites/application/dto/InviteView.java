@@ -12,7 +12,7 @@ import java.util.UUID;
  */
 public record InviteView(
     UUID id,
-    UUID tenantId,
+    long tenantId,
     String email,
     String fullName,
     String role,

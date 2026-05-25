@@ -51,6 +51,14 @@ else
     warn "Falha ao extrair PAT — sem ele a Session API responde 401. Rode manualmente quando o Zitadel ficar healthy."
 fi
 
+# ── 2c. Seed Zitadel (project TKWS OS + app Web + roles + sync .env.local) ────
+# Idempotente: roda toda subida pra garantir que .env.local tem o client_id correto
+# e que o estado de aplicação está consistente. Falhas em writes (precisam de
+# ORG_OWNER) são apenas avisos. Ver docs/04-AUTH.md § "Reset Zitadel do zero".
+info "Aplicando seed do Zitadel (idempotente)..."
+bash "$ROOT_DIR/scripts/zitadel-seed.sh" 2>&1 | sed 's/^/  /' || \
+  warn "Seed do Zitadel teve falhas (ver acima). Pode ser primeira execução · siga docs/04-AUTH.md § Reset Zitadel."
+
 # ── 3. Login app (porta 5174) ──────────────────────────────────────────────────
 info "Iniciando login app em localhost:5174..."
 if lsof -ti:5174 >/dev/null 2>&1; then

@@ -131,16 +131,13 @@ Para CADA feature nova, a ordem é:
 | `docs/12-FEATURE-FLAGS.md` | Como usar feature flags |
 | `docs/13-ONBOARDING.md` | Fluxo de onboarding de tenants (com aprovação manual) |
 | `docs/14-DESIGN-SYSTEM-SYNC.md` | **Antes de copiar/atualizar qualquer componente do `design-system/` para o `frontend/`** — runbook + lista de arquivos preservados |
-| `.ai/CODING-RULES.md` | Regras de código que a IA deve seguir |
-| `.ai/FEATURE-TEMPLATE.md` | Template de prompt para gerar feature nova |
-| `.ai/REVIEW-CHECKLIST.md` | Auto-review antes de propor PR |
-| `docs/adr/` | Decisões arquiteturais (por quê fizemos X em vez de Y) |
+| `docs/adr/` | Decisões arquiteturais (por quê fizemos X em vez de Y) · 20 ADRs (gap em 017) |
 
 ## Princípios não-negociáveis
 
 1. **TDD primeiro, código depois.** Sempre. Sem exceção.
 2. **Toda decisão arquitetural vira ADR** em `docs/adr/`.
-3. **Toda feature segue o template** em `.ai/FEATURE-TEMPLATE.md`.
+3. **Toda feature nova replica a estrutura de `features/tenants/`** (Clean Architecture · domain / application / infrastructure / web). Lookup tables são exceção declarada em ADR-020.
 4. **Toda mudança visual consulta o design system** em `docs/05-DESIGN-SYSTEM.md`.
 5. **Nunca commitar segredo** (`.env*` está no `.gitignore`).
 6. **Nunca pular o ArchUnit** — se ele falhou, a violação é real, não tente contornar.
@@ -198,11 +195,11 @@ Use esta ordem de fallback:
 | Termo | Significado |
 |---|---|
 | **Tenant** | Um escritório de arquitetura cliente do TKWS OS |
-| **System Admin** | Operador da Group WS (acesso total a todos os tenants) |
-| **Org Admin** | Administrador de um tenant (escritório) |
-| **Project Manager** | Gestor de projeto dentro de um tenant |
-| **Architect** | Membro de equipe técnica dentro de um tenant |
-| **Viewer** | Cliente final que apenas consulta status do seu projeto |
+| **System Admin** (`system_admin`) | Operador da Group WS · acesso total a todos os tenants |
+| **Org Admin** (`org_admin`) | Administrador do escritório · configurações + comercial completo |
+| **Comercial Atendimento** (`comercial_atendimento`) | Time de atendimento comercial · Pessoas + Oportunidades |
+| **Comercial Proposta** (`comercial_proposta`) | Time de proposta comercial · Pessoas + Oportunidades |
+| **Default** (`default`) | Role base de qualquer convidado · entra mas só vê próprios dados (menu/funcionalidade habilitada por outras roles) |
 | **Turnkey** | Projeto "chave na mão" — escritório entrega obra completa |
 | **Login V2** | Tela de login do Zitadel 4.x. O TKWS OS substitui por uma SPA própria em `login/` (porta 5174) |
 | **login-client** | Machine user do Zitadel cujo PAT autoriza chamadas à Session API |

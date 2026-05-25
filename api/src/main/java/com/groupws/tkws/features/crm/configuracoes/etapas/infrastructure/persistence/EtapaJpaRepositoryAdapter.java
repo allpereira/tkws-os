@@ -9,7 +9,6 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 @Repository
 class EtapaJpaRepositoryAdapter implements EtapaRepository {
@@ -41,29 +40,29 @@ class EtapaJpaRepositoryAdapter implements EtapaRepository {
     }
 
     @Override
-    public Optional<Etapa> findById(UUID tenantId, EtapaId id) {
+    public Optional<Etapa> findById(long tenantId, EtapaId id) {
         return jpa.findByIdAndTenantId(id.value(), tenantId).map(this::toDomain);
     }
 
     @Override
-    public List<Etapa> listByPipeline(UUID tenantId, PipelineId pipelineId) {
+    public List<Etapa> listByPipeline(long tenantId, PipelineId pipelineId) {
         return jpa.findByTenantIdAndPipelineIdOrderByOrdemAscNomeAsc(tenantId, pipelineId.value())
             .stream().map(this::toDomain).toList();
     }
 
     @Override
-    public List<Etapa> listAll(UUID tenantId) {
+    public List<Etapa> listAll(long tenantId) {
         return jpa.findByTenantIdOrderByOrdemAscNomeAsc(tenantId)
             .stream().map(this::toDomain).toList();
     }
 
     @Override
-    public boolean existsByCodigo(UUID tenantId, String codigo) {
+    public boolean existsByCodigo(long tenantId, String codigo) {
         return jpa.existsByTenantIdAndCodigo(tenantId, codigo);
     }
 
     @Override
-    public void delete(UUID tenantId, EtapaId id) {
+    public void delete(long tenantId, EtapaId id) {
         jpa.findByIdAndTenantId(id.value(), tenantId).ifPresent(jpa::delete);
     }
 

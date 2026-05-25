@@ -18,11 +18,11 @@ import java.util.UUID;
 public record PessoaConvertedToClienteEvent(
     UUID eventId,
     PessoaId pessoaId,
-    UUID tenantId,
+    long tenantId,
     Instant occurredOn
 ) implements DomainEvent {
 
-    public PessoaConvertedToClienteEvent(PessoaId pessoaId, UUID tenantId, Instant occurredOn) {
+    public PessoaConvertedToClienteEvent(PessoaId pessoaId, long tenantId, Instant occurredOn) {
         this(UUID.randomUUID(), pessoaId, tenantId, occurredOn);
     }
 }

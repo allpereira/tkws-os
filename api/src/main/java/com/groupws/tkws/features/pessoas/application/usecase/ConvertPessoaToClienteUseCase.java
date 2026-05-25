@@ -9,8 +9,6 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.UUID;
-
 /**
  * Use case · promove LEAD para CLIENTE.
  *
@@ -37,7 +35,7 @@ public class ConvertPessoaToClienteUseCase {
     }
 
     @Transactional
-    public PessoaView execute(UUID tenantId, PessoaId pessoaId) {
+    public PessoaView execute(long tenantId, PessoaId pessoaId) {
         Pessoa pessoa = repository.findById(tenantId, pessoaId)
             .orElseThrow(() -> new PessoaNotFoundException(pessoaId));
 

@@ -8,10 +8,12 @@ import java.util.UUID;
  *
  * Idêntica para todas as 8 tabelas — única diferença entre elas é o
  * `@Table(name = ...)` na entidade JPA.
+ *
+ * `tenantId` é o BIGINT local.
  */
 public record LookupView(
     UUID id,
-    UUID tenantId,
+    long tenantId,
     String codigo,
     String nome,
     boolean ativo,

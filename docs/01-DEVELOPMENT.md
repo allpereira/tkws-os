@@ -21,10 +21,12 @@ bash scripts/dev-start.sh
 ```
 
 O script faz: `docker compose up -d` da infra (postgres, redis, zitadel,
-zitadel-gateway), espera o Zitadel ficar healthy, ativa Login V2 apontando para
-a SPA custom em `:5174`, extrai o PAT do `login-client` para
-`docker/zitadel/login-client.pat` (o Vite proxy precisa dele), e sobe os três
-processos Vite/Maven em background com logs em `/tmp/tkws-*.log`.
+zitadel-gateway, mailpit), espera o Zitadel ficar healthy, ativa Login V2
+apontando para a SPA custom em `:5174`, extrai o PAT do `login-client` para
+`docker/zitadel/login-client.pat` (o Vite proxy precisa dele), aplica o seed
+declarativo via [`scripts/zitadel-seed.sh`](../scripts/zitadel-seed.sh)
+(projeto · app OIDC · 5 roles · sync `VITE_ZITADEL_*` em `.env.local`), e sobe
+os três processos Vite/Maven em background com logs em `/tmp/tkws-*.log`.
 
 **Setup manual** (quando o script falhar ou você quiser controlar passo a passo):
 
@@ -36,14 +38,15 @@ docker compose up -d postgres redis zitadel zitadel-gateway
 # 2. Aguarda Zitadel ficar healthy (1-3 min na primeira vez)
 docker compose ps   # zitadel deve estar "healthy"
 
-# 3. Setup do Zitadel (uma vez por instância)
-#    Veja docs/04-AUTH.md → "Setup inicial" e "Configurar Login V2 customizado".
-#    Pega: Client ID do app web + PAT do login-client.
-#    Salva PAT em docker/zitadel/login-client.pat (gitignored).
+# 3. Extrai o PAT do login-client (criado pelo bootstrap do Zitadel)
+bash scripts/extract-login-pat.sh
 
-# 4. Configura envs
-cp frontend/.env.example frontend/.env.local   # cola VITE_ZITADEL_CLIENT_ID
-cp login/.env.example login/.env.local         # cola o mesmo VITE_ZITADEL_CLIENT_ID
+# 4. Aplica seed declarativo do Zitadel (idempotente)
+#    Cria projeto "TKWS OS" + app "Web" + 5 roles + sincroniza
+#    VITE_ZITADEL_CLIENT_ID e VITE_ZITADEL_PROJECT_ID em ambos .env.local.
+#    Se for primeira execução pós-reset, ver docs/04-AUTH.md § "Reset Zitadel
+#    do zero" para o passo manual de ORG_OWNER + projectRoleAssertion.
+bash scripts/zitadel-seed.sh
 
 # 5. Sobe os três processos em terminais separados
 cd login && npm install && npm run dev          # :5174 — custom login SPA

@@ -40,6 +40,40 @@
             └──────────┘         └─────────────────┘
 ```
 
+### Camada de containers · qual compose para qual ambiente
+
+| Arquivo | Ambiente | Postgres |
+|---|---|---|
+| `docker-compose.yml` | Dev local | `postgres:16-alpine` container (porta host 5433) |
+| `docker-compose.staging.yml` | Staging EC2 | RDS externo (`${DB_HOST}`) · SSL `require` |
+| `docker-compose.prod.yml` | Prod EC2 | RDS externo (`${DB_HOST}`) · SSL `require` · memory limits 2G/1G · Redis maxmemory 256mb LRU |
+
+**Services comuns (todos os 3 ambientes)**: `api`, `zitadel`, `zitadel-login`,
+`zitadel-gateway` (Caddy interno), `redis`.
+
+**Dev-only no `docker-compose.yml`**: `postgres`, `mailpit` (SMTP catch-all em :1025 + UI :8025) e `frontend` (Nginx servindo o build · opcional, normalmente local roda `npm run dev` em :5173).
+
+**Em staging/prod**: frontend está em Cloudflare Pages — não há service `frontend` no compose. SMTP usa SES (`SMTP_HOST=email-smtp.sa-east-1.amazonaws.com`).
+
+### Caddyfiles
+
+| Arquivo | Para | Roteamento |
+|---|---|---|
+| `docker/zitadel/Caddyfile` | dev (`:8088`) | `/ui/v2/login*` → `zitadel-login:3000` · resto → `zitadel:8088` |
+| `docker/caddy/Caddyfile.staging` | staging | `api.staging.tkws.com.br` → `api:8080` · `auth.staging.tkws.com.br` → `zitadel:8088` · HTTPS automático Let's Encrypt + HSTS |
+| `docker/caddy/Caddyfile.prod` | prod | `api.tkws.com.br` → `api:8080` · `auth.tkws.com.br` → `zitadel:8088` · HSTS 2 anos + preload |
+
+### Dockerfiles
+
+| Caminho | Base build / runtime | Builda |
+|---|---|---|
+| `docker/api/Dockerfile` | `maven:3.9-eclipse-temurin-21-alpine` → `eclipse-temurin:21-jre-alpine` | JAR Spring Boot com layertools, usuário `spring` não-root · healthcheck `curl /actuator/health` |
+| `docker/frontend/Dockerfile` | `node:22-alpine` → `nginx:1.27-alpine` | Vite build · 4 build args `VITE_*` · Nginx SPA com fallback `/index.html` |
+
+Frontend em produção é deployado via Cloudflare Pages (não usa o Dockerfile);
+o `docker/frontend/Dockerfile` existe para dev local containerizado ou
+homologação interna.
+
 ## Setup inicial (uma vez por ambiente)
 
 ### Parte 1: AWS (backend)

@@ -20,7 +20,7 @@
 
 CREATE TABLE setores (
     id          UUID PRIMARY KEY,
-    tenant_id   UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    tenant_id   BIGINT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     codigo      VARCHAR(40) NOT NULL,
     nome        VARCHAR(80) NOT NULL,
     ativo       BOOLEAN NOT NULL DEFAULT TRUE,
@@ -32,7 +32,7 @@ CREATE INDEX idx_setores_tenant_ativo ON setores (tenant_id, ativo);
 
 CREATE TABLE funcoes_pessoas (
     id          UUID PRIMARY KEY,
-    tenant_id   UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    tenant_id   BIGINT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     codigo      VARCHAR(40) NOT NULL,
     nome        VARCHAR(80) NOT NULL,
     ativo       BOOLEAN NOT NULL DEFAULT TRUE,
@@ -44,7 +44,7 @@ CREATE INDEX idx_funcoes_pessoas_tenant_ativo ON funcoes_pessoas (tenant_id, ati
 
 CREATE TABLE tipos_empresa (
     id          UUID PRIMARY KEY,
-    tenant_id   UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    tenant_id   BIGINT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     codigo      VARCHAR(40) NOT NULL,
     nome        VARCHAR(80) NOT NULL,
     ativo       BOOLEAN NOT NULL DEFAULT TRUE,
@@ -56,7 +56,7 @@ CREATE INDEX idx_tipos_empresa_tenant_ativo ON tipos_empresa (tenant_id, ativo);
 
 CREATE TABLE tipos_projeto (
     id          UUID PRIMARY KEY,
-    tenant_id   UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    tenant_id   BIGINT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     codigo      VARCHAR(40) NOT NULL,
     nome        VARCHAR(80) NOT NULL,
     ativo       BOOLEAN NOT NULL DEFAULT TRUE,
@@ -68,7 +68,7 @@ CREATE INDEX idx_tipos_projeto_tenant_ativo ON tipos_projeto (tenant_id, ativo);
 
 CREATE TABLE unidades (
     id          UUID PRIMARY KEY,
-    tenant_id   UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    tenant_id   BIGINT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     codigo      VARCHAR(40) NOT NULL,
     nome        VARCHAR(120) NOT NULL,
     ativo       BOOLEAN NOT NULL DEFAULT TRUE,
@@ -80,7 +80,7 @@ CREATE INDEX idx_unidades_tenant_ativo ON unidades (tenant_id, ativo);
 
 CREATE TABLE empreendimentos (
     id          UUID PRIMARY KEY,
-    tenant_id   UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    tenant_id   BIGINT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     codigo      VARCHAR(40) NOT NULL,
     nome        VARCHAR(160) NOT NULL,
     ativo       BOOLEAN NOT NULL DEFAULT TRUE,
@@ -92,7 +92,7 @@ CREATE INDEX idx_empreendimentos_tenant_ativo ON empreendimentos (tenant_id, ati
 
 CREATE TABLE ofertas (
     id          UUID PRIMARY KEY,
-    tenant_id   UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    tenant_id   BIGINT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     codigo      VARCHAR(40) NOT NULL,
     nome        VARCHAR(160) NOT NULL,
     ativo       BOOLEAN NOT NULL DEFAULT TRUE,
@@ -109,7 +109,7 @@ COMMENT ON TABLE ofertas IS
 
 CREATE TABLE tipos_pagamento (
     id          UUID PRIMARY KEY,
-    tenant_id   UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    tenant_id   BIGINT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     codigo      VARCHAR(40) NOT NULL,
     nome        VARCHAR(80) NOT NULL,
     ativo       BOOLEAN NOT NULL DEFAULT TRUE,
@@ -121,7 +121,7 @@ CREATE INDEX idx_tipos_pagamento_tenant_ativo ON tipos_pagamento (tenant_id, ati
 
 CREATE TABLE pipelines (
     id          UUID PRIMARY KEY,
-    tenant_id   UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    tenant_id   BIGINT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     codigo      VARCHAR(40) NOT NULL,
     nome        VARCHAR(80) NOT NULL,
     descricao   VARCHAR(280),
@@ -137,7 +137,7 @@ CREATE INDEX idx_pipelines_tenant_modulo_ativo ON pipelines (tenant_id, modulo, 
 
 CREATE TABLE etapas (
     id                          UUID PRIMARY KEY,
-    tenant_id                   UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    tenant_id                   BIGINT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     pipeline_id                 UUID NOT NULL REFERENCES pipelines(id) ON DELETE CASCADE,
     codigo                      VARCHAR(40) NOT NULL,
     nome                        VARCHAR(80) NOT NULL,
@@ -164,7 +164,7 @@ COMMENT ON COLUMN etapas.converte_lead_em_cliente IS
 
 CREATE TABLE oportunidades (
     id                  UUID PRIMARY KEY,
-    tenant_id           UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    tenant_id           BIGINT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     pipeline_id         UUID NOT NULL REFERENCES pipelines(id),
     etapa_id            UUID NOT NULL REFERENCES etapas(id),
     pessoa_id           UUID REFERENCES pessoas(id) ON DELETE SET NULL,

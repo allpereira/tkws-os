@@ -47,7 +47,8 @@ api/src/test/java/com/groupws/tkws/
 - Domain tests: ZERO dependência de Spring
 - Application tests: Mockito puro, sem `@SpringBootTest`
 - Infrastructure IT: estende `AbstractIntegrationTest`
-- Web IT: estende `AbstractIntegrationTest`, importa `MockJwtConfig`, usa REST Assured
+- Web IT: estende `AbstractIntegrationTest` (importa `MockJwtConfig`
+  automaticamente via `@Import`), usa REST Assured
 
 ### Comandos
 
@@ -77,12 +78,20 @@ open target/site/jacoco/index.html
 - Domain importar Spring/JPA/Hibernate
 - Domain depender de infrastructure ou web
 - Application acessar JPA diretamente
-- Features dependerem umas das outras
 - Use Cases não terminarem com `UseCase`
-- JPA Entities fora de `infrastructure.persistence`
+- JPA Entities fora de `infrastructure.persistence` (exceto `LookupJpaEntity` por ADR-020)
+- Repositórios Spring Data fora de `infrastructure.persistence` (exceto `LookupRepository`)
 - Controllers não terminarem com `Controller`
 
 **Você não precisa lembrar dessas regras. O teste lembra.**
+
+> Nota: a regra "features não se acessam diretamente" foi removida da
+> ArchUnit em 2026-05 porque era um no-op silencioso (sintaxe `(*)` sem
+> correlação) e a base tem acoplamentos legítimos via value objects
+> compartilhados (`Oportunidade.pessoaId`) e eventos cross-feature
+> (`OportunidadeMovedToConvertingEtapaEvent`). Isolation continua sendo
+> princípio do CLAUDE.md regra 4, enforçada por code review até a base
+> ficar madura o bastante para uma regra Slices configurada por feature.
 
 ### Padrão de um teste de domain
 
@@ -387,3 +396,37 @@ Cobertura baixa em UI estática = aceitável.
 4. Playwright apenas em PRs pra `main`
 
 **Build vermelho bloqueia merge.**
+
+## Troubleshooting
+
+### `mvn verify` falha com `Could not find a valid Docker environment`
+
+Sintoma: o failsafe trava em `org.testcontainers.dockerclient.DockerClientProviderStrategy` retornando 400 com payload "vazio" (campo `ID` em branco mas com `Labels.com.docker.desktop.address=...`).
+
+Causa típica: Docker Desktop 29.x+ no macOS tem um proxy de socket em que o endpoint `/info` HTTP retorna metadados degradados, embora o CLI funcione. O docker-java do Testcontainers rejeita esse payload e tenta múltiplas estratégias em sequência sem sucesso.
+
+**Workaround**: aponte os ITs para o Postgres do compose em vez de subir um efêmero via Testcontainers.
+
+```bash
+# 1. Cria o DB de teste no Postgres do compose (idempotente)
+docker exec tkws-postgres psql -U tkws -c "CREATE DATABASE tkws_test;" 2>/dev/null || true
+
+# 2. Roda mvn verify apontando para esse DB
+TKWS_TEST_DB_URL=jdbc:postgresql://localhost:5433/tkws_test \
+TKWS_TEST_DB_USER=tkws TKWS_TEST_DB_PASS=tkws \
+mvn verify
+```
+
+Quando a env var `TKWS_TEST_DB_URL` está setada, `AbstractIntegrationTest` pula `Testcontainers.start()` e usa o Postgres apontado. Flyway resetar o schema em validation error (`spring.flyway.clean-on-validation-error=true`) — só seguro porque o DB é dedicado.
+
+Em CI continuamos usando Testcontainers normalmente (Docker no Linux não tem esse problema).
+
+### Tests retornam 401 inesperado em IT de Controller
+
+Causa típica: o token mock em `MockJwtConfig` tem caractere inválido para o `DefaultBearerTokenResolver` do Spring Security 6 (que valida `^Bearer [a-zA-Z0-9-._~+/]+=*$`). Não use `:` ou outros caracteres especiais no token mock — o formato atual é `mock-jwt-<roles>`.
+
+### `Unable to resolve the Configuration with the provided Issuer of "http://localhost:9999/mock-zitadel"`
+
+Causa: o bean `jwtDecoder` em `SecurityConfig` faz `NimbusJwtDecoder.withIssuerLocation(...)` que bate HTTP no issuer no startup. Em testes, o issuer mock não existe.
+
+Fix: o `jwtDecoder` real está anotado com `@Profile("!test")`. Os ITs ativam profile `test` e o `MockJwtConfig` (auto-importado pelo `AbstractIntegrationTest`) provê o decoder `@Primary` mockado. Não precisa configurar nada — só garantir que o IT estende `AbstractIntegrationTest`.

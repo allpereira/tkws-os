@@ -60,7 +60,7 @@ class TenantRepositoryIT extends AbstractIntegrationTest {
     @Test
     @DisplayName("findById deve retornar empty quando não existir")
     void findByIdDeveRetornarEmpty() {
-        Optional<Tenant> achado = tenantRepository.findById(TenantId.generate());
+        Optional<Tenant> achado = tenantRepository.findById(TenantId.of(999_999L));
         assertThat(achado).isEmpty();
     }
 

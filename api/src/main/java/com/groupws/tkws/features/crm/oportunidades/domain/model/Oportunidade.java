@@ -16,6 +16,8 @@ import java.util.UUID;
 /**
  * Aggregate Root · Oportunidade (= Negócio) no funil.
  *
+ * `tenantId` é o BIGINT local (PK em tenants.id).
+ *
  * Vive dentro de um Pipeline + Etapa. A regra de promoção LEAD→CLIENTE
  * (ADR-018) é disparada por este agregado quando `moveToEtapa()` recebe
  * uma etapa marcada com `converteLeadEmCliente=true` — emite o evento
@@ -25,7 +27,7 @@ import java.util.UUID;
 public final class Oportunidade extends AggregateRoot<OportunidadeId> {
 
     private final OportunidadeId id;
-    private final UUID tenantId;
+    private final long tenantId;
     private PipelineId pipelineId;
     private EtapaId etapaId;
     private PessoaId pessoaId;          // pode ser null antes de associar
@@ -43,14 +45,17 @@ public final class Oportunidade extends AggregateRoot<OportunidadeId> {
     private final Instant createdAt;
     private Instant updatedAt;
 
-    private Oportunidade(OportunidadeId id, UUID tenantId, PipelineId pipelineId, EtapaId etapaId,
+    private Oportunidade(OportunidadeId id, long tenantId, PipelineId pipelineId, EtapaId etapaId,
                          PessoaId pessoaId, UUID ofertaId, UUID tipoPagamentoId,
                          UUID empreendimentoId, UUID tipoProjetoId, UUID responsavelId,
                          String titulo, String descricao, BigDecimal valor, BigDecimal metragemM2,
                          LocalDate prazoFechamento, String notas,
                          Instant createdAt, Instant updatedAt) {
         this.id = Objects.requireNonNull(id);
-        this.tenantId = Objects.requireNonNull(tenantId);
+        if (tenantId <= 0) {
+            throw new IllegalArgumentException("tenantId deve ser positivo · recebeu: " + tenantId);
+        }
+        this.tenantId = tenantId;
         this.pipelineId = Objects.requireNonNull(pipelineId, "pipelineId");
         this.etapaId = Objects.requireNonNull(etapaId, "etapaId");
         this.pessoaId = pessoaId;
@@ -69,7 +74,7 @@ public final class Oportunidade extends AggregateRoot<OportunidadeId> {
         this.updatedAt = Objects.requireNonNull(updatedAt);
     }
 
-    public static Oportunidade create(UUID tenantId, PipelineId pipelineId, EtapaId etapaId,
+    public static Oportunidade create(long tenantId, PipelineId pipelineId, EtapaId etapaId,
                                       PessoaId pessoaId, UUID ofertaId, UUID tipoPagamentoId,
                                       UUID empreendimentoId, UUID tipoProjetoId, UUID responsavelId,
                                       String titulo, String descricao, BigDecimal valor,
@@ -80,7 +85,7 @@ public final class Oportunidade extends AggregateRoot<OportunidadeId> {
             titulo, descricao, valor, metragemM2, prazoFechamento, notas, now, now);
     }
 
-    public static Oportunidade reconstitute(OportunidadeId id, UUID tenantId, PipelineId pipelineId,
+    public static Oportunidade reconstitute(OportunidadeId id, long tenantId, PipelineId pipelineId,
                                             EtapaId etapaId, PessoaId pessoaId, UUID ofertaId,
                                             UUID tipoPagamentoId, UUID empreendimentoId,
                                             UUID tipoProjetoId, UUID responsavelId,
@@ -142,7 +147,7 @@ public final class Oportunidade extends AggregateRoot<OportunidadeId> {
     }
 
     @Override public OportunidadeId id() { return id; }
-    public UUID tenantId() { return tenantId; }
+    public long tenantId() { return tenantId; }
     public PipelineId pipelineId() { return pipelineId; }
     public EtapaId etapaId() { return etapaId; }
     public Optional<PessoaId> pessoaId() { return Optional.ofNullable(pessoaId); }

@@ -10,7 +10,7 @@ public record UserView(
     String email,
     String fullName,
     String avatarUrl,
-    UUID tenantId,
+    Long tenantId,
     boolean active,
     Instant lastLoginAt
 ) {
@@ -20,7 +20,7 @@ public record UserView(
             user.email().value(),
             user.fullName(),
             user.avatarUrl(),
-            user.tenantId().orElse(null),
+            user.tenantIdOrNull(),
             user.active(),
             user.lastLoginAt().orElse(null)
         );

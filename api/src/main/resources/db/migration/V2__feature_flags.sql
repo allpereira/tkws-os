@@ -11,8 +11,8 @@ CREATE TABLE feature_flags (
     name                VARCHAR(100) NOT NULL UNIQUE,
     description         TEXT,
     default_enabled     BOOLEAN NOT NULL DEFAULT FALSE,
-    enabled_for_tenants UUID[] NOT NULL DEFAULT '{}',
-    disabled_for_tenants UUID[] NOT NULL DEFAULT '{}',
+    enabled_for_tenants BIGINT[] NOT NULL DEFAULT '{}',
+    disabled_for_tenants BIGINT[] NOT NULL DEFAULT '{}',
     created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

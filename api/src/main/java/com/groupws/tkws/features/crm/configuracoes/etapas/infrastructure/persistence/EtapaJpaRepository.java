@@ -7,8 +7,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 interface EtapaJpaRepository extends JpaRepository<EtapaJpaEntity, UUID> {
-    Optional<EtapaJpaEntity> findByIdAndTenantId(UUID id, UUID tenantId);
-    List<EtapaJpaEntity> findByTenantIdAndPipelineIdOrderByOrdemAscNomeAsc(UUID tenantId, UUID pipelineId);
-    List<EtapaJpaEntity> findByTenantIdOrderByOrdemAscNomeAsc(UUID tenantId);
-    boolean existsByTenantIdAndCodigo(UUID tenantId, String codigo);
+    Optional<EtapaJpaEntity> findByIdAndTenantId(UUID id, Long tenantId);
+    List<EtapaJpaEntity> findByTenantIdAndPipelineIdOrderByOrdemAscNomeAsc(Long tenantId, UUID pipelineId);
+    List<EtapaJpaEntity> findByTenantIdOrderByOrdemAscNomeAsc(Long tenantId);
+    boolean existsByTenantIdAndCodigo(Long tenantId, String codigo);
 }

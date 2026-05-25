@@ -11,13 +11,13 @@ import java.util.UUID;
 public record PessoaCreatedEvent(
     UUID eventId,
     PessoaId pessoaId,
-    UUID tenantId,
+    long tenantId,
     TipoPessoa tipoPessoa,
     StatusPessoa status,
     Instant occurredOn
 ) implements DomainEvent {
 
-    public PessoaCreatedEvent(PessoaId pessoaId, UUID tenantId, TipoPessoa tipoPessoa,
+    public PessoaCreatedEvent(PessoaId pessoaId, long tenantId, TipoPessoa tipoPessoa,
                               StatusPessoa status, Instant occurredOn) {
         this(UUID.randomUUID(), pessoaId, tenantId, tipoPessoa, status, occurredOn);
     }

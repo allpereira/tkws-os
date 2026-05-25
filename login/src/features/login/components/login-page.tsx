@@ -42,12 +42,12 @@ export function LoginPage() {
     <AuthStage
       quote={
         <>
-          "Para arquitetos.
+          "Onde o briefing, o orçamento e a obra
           <br />
-          <em>Não para back-office.</em>"
+          <em>moram juntos.</em>"
         </>
       }
-      quoteCite="· The TKWS OS Manifesto"
+      quoteCite="· OS do TKWS"
     >
       <p className="mb-[22px] font-mono text-[10px] uppercase tracking-[0.15em] text-ink-4">
         Entrar · TKWS OS

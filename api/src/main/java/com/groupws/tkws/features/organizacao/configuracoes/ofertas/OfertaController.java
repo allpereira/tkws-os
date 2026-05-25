@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequestMapping("/api/v1/organizacao/ofertas")
-@PreAuthorize("hasAnyRole('ORG_ADMIN', 'PROJECT_MANAGER', 'ARCHITECT')")
+@PreAuthorize("hasRole('ORG_ADMIN')")
 class OfertaController extends LookupController<OfertaJpaEntity> {
 
     OfertaController(OfertaJpaRepository repository) {

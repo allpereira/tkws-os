@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequestMapping("/api/v1/crm/tipos-pagamento")
-@PreAuthorize("hasAnyRole('ORG_ADMIN', 'PROJECT_MANAGER', 'ARCHITECT')")
+@PreAuthorize("hasRole('ORG_ADMIN')")
 class TipoPagamentoController extends LookupController<TipoPagamentoJpaEntity> {
     TipoPagamentoController(TipoPagamentoJpaRepository repository) {
         super(new LookupService<>("tipos_pagamento", repository, TipoPagamentoJpaEntity::new), "/api/v1/crm/tipos-pagamento");

@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequestMapping("/api/v1/organizacao/setores")
-@PreAuthorize("hasAnyRole('ORG_ADMIN', 'PROJECT_MANAGER', 'ARCHITECT')")
+@PreAuthorize("hasRole('ORG_ADMIN')")
 class SetorController extends LookupController<SetorJpaEntity> {
     SetorController(SetorJpaRepository repository) {
         super(new LookupService<>("setores", repository, SetorJpaEntity::new), "/api/v1/organizacao/setores");

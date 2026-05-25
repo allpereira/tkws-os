@@ -5,7 +5,7 @@ import { z } from 'zod';
  * (forms reutilizam isso, garantindo consistência client ↔ server).
  */
 export const tenantSchema = z.object({
-  id: z.string().uuid(),
+  id: z.number().int().positive(),
   zitadelOrgId: z.string(),
   name: z.string().min(1).max(255),
   slug: z

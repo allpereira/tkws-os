@@ -3,7 +3,7 @@ import { z } from 'zod'
 /** Tipos de Projetos · ex: "Residencial alto padrão", "Comercial", "Reforma". */
 export const tipoProjetoSchema = z.object({
   id: z.string().uuid(),
-  tenantId: z.string().uuid(),
+  tenantId: z.number().int().positive(),
   codigo: z.string().min(1).max(40),
   nome: z.string().min(1).max(80),
   ativo: z.boolean().default(true),

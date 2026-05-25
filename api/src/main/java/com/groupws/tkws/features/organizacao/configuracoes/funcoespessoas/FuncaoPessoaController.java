@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequestMapping("/api/v1/organizacao/funcoes-pessoas")
-@PreAuthorize("hasAnyRole('ORG_ADMIN', 'PROJECT_MANAGER', 'ARCHITECT')")
+@PreAuthorize("hasRole('ORG_ADMIN')")
 class FuncaoPessoaController extends LookupController<FuncaoPessoaJpaEntity> {
     FuncaoPessoaController(FuncaoPessoaJpaRepository repository) {
         super(new LookupService<>("funcoes_pessoas", repository, FuncaoPessoaJpaEntity::new), "/api/v1/organizacao/funcoes-pessoas");

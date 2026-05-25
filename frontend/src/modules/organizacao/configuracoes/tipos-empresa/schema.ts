@@ -8,7 +8,7 @@ import { z } from 'zod'
  */
 export const tipoEmpresaSchema = z.object({
   id: z.string().uuid(),
-  tenantId: z.string().uuid(),
+  tenantId: z.number().int().positive(),
   codigo: z.string().min(1).max(20),
   nome: z.string().min(1).max(80),
   ativo: z.boolean().default(true),

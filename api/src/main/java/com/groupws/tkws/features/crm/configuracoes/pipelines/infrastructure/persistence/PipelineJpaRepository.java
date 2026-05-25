@@ -7,8 +7,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 interface PipelineJpaRepository extends JpaRepository<PipelineJpaEntity, UUID> {
-    Optional<PipelineJpaEntity> findByIdAndTenantId(UUID id, UUID tenantId);
-    List<PipelineJpaEntity> findByTenantIdOrderByOrdemAscNomeAsc(UUID tenantId);
-    List<PipelineJpaEntity> findByTenantIdAndModuloOrderByOrdemAscNomeAsc(UUID tenantId, String modulo);
-    boolean existsByTenantIdAndCodigo(UUID tenantId, String codigo);
+    Optional<PipelineJpaEntity> findByIdAndTenantId(UUID id, Long tenantId);
+    List<PipelineJpaEntity> findByTenantIdOrderByOrdemAscNomeAsc(Long tenantId);
+    List<PipelineJpaEntity> findByTenantIdAndModuloOrderByOrdemAscNomeAsc(Long tenantId, String modulo);
+    boolean existsByTenantIdAndCodigo(Long tenantId, String codigo);
 }

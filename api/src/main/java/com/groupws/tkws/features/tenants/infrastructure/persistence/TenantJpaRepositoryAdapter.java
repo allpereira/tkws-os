@@ -12,6 +12,10 @@ import java.util.Optional;
  * usando Spring Data JPA por baixo.
  *
  * É aqui que acontece a conversão Domain Model ↔ JPA Entity.
+ *
+ * O id é BIGINT IDENTITY · em INSERT entregamos null e lemos o id gerado
+ * pelo Postgres após `save()`. O método {@link Tenant#assignIdIfTransient}
+ * é então chamado para popular o id no agregado e disparar o evento de criação.
  */
 @Repository
 class TenantJpaRepositoryAdapter implements TenantRepository {
@@ -26,25 +30,40 @@ class TenantJpaRepositoryAdapter implements TenantRepository {
      * Salva o tenant preservando campos de V3 (status, requester data, etc.)
      * que ainda não existem no Aggregate Root.
      *
-     * Estratégia: se a entidade já existir no banco (update), carregamos o registro
-     * existente e atualizamos APENAS os campos que o domínio atual conhece, evitando
-     * sobrescrever colunas do workflow de aprovação (status, requested_at, etc.).
-     *
-     * Quando a feature `onboarding-v1` mapear esses campos no Aggregate Root,
-     * este merge pode ser simplificado para um `toEntity()` direto.
+     * - Se o aggregate é transiente (id null), INSERT · o banco gera o id BIGINT
+     *   e chamamos {@link Tenant#assignIdIfTransient} pra anexar o id e disparar
+     *   `TenantCreatedEvent`.
+     * - Se já tem id, carregamos o registro existente e atualizamos APENAS os
+     *   campos que o domínio atual conhece (evita sobrescrever colunas do
+     *   workflow de aprovação).
      */
     @Override
     public Tenant save(Tenant tenant) {
-        TenantJpaEntity entity = jpaRepository.findById(tenant.id().value())
+        if (tenant.isTransient()) {
+            TenantJpaEntity entity = new TenantJpaEntity(
+                tenant.zitadelOrgId(),
+                tenant.name(),
+                tenant.slug(),
+                tenant.active(),
+                tenant.createdAt(),
+                tenant.updatedAt()
+            );
+            TenantJpaEntity saved = jpaRepository.save(entity);
+            tenant.assignIdIfTransient(TenantId.of(saved.id));
+            return tenant;
+        }
+
+        long id = tenant.id().value();
+        TenantJpaEntity entity = jpaRepository.findById(id)
             .map(existing -> {
-                // Update: atualiza apenas campos conhecidos pelo domínio atual
                 existing.name      = tenant.name();
                 existing.slug      = tenant.slug();
                 existing.active    = tenant.active();
                 existing.updatedAt = tenant.updatedAt();
                 return existing;
             })
-            .orElseGet(() -> toEntity(tenant)); // Insert: cria entidade nova
+            .orElseThrow(() -> new IllegalStateException(
+                "Tenant com id=" + id + " marcado como persistido mas não encontrado no banco"));
 
         TenantJpaEntity saved = jpaRepository.save(entity);
         return toDomain(saved);
@@ -73,20 +92,6 @@ class TenantJpaRepositoryAdapter implements TenantRepository {
     @Override
     public boolean existsByZitadelOrgId(String zitadelOrgId) {
         return jpaRepository.existsByZitadelOrgId(zitadelOrgId);
-    }
-
-    // ============ Conversões ============
-
-    private TenantJpaEntity toEntity(Tenant tenant) {
-        return new TenantJpaEntity(
-            tenant.id().value(),
-            tenant.zitadelOrgId(),
-            tenant.name(),
-            tenant.slug(),
-            tenant.active(),
-            tenant.createdAt(),
-            tenant.updatedAt()
-        );
     }
 
     private Tenant toDomain(TenantJpaEntity entity) {

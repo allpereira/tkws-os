@@ -14,7 +14,7 @@ import java.util.UUID;
  */
 public record PessoaView(
     UUID id,
-    UUID tenantId,
+    long tenantId,
     TipoPessoa tipoPessoa,
     String documento,
     String nomeContato,

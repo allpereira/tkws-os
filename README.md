@@ -16,15 +16,8 @@
 
 ## Para IAs (Claude, Cursor, Copilot, etc)
 
-**Entrada principal:** [`CLAUDE.md`](CLAUDE.md)
-
-Outros arquivos relevantes:
-- [`.ai/CONTEXT.md`](.ai/CONTEXT.md) — contexto compacto
-- [`.ai/CODING-RULES.md`](.ai/CODING-RULES.md) — regras de código
-- [`.ai/FEATURE-TEMPLATE.md`](.ai/FEATURE-TEMPLATE.md) — prompt para gerar feature
-- [`.ai/REVIEW-CHECKLIST.md`](.ai/REVIEW-CHECKLIST.md) — auto-review
-- [`.cursor/rules/`](.cursor/rules/) — regras Cursor
-- [`.github/copilot-instructions.md`](.github/copilot-instructions.md) — instruções Copilot
+**Entrada principal:** [`CLAUDE.md`](CLAUDE.md) — descreve topologia, stack, regras
+não-negociáveis, glossário do domínio e referências cruzadas para a doc operacional.
 
 ## Stack
 
@@ -44,8 +37,10 @@ bash scripts/dev-start.sh
 # Acessa http://localhost:5173 — redireciona para o custom login em :5174
 ```
 
-O script sobe Docker (Postgres, Redis, Zitadel, gateway), extrai o PAT do
-`login-client` necessário pro custom login, e inicia os três processos
+O script sobe os containers de infra (Postgres, Redis, Zitadel, gateway Caddy
++ Mailpit), extrai o PAT do `login-client` necessário pro custom login,
+aplica o seed declarativo do Zitadel ([`scripts/zitadel-seed.sh`](scripts/zitadel-seed.sh))
+e inicia os três processos via `npm run dev` / `mvn spring-boot:run`
 (login app :5174, frontend :5173, API :8080) com logs em `/tmp/tkws-*.log`.
 Setup manual ou troubleshooting: [`docs/01-DEVELOPMENT.md`](docs/01-DEVELOPMENT.md).
 
@@ -74,9 +69,9 @@ docker compose down -v               # reseta tudo (CUIDADO)
 docs/
 ├── 00-ARCHITECTURE.md       # Arquitetura, Clean Arch, DDD, multi-tenancy
 ├── 01-DEVELOPMENT.md        # Setup, workflow diário, padrões, Capacitor
-├── 02-TESTING.md            # Testing Trophy, TDD, padrões de teste
+├── 02-TESTING.md            # Testing Trophy, TDD, padrões + troubleshooting
 ├── 03-DEPLOY.md             # AWS + Cloudflare Pages, CI/CD, custos
-├── 04-AUTH.md               # Zitadel, OIDC, roles, mobile auth
+├── 04-AUTH.md               # Zitadel, OIDC, roles, reset Zitadel
 ├── 05-DESIGN-SYSTEM.md      # Tokens, componentes, padrões visuais
 ├── 06-BACKUP-RECOVERY.md    # Backup strategy, DR, runbooks de restore
 ├── 07-OBSERVABILITY.md      # Logs, métricas, Sentry, alertas
@@ -86,9 +81,10 @@ docs/
 ├── 11-SECRETS-VAULT.md      # Cofre de segredos críticos (Zitadel masterkey, etc)
 ├── 12-FEATURE-FLAGS.md      # Sistema de feature flags
 ├── 13-ONBOARDING.md         # Fluxo de onboarding de tenants
-└── adr/                     # Architecture Decision Records (15 ADRs)
+├── 14-DESIGN-SYSTEM-SYNC.md # Espelhamento DS → frontend
+└── adr/                     # Architecture Decision Records (20 ADRs · 001-016, 018-021)
     ├── README.md
-    └── ADR-001..015.md
+    └── ADR-001..ADR-021.md
 ```
 
 ## Princípios

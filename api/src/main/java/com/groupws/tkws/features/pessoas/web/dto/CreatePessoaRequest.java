@@ -7,8 +7,6 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
-import java.util.UUID;
-
 /**
  * Body de `POST /api/v1/pessoas` · não contém `tenantId`, pois ele é
  * resolvido pelo contexto da request (JWT/X-Tenant-Id) e injetado no
@@ -23,7 +21,7 @@ public record CreatePessoaRequest(
     @Size(max = 160) String nomeEmpresa,
     boolean forceCreate
 ) {
-    public CreatePessoaCommand toCommand(UUID tenantId) {
+    public CreatePessoaCommand toCommand(long tenantId) {
         return new CreatePessoaCommand(
             tenantId,
             tipoPessoa,

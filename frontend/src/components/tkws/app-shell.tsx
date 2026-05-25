@@ -20,7 +20,6 @@ import {
   MapPin,
   Menu,
   Network,
-  Plus,
   Search,
   Settings,
   ShoppingBag,
@@ -534,19 +533,6 @@ function Sidebar({
       style={{ background: 'var(--surface-1)', borderColor: 'var(--line-1)' }}
     >
       <SidebarBrand collapsed={collapsed} />
-
-      {/* Quick action */}
-      <div className="px-3 pt-3">
-        {!collapsed ? (
-          <Button size="sm" className="w-full">
-            <Plus size={13} /> Novo
-          </Button>
-        ) : (
-          <Button size="icon" aria-label="Novo" className="w-full">
-            <Plus size={14} />
-          </Button>
-        )}
-      </div>
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto py-3">

@@ -17,5 +17,5 @@ interface InviteJpaRepository extends JpaRepository<InviteJpaEntity, UUID> {
           AND LOWER(i.email) = LOWER(:email)
           AND i.status = 'PENDING'
         """)
-    boolean existsPending(@Param("tenantId") UUID tenantId, @Param("email") String email);
+    boolean existsPending(@Param("tenantId") Long tenantId, @Param("email") String email);
 }

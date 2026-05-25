@@ -3,9 +3,8 @@ package com.groupws.tkws.features.tenants.infrastructure.persistence;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
-import java.util.UUID;
 
-interface TenantJpaRepository extends JpaRepository<TenantJpaEntity, UUID> {
+interface TenantJpaRepository extends JpaRepository<TenantJpaEntity, Long> {
 
     Optional<TenantJpaEntity> findBySlug(String slug);
 

@@ -11,7 +11,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 /**
  * Use case · detectar duplicidade ANTES de criar uma Pessoa nova.
@@ -34,7 +33,7 @@ public class CheckDuplicidadePessoaUseCase {
     }
 
     @Transactional(readOnly = true)
-    public DedupResult execute(UUID tenantId, TipoPessoa tipoPessoa, String documentoRaw,
+    public DedupResult execute(long tenantId, TipoPessoa tipoPessoa, String documentoRaw,
                                String email, String celular) {
         // Tentativa 1 · documento exato
         if (documentoRaw != null && !documentoRaw.isBlank() && tipoPessoa != null) {

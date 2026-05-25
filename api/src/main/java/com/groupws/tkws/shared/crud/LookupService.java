@@ -13,6 +13,8 @@ import java.util.function.Supplier;
  * Cada feature mantém uma instância (com seu {@link LookupRepository} e
  * a factory da entidade concreta · ver `OfertaController` como template).
  *
+ * `tenantId` é o BIGINT local (PK em tenants.id).
+ *
  * Decisões:
  *   - Sem use cases separados (1 por operação). A "lógica de negócio" das
  *     lookup tables é apenas: validar unicidade + persistir. Use cases
@@ -35,21 +37,21 @@ public final class LookupService<E extends LookupJpaEntity> {
     }
 
     @Transactional(readOnly = true)
-    public List<LookupView> list(UUID tenantId) {
+    public List<LookupView> list(long tenantId) {
         return repository.findByTenantIdOrderByNomeAsc(tenantId).stream()
             .map(LookupView::from)
             .toList();
     }
 
     @Transactional(readOnly = true)
-    public LookupView findById(UUID tenantId, UUID id) {
+    public LookupView findById(long tenantId, UUID id) {
         E entity = repository.findByIdAndTenantId(id, tenantId)
             .orElseThrow(() -> new LookupNotFoundException(tabela, id));
         return LookupView.from(entity);
     }
 
     @Transactional
-    public LookupView create(UUID tenantId, LookupRequest request) {
+    public LookupView create(long tenantId, LookupRequest request) {
         if (repository.existsByTenantIdAndCodigo(tenantId, request.codigo())) {
             throw new LookupCodigoDuplicadoException(tabela, request.codigo());
         }
@@ -59,7 +61,7 @@ public final class LookupService<E extends LookupJpaEntity> {
     }
 
     @Transactional
-    public LookupView update(UUID tenantId, UUID id, LookupRequest request) {
+    public LookupView update(long tenantId, UUID id, LookupRequest request) {
         E entity = repository.findByIdAndTenantId(id, tenantId)
             .orElseThrow(() -> new LookupNotFoundException(tabela, id));
 
@@ -74,7 +76,7 @@ public final class LookupService<E extends LookupJpaEntity> {
     }
 
     @Transactional
-    public void remove(UUID tenantId, UUID id) {
+    public void remove(long tenantId, UUID id) {
         E entity = repository.findByIdAndTenantId(id, tenantId)
             .orElseThrow(() -> new LookupNotFoundException(tabela, id));
         repository.delete(entity);

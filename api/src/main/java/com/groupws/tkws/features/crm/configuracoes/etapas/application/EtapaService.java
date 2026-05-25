@@ -11,7 +11,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.UUID;
 
 @Service
 public class EtapaService {
@@ -23,7 +22,7 @@ public class EtapaService {
     }
 
     @Transactional(readOnly = true)
-    public List<EtapaView> list(UUID tenantId, PipelineId pipelineId) {
+    public List<EtapaView> list(long tenantId, PipelineId pipelineId) {
         List<Etapa> etapas = pipelineId != null
             ? repository.listByPipeline(tenantId, pipelineId)
             : repository.listAll(tenantId);
@@ -31,14 +30,14 @@ public class EtapaService {
     }
 
     @Transactional(readOnly = true)
-    public EtapaView findById(UUID tenantId, EtapaId id) {
+    public EtapaView findById(long tenantId, EtapaId id) {
         return repository.findById(tenantId, id)
             .map(EtapaView::from)
             .orElseThrow(() -> new EtapaNotFoundException(id));
     }
 
     @Transactional
-    public EtapaView create(UUID tenantId, PipelineId pipelineId, String codigo, String nome,
+    public EtapaView create(long tenantId, PipelineId pipelineId, String codigo, String nome,
                             String descricao, String cor, int probabilidade, TipoEtapa tipo,
                             int ordem, boolean converteLeadEmCliente, boolean ativo) {
         if (repository.existsByCodigo(tenantId, codigo)) {
@@ -50,7 +49,7 @@ public class EtapaService {
     }
 
     @Transactional
-    public EtapaView update(UUID tenantId, EtapaId id, String codigo, String nome,
+    public EtapaView update(long tenantId, EtapaId id, String codigo, String nome,
                             String descricao, String cor, int probabilidade, TipoEtapa tipo,
                             int ordem, boolean converteLeadEmCliente, boolean ativo) {
         Etapa etapa = repository.findById(tenantId, id)
@@ -64,7 +63,7 @@ public class EtapaService {
     }
 
     @Transactional
-    public void remove(UUID tenantId, EtapaId id) {
+    public void remove(long tenantId, EtapaId id) {
         repository.delete(tenantId, id);
     }
 }

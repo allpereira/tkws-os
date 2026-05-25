@@ -11,7 +11,6 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 /**
  * Adapter de persistência · implementa o port `PessoaRepository` usando
@@ -36,17 +35,17 @@ class PessoaJpaRepositoryAdapter implements PessoaRepository {
     }
 
     @Override
-    public Optional<Pessoa> findById(UUID tenantId, PessoaId id) {
+    public Optional<Pessoa> findById(long tenantId, PessoaId id) {
         return jpa.findByIdAndTenantId(id.value(), tenantId).map(this::toDomain);
     }
 
     @Override
-    public Optional<Pessoa> findByDocumento(UUID tenantId, String documentoNormalizado) {
+    public Optional<Pessoa> findByDocumento(long tenantId, String documentoNormalizado) {
         return jpa.findByTenantIdAndDocumento(tenantId, documentoNormalizado).map(this::toDomain);
     }
 
     @Override
-    public List<Pessoa> findByEmailOuCelular(UUID tenantId, String email, String celular) {
+    public List<Pessoa> findByEmailOuCelular(long tenantId, String email, String celular) {
         String e = (email != null && !email.isBlank()) ? email : null;
         String c = (celular != null && !celular.isBlank()) ? celular : null;
         if (e == null && c == null) return List.of();
@@ -56,7 +55,7 @@ class PessoaJpaRepositoryAdapter implements PessoaRepository {
     }
 
     @Override
-    public List<Pessoa> list(UUID tenantId, StatusPessoa statusOuNull, int limit, int offset) {
+    public List<Pessoa> list(long tenantId, StatusPessoa statusOuNull, int limit, int offset) {
         int safeLimit = Math.max(1, Math.min(limit, 200));
         int safeOffset = Math.max(0, offset);
         int page = safeOffset / safeLimit;
@@ -70,7 +69,7 @@ class PessoaJpaRepositoryAdapter implements PessoaRepository {
     }
 
     @Override
-    public boolean existsByDocumento(UUID tenantId, String documentoNormalizado) {
+    public boolean existsByDocumento(long tenantId, String documentoNormalizado) {
         return jpa.existsByTenantIdAndDocumento(tenantId, documentoNormalizado);
     }
 

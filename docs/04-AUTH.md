@@ -147,7 +147,9 @@ Como confirmar:
 
 ```bash
 # Pegue um JWT depois de logar e cole em https://jwt.io
-# No payload, procure: "urn:zitadel:iam:user:resourceowner:id": "<UUID da org>"
+# No payload, procure: "urn:zitadel:iam:user:resourceowner:id": "<snowflake da org>"
+# (snowflake numérico ~18 dígitos — formato do Zitadel; mapeado para BIGINT
+#  local em tenants.zitadel_org_id; ver ADR-021)
 ```
 
 **Sem essa configuração**, a API ainda funciona via fallback automático que chama
@@ -175,13 +177,17 @@ Checklist:
 
 Project → Roles → New:
 
-| Role key | Nome | Descrição |
+| Role key | Display Name | Descrição |
 |---|---|---|
-| `system_admin` | System Admin | Operador da Group WS (acesso total) |
-| `org_admin` | Org Admin | Administrador do escritório cliente |
-| `project_manager` | Project Manager | Gestor de projeto |
-| `architect` | Architect | Membro de equipe técnica |
-| `viewer` | Viewer | Cliente final, só consulta |
+| `system_admin` | Administrador da plataforma TKWS | Operador da Group WS · acesso total a todos os tenants |
+| `org_admin` | Administrador do escritório | Configurações do tenant + comercial completo |
+| `comercial_atendimento` | Atendimento Comercial | Time de atendimento · Pessoas + Oportunidades |
+| `comercial_proposta` | Proposta Comercial | Time de proposta · Pessoas + Oportunidades |
+| `default` | Usuário básico | Role base de qualquer convidado · entra mas não tem permissão em rotas com `@PreAuthorize`. Frontend usa pra gate de menu/funcionalidade |
+
+**Group** (campo opcional do Zitadel ao criar role): use `tkws` em todas as 5 — agrupa visualmente no Console.
+
+O `zitadel-seed.sh` cria essas 5 roles automaticamente quando rodado com PAT de `ORG_OWNER` (ver § "Reset Zitadel do zero").
 
 ### 6. Habilitar métodos de auth
 
@@ -671,13 +677,159 @@ mesmo valor do frontend.
 
 ## Roles e permissões — quadro de referência
 
+Paths base reais e roles autorizadas (espelho do `@PreAuthorize` nos
+controllers · snapshot atual). Quando criar endpoint novo, atualize aqui.
+
 | Endpoint | Roles autorizadas |
 |---|---|
-| `GET /api/v1/users/me` | Qualquer autenticado |
+| `GET /api/v1/users/me` | qualquer autenticado · sem `@PreAuthorize` (inclui `default`) |
 | `POST /api/v1/tenants` | `system_admin` |
-| `GET /api/v1/tenants/{id}` | `system_admin`, `org_admin` |
-| `POST /api/v1/orcamentos` (futuro) | `org_admin`, `project_manager`, `architect` |
-| `GET /api/v1/orcamentos` (futuro) | `org_admin`, `project_manager`, `architect`, `viewer` |
+| `GET /api/v1/tenants/{id}`, `GET /api/v1/tenants/by-slug/{slug}` | `system_admin`, `org_admin` |
+| `POST /api/v1/invites` | `org_admin`, `system_admin` |
+| `GET /api/v1/invites/by-token`, `POST /api/v1/invites/accept` | público (sem auth) |
+| `GET /api/v1/pessoas` (`?status=LEAD\|CLIENTE`) | `org_admin`, `comercial_atendimento`, `comercial_proposta` |
+| `GET /api/v1/pessoas/{id}`, `GET /api/v1/pessoas/buscar` (dedup) | `org_admin`, `comercial_atendimento`, `comercial_proposta` |
+| `POST /api/v1/pessoas`, `PATCH /api/v1/pessoas/{id}` | `org_admin`, `comercial_atendimento`, `comercial_proposta` |
+| `POST /api/v1/pessoas/{id}/converter` (Lead → Cliente manual) | `org_admin`, `comercial_atendimento`, `comercial_proposta` |
+| `GET/POST/PATCH/DELETE /api/v1/crm/oportunidades` + `/{id}/mover` | `org_admin`, `comercial_atendimento`, `comercial_proposta` |
+| `GET/POST/PATCH/DELETE /api/v1/crm/pipelines` | `org_admin` |
+| `GET/POST/PATCH/DELETE /api/v1/crm/etapas` | `org_admin` |
+| `GET/POST/PATCH/DELETE /api/v1/crm/tipos-pagamento` (lookup · ADR-020) | `org_admin` |
+| `GET/POST/PATCH/DELETE /api/v1/organizacao/ofertas` (lookup) | `org_admin` |
+| `GET/POST/PATCH/DELETE /api/v1/organizacao/setores` (lookup) | `org_admin` |
+| `GET/POST/PATCH/DELETE /api/v1/organizacao/tipos-empresa` (lookup) | `org_admin` |
+| `GET/POST/PATCH/DELETE /api/v1/organizacao/tipos-projeto` (lookup) | `org_admin` |
+| `GET/POST/PATCH/DELETE /api/v1/organizacao/unidades` (lookup) | `org_admin` |
+| `GET/POST/PATCH/DELETE /api/v1/organizacao/empreendimentos` (lookup) | `org_admin` |
+| `GET/POST/PATCH/DELETE /api/v1/organizacao/funcoes-pessoas` (lookup) | `org_admin` |
 
 **Padrão:** sempre usar `@PreAuthorize` em controllers, não `.authorizeHttpRequests()` exceto
 para rotas públicas (health, swagger).
+
+**Sobre a role `default`**: ela é atribuída a qualquer convidado e funciona como
+gate de UI · o usuário entra no sistema (pode chamar `/users/me`), mas todo
+endpoint com `@PreAuthorize` retorna 403. O frontend lê as authorities do JWT e
+liga/desliga menus conforme as outras roles que o usuário tem.
+
+## Reset Zitadel do zero (dev local)
+
+Quando você quer recomeçar limpo (instância Zitadel inteira derrubada e recriada),
+o bootstrap automático do compose recria:
+
+- **org default** `tkws.localhost`
+- humano **`admin@tkws.local`** com senha `Admin@123456` (vars
+  `ZITADEL_FIRSTINSTANCE_ORG_HUMAN_*` no `docker-compose.yml`)
+- machine **`login-client`** + PAT salvo em `/zitadel/bootstrap/login-client.pat`
+  (var `ZITADEL_FIRSTINSTANCE_LOGINCLIENTPATPATH`)
+- **Login V2 ativado** apontando para `http://localhost:5174` (var
+  `ZITADEL_DEFAULTINSTANCE_FEATURES_LOGINV2_REQUIRED=true`)
+
+O que o bootstrap **não** cria automaticamente:
+
+- Nome da org (renomeada para `GROUP WS`) e domínio primário (`group-ws.localhost`)
+- Projeto `TKWS OS`
+- App OIDC `Web` (com redirect, post-logout, JWT, role assertion)
+- 5 roles do projeto: `system_admin`, `org_admin`, `comercial_atendimento`, `comercial_proposta`, `default`
+- `projectRoleAssertion=true` no projeto (necessário para o claim de roles vir no JWT · ver § "Diagnóstico · JWT sem claim de roles")
+- Usuários humanos da equipe (além do admin) + UserGrants (atribuir roles a humanos)
+
+Esse "estado de aplicação" é construído pelo script
+[`scripts/zitadel-seed.sh`](../scripts/zitadel-seed.sh) (idempotente).
+
+### Procedimento completo
+
+```bash
+# 1. Destrói tudo (containers + volumes; perde dados Zitadel + Postgres TKWS)
+docker compose down -v
+
+# 2. Sobe de novo (bootstrap automático faz seu trabalho)
+docker compose up -d
+
+# 3. Aguarda Zitadel saudável (~30s) e extrai o PAT bootstrap para o host
+bash scripts/extract-login-pat.sh
+
+# 4. Aplica o seed declarativo
+bash scripts/zitadel-seed.sh
+```
+
+O `zitadel-seed.sh`:
+
+- detecta `Projeto TKWS OS` (cria se não existir)
+- detecta `App Web` (cria se não existir, com config OIDC PKCE + JWT)
+- cria as 5 roles do projeto (`system_admin`, `org_admin`, etc.)
+- sincroniza `VITE_ZITADEL_CLIENT_ID` nos `frontend/.env.local` e
+  `login/.env.local`
+
+### Limitação · ORG_OWNER
+
+O PAT do `login-client` tem permissão mínima (só Session API + OIDC). Para
+**criar projeto/app/role** o seed precisa rodar com um machine user que tenha
+role `ORG_OWNER`. Caminhos:
+
+**A. Promover o login-client a ORG_OWNER (dev local, simples)**
+
+1. Abra http://localhost:8088 e logue como `admin@tkws.local` / `Admin@123456`
+2. Vá em **Users** → `login-client` → **Authorizations** → **+ New**
+3. Selecione a org TKWS e o role `ORG_OWNER`
+4. Re-rode `bash scripts/zitadel-seed.sh` — agora ele consegue criar tudo
+
+**B. Criar machine user dedicado `seed-bot` (recomendado para staging/prod)**
+
+1. Abra http://localhost:8088 logado como admin
+2. **Users** → **+ New** → tipo **Service User**, name `seed-bot`
+3. Adicione **Authorization** com role `ORG_OWNER`
+4. **Personal Access Tokens** → **+ New** → expiration distante (ou never)
+5. Copie o PAT e salve em `docker/zitadel/seed-bot.pat`
+6. Edite `scripts/zitadel-seed.sh`: troque `PAT_FILE` para
+   `docker/zitadel/seed-bot.pat`
+7. Re-rode o seed
+
+Quando o usuário convidado aceitar o invite (ver ADR-016), ele também precisará
+ser autorizado no projeto via o fluxo de UserGrant que o backend já faz por código.
+
+### Quando o `zitadel-seed.sh` falha com 403
+
+O script é tolerante a 403: ele imprime aviso e continua. Os endpoints com
+permissão limitada são `POST /projects`, `POST /apps`, `POST /roles` e
+`PUT /projects/{id}`. Em todos os outros casos (sync `.env.local`, leitura
+de estado) ele funciona com o PAT do login-client.
+
+### Diagnóstico · JWT sem claim de roles (403 em todo endpoint)
+
+Sintoma: depois de logar via OIDC, todo `GET /api/v1/...` com `@PreAuthorize`
+retorna 403. O usuário **tem grants** assinalados no projeto, mas o claim
+`urn:zitadel:iam:org:project:roles` não aparece no JWT.
+
+Para o claim ser emitido, **três** condições precisam estar satisfeitas
+simultaneamente:
+
+1. **No FRONTEND** · scope OIDC `urn:zitadel:iam:org:project:id:{ProjectId}:aud`
+   no `oidc-config.ts`. Adiciona o `project_id` ao `aud` do token. Sem isso o
+   audience fica só com o client_id e o Zitadel não emite o role claim. Vem
+   automaticamente quando `VITE_ZITADEL_PROJECT_ID` está no `.env.local`.
+
+2. **No APP `Web`** · `accessTokenRoleAssertion: true` (e `idTokenRoleAssertion: true`
+   se o frontend usar id_token). Já configurado pelo seed na criação inicial.
+
+3. **No PROJETO `TKWS OS`** · `projectRoleAssertion: true`. **Esse é o que mais
+   passa despercebido** — projetos criados manualmente no Console nascem com
+   essa flag em `false`. Console → Projects → TKWS OS → toggle
+   **"Assert Roles on Authentication"** → Save.
+
+O `zitadel-seed.sh` detecta projetos com `projectRoleAssertion=false` e tenta
+ligar via `PUT /projects/{id}`, mas isso requer `ORG_OWNER` no PAT (gap
+documentado na seção anterior).
+
+**Diagnose rápido**: pegue o access token (`localStorage.clear()` + login,
+copie do localStorage `oidc.user:...`), cole em https://jwt.io e cheque:
+
+```json
+{
+  "aud": ["client_id", "project_id"],   // ✓ scope project audience funcionou
+  "urn:zitadel:iam:user:resourceowner:id": "...",  // ✓ org id
+  "urn:zitadel:iam:org:project:roles": { ... }   // ✓ projectRoleAssertion ON
+}
+```
+
+Se `aud` não tem o project_id → fix (1).
+Se tem project_id em `aud` mas falta `urn:zitadel:iam:org:project:roles` → fix (3).

@@ -13,7 +13,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.UUID;
 
 /**
  * Orquestração de Oportunidades.
@@ -39,7 +38,7 @@ public class OportunidadeService {
     }
 
     @Transactional(readOnly = true)
-    public List<OportunidadeView> list(UUID tenantId, PipelineId pipelineId) {
+    public List<OportunidadeView> list(long tenantId, PipelineId pipelineId) {
         List<Oportunidade> data = pipelineId != null
             ? repository.listByPipeline(tenantId, pipelineId)
             : repository.listAll(tenantId);
@@ -47,14 +46,14 @@ public class OportunidadeService {
     }
 
     @Transactional(readOnly = true)
-    public OportunidadeView findById(UUID tenantId, OportunidadeId id) {
+    public OportunidadeView findById(long tenantId, OportunidadeId id) {
         return repository.findById(tenantId, id)
             .map(OportunidadeView::from)
             .orElseThrow(() -> new OportunidadeNotFoundException(id));
     }
 
     @Transactional
-    public OportunidadeView create(UUID tenantId, OportunidadeCommand cmd) {
+    public OportunidadeView create(long tenantId, OportunidadeCommand cmd) {
         Oportunidade oportunidade = Oportunidade.create(
             tenantId,
             PipelineId.of(cmd.pipelineId()),
@@ -79,7 +78,7 @@ public class OportunidadeService {
     }
 
     @Transactional
-    public OportunidadeView update(UUID tenantId, OportunidadeId id, OportunidadeCommand cmd) {
+    public OportunidadeView update(long tenantId, OportunidadeId id, OportunidadeCommand cmd) {
         Oportunidade oportunidade = repository.findById(tenantId, id)
             .orElseThrow(() -> new OportunidadeNotFoundException(id));
 
@@ -105,7 +104,7 @@ public class OportunidadeService {
     }
 
     @Transactional
-    public OportunidadeView moveToEtapa(UUID tenantId, OportunidadeId id, EtapaId novaEtapa) {
+    public OportunidadeView moveToEtapa(long tenantId, OportunidadeId id, EtapaId novaEtapa) {
         Oportunidade oportunidade = repository.findById(tenantId, id)
             .orElseThrow(() -> new OportunidadeNotFoundException(id));
 
@@ -120,7 +119,7 @@ public class OportunidadeService {
     }
 
     @Transactional
-    public void remove(UUID tenantId, OportunidadeId id) {
+    public void remove(long tenantId, OportunidadeId id) {
         repository.delete(tenantId, id);
     }
 

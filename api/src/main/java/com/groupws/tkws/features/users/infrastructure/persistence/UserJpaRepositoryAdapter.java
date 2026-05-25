@@ -44,7 +44,7 @@ class UserJpaRepositoryAdapter implements UserRepository {
             u.email().value(),
             u.fullName(),
             u.avatarUrl(),
-            u.tenantId().orElse(null),
+            u.tenantIdOrNull(),
             u.active(),
             u.createdAt(),
             u.updatedAt(),

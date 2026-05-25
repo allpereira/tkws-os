@@ -3,7 +3,7 @@ import { z } from 'zod'
 /** Pipelines · CRM tem ao menos 2: Atendimento e Proposta. */
 export const pipelineSchema = z.object({
   id: z.string().uuid(),
-  tenantId: z.string().uuid(),
+  tenantId: z.number().int().positive(),
   nome: z.string().min(1).max(80),
   descricao: z.string().max(280).optional().nullable(),
   modulo: z.enum(['atendimento', 'proposta']),

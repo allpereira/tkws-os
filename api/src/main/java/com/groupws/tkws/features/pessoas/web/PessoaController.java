@@ -1,5 +1,19 @@
 package com.groupws.tkws.features.pessoas.web;
 
+import java.net.URI;
+import java.util.List;
+import java.util.UUID;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.groupws.tkws.features.pessoas.application.dto.DedupResult;
 import com.groupws.tkws.features.pessoas.application.dto.PessoaView;
 import com.groupws.tkws.features.pessoas.application.usecase.CheckDuplicidadePessoaUseCase;
@@ -12,20 +26,8 @@ import com.groupws.tkws.features.pessoas.domain.model.TipoPessoa;
 import com.groupws.tkws.features.pessoas.web.dto.CreatePessoaRequest;
 import com.groupws.tkws.shared.web.tenant.CurrentTenant;
 import com.groupws.tkws.shared.web.tenant.TenantContext;
-import jakarta.validation.Valid;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 
-import java.net.URI;
-import java.util.List;
-import java.util.UUID;
+import jakarta.validation.Valid;
 
 /**
  * REST API · cadastro único de Pessoas (Lead/Cliente).
@@ -44,6 +46,7 @@ import java.util.UUID;
  */
 @RestController
 @RequestMapping("/api/v1/pessoas")
+@PreAuthorize("hasAnyRole('ORG_ADMIN', 'COMERCIAL_ATENDIMENTO', 'COMERCIAL_PROPOSTA')")
 class PessoaController {
 
     private final CreatePessoaUseCase createPessoa;
@@ -62,7 +65,7 @@ class PessoaController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ORG_ADMIN', 'PROJECT_MANAGER', 'ARCHITECT')")
+    @PreAuthorize("hasAnyRole('ORG_ADMIN', 'COMERCIAL_ATENDIMENTO', 'COMERCIAL_PROPOSTA')")
     public ResponseEntity<List<PessoaView>> list(
         @CurrentTenant TenantContext tenant,
         @RequestParam(required = false) StatusPessoa status,
@@ -73,7 +76,7 @@ class PessoaController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ORG_ADMIN', 'PROJECT_MANAGER', 'ARCHITECT')")
+    @PreAuthorize("hasAnyRole('ORG_ADMIN', 'COMERCIAL_ATENDIMENTO', 'COMERCIAL_PROPOSTA')")
     public ResponseEntity<PessoaView> findById(
         @PathVariable UUID id,
         @CurrentTenant TenantContext tenant
@@ -86,7 +89,7 @@ class PessoaController {
      * Comportamento detalhado em ADR-018.
      */
     @GetMapping("/buscar")
-    @PreAuthorize("hasAnyRole('ORG_ADMIN', 'PROJECT_MANAGER', 'ARCHITECT')")
+    @PreAuthorize("hasAnyRole('ORG_ADMIN', 'COMERCIAL_ATENDIMENTO', 'COMERCIAL_PROPOSTA')")
     public ResponseEntity<DedupResult> buscar(
         @CurrentTenant TenantContext tenant,
         @RequestParam(required = false) TipoPessoa tipoPessoa,
@@ -100,7 +103,7 @@ class PessoaController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ORG_ADMIN', 'PROJECT_MANAGER', 'ARCHITECT')")
+    @PreAuthorize("hasAnyRole('ORG_ADMIN', 'COMERCIAL_ATENDIMENTO', 'COMERCIAL_PROPOSTA')")
     public ResponseEntity<PessoaView> create(
         @CurrentTenant TenantContext tenant,
         @Valid @RequestBody CreatePessoaRequest request
@@ -115,7 +118,7 @@ class PessoaController {
      * Promove Pessoa de LEAD para CLIENTE. Idempotente.
      */
     @PostMapping("/{id}/converter")
-    @PreAuthorize("hasAnyRole('ORG_ADMIN', 'PROJECT_MANAGER')")
+    @PreAuthorize("hasAnyRole('ORG_ADMIN', 'COMERCIAL_ATENDIMENTO', 'COMERCIAL_PROPOSTA')")
     public ResponseEntity<PessoaView> converter(
         @PathVariable UUID id,
         @CurrentTenant TenantContext tenant

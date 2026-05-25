@@ -10,7 +10,6 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 @Repository
 class OportunidadeJpaRepositoryAdapter implements OportunidadeRepository {
@@ -46,24 +45,24 @@ class OportunidadeJpaRepositoryAdapter implements OportunidadeRepository {
     }
 
     @Override
-    public Optional<Oportunidade> findById(UUID tenantId, OportunidadeId id) {
+    public Optional<Oportunidade> findById(long tenantId, OportunidadeId id) {
         return jpa.findByIdAndTenantId(id.value(), tenantId).map(this::toDomain);
     }
 
     @Override
-    public List<Oportunidade> listByPipeline(UUID tenantId, PipelineId pipelineId) {
+    public List<Oportunidade> listByPipeline(long tenantId, PipelineId pipelineId) {
         return jpa.findByTenantIdAndPipelineIdOrderByUpdatedAtDesc(tenantId, pipelineId.value())
             .stream().map(this::toDomain).toList();
     }
 
     @Override
-    public List<Oportunidade> listAll(UUID tenantId) {
+    public List<Oportunidade> listAll(long tenantId) {
         return jpa.findByTenantIdOrderByUpdatedAtDesc(tenantId)
             .stream().map(this::toDomain).toList();
     }
 
     @Override
-    public void delete(UUID tenantId, OportunidadeId id) {
+    public void delete(long tenantId, OportunidadeId id) {
         jpa.findByIdAndTenantId(id.value(), tenantId).ifPresent(jpa::delete);
     }
 

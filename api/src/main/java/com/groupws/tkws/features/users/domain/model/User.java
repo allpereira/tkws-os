@@ -7,8 +7,14 @@ import com.groupws.tkws.shared.domain.Email;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.UUID;
+import java.util.OptionalLong;
 
+/**
+ * Aggregate Root · usuário espelhado a partir do Zitadel.
+ *
+ * `tenantId` é o BIGINT local (PK em tenants.id) · pode ser null quando o
+ * user ainda não foi vinculado a nenhum tenant.
+ */
 public final class User extends AggregateRoot<UserId> {
 
     private final UserId id;
@@ -16,14 +22,15 @@ public final class User extends AggregateRoot<UserId> {
     private Email email;
     private String fullName;
     private String avatarUrl;
-    private UUID tenantId;
+    /** null quando o user ainda não foi associado a um tenant. */
+    private Long tenantId;
     private boolean active;
     private final Instant createdAt;
     private Instant updatedAt;
     private Instant lastLoginAt;
 
     private User(UserId id, String zitadelId, Email email, String fullName, String avatarUrl,
-                 UUID tenantId, boolean active, Instant createdAt, Instant updatedAt, Instant lastLoginAt) {
+                 Long tenantId, boolean active, Instant createdAt, Instant updatedAt, Instant lastLoginAt) {
         this.id = Objects.requireNonNull(id, "id");
         this.zitadelId = Objects.requireNonNull(zitadelId, "zitadelId");
         this.email = Objects.requireNonNull(email, "email");
@@ -45,7 +52,7 @@ public final class User extends AggregateRoot<UserId> {
     }
 
     public static User reconstitute(UserId id, String zitadelId, Email email, String fullName,
-                                    String avatarUrl, UUID tenantId, boolean active,
+                                    String avatarUrl, Long tenantId, boolean active,
                                     Instant createdAt, Instant updatedAt, Instant lastLoginAt) {
         return new User(id, zitadelId, email, fullName, avatarUrl, tenantId, active, createdAt, updatedAt, lastLoginAt);
     }
@@ -59,8 +66,11 @@ public final class User extends AggregateRoot<UserId> {
         registerEvent(new UserSyncedEvent(id, zitadelId, email.value(), Instant.now(), false));
     }
 
-    public void assignToTenant(UUID tenantId) {
-        this.tenantId = Objects.requireNonNull(tenantId);
+    public void assignToTenant(long tenantId) {
+        if (tenantId <= 0) {
+            throw new IllegalArgumentException("tenantId deve ser positivo · recebeu: " + tenantId);
+        }
+        this.tenantId = tenantId;
         this.updatedAt = Instant.now();
     }
 
@@ -75,7 +85,11 @@ public final class User extends AggregateRoot<UserId> {
     public Email email() { return email; }
     public String fullName() { return fullName; }
     public String avatarUrl() { return avatarUrl; }
-    public Optional<UUID> tenantId() { return Optional.ofNullable(tenantId); }
+    public OptionalLong tenantId() {
+        return tenantId == null ? OptionalLong.empty() : OptionalLong.of(tenantId);
+    }
+    /** Retorna o tenantId como `Long` (boxed · null se sem tenant). Útil para JPA / DTOs. */
+    public Long tenantIdOrNull() { return tenantId; }
     public boolean active() { return active; }
     public Instant createdAt() { return createdAt; }
     public Instant updatedAt() { return updatedAt; }

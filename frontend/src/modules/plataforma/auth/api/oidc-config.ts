@@ -4,6 +4,7 @@ import type { AuthProviderProps } from 'react-oidc-context';
 export const ZITADEL_AUTHORITY =
   import.meta.env.VITE_ZITADEL_AUTHORITY || 'http://localhost:8088';
 export const ZITADEL_CLIENT_ID = import.meta.env.VITE_ZITADEL_CLIENT_ID || '';
+export const ZITADEL_PROJECT_ID = import.meta.env.VITE_ZITADEL_PROJECT_ID || '';
 export const OIDC_REDIRECT_URI =
   import.meta.env.VITE_REDIRECT_URI || 'http://localhost:5173/callback';
 
@@ -22,9 +23,10 @@ export function isOidcConfigured(): boolean {
  *   - offline_access · refresh token
  *   - urn:zitadel:iam:user:resourceowner · **claim org_id no JWT**, necessário
  *     para o backend resolver o tenant (ver ADR-019 e docs/04-AUTH.md § 4.1).
- *   - urn:zitadel:iam:org:project:id:zitadel:aud · força o audience do
- *     projeto · usado pelas claims de roles. Em alguns setups o claim
- *     `urn:zitadel:iam:org:project:roles` só vem com este scope.
+ *   - urn:zitadel:iam:org:project:id:{ProjectId}:aud · adiciona o project_id
+ *     no audience do token, **obrigatório** para o claim
+ *     `urn:zitadel:iam:org:project:roles` ser emitido. Sem isso, mesmo com
+ *     `accessTokenRoleAssertion=true` no app Zitadel, as roles não vêm.
  */
 const SCOPES = [
   'openid',
@@ -32,6 +34,7 @@ const SCOPES = [
   'email',
   'offline_access',
   'urn:zitadel:iam:user:resourceowner',
+  ...(ZITADEL_PROJECT_ID ? [`urn:zitadel:iam:org:project:id:${ZITADEL_PROJECT_ID}:aud`] : []),
 ].join(' ')
 
 export const oidcConfig: AuthProviderProps = {

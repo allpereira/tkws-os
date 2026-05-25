@@ -21,7 +21,7 @@ class InviteJpaEntity {
     UUID id;
 
     @Column(name = "tenant_id", nullable = false)
-    UUID tenantId;
+    Long tenantId;
 
     @Column(name = "email", nullable = false, length = 255)
     String email;

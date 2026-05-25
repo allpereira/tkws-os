@@ -17,4 +17,9 @@ public record TenantCreatedEvent(
     public TenantCreatedEvent(TenantId tenantId, String name, String slug, Instant occurredOn) {
         this(UUID.randomUUID(), tenantId, name, slug, occurredOn);
     }
+
+    /** Helper · `tenantId` como long puro (matching o tipo de coluna no banco). */
+    public long tenantIdLong() {
+        return tenantId.value();
+    }
 }

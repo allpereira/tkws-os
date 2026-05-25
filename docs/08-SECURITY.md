@@ -126,7 +126,7 @@ Tabela `audit_log` (a criar):
 ```sql
 CREATE TABLE audit_log (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    tenant_id UUID,
+    tenant_id BIGINT REFERENCES tenants(id),  -- ver ADR-021
     user_id UUID,
     action VARCHAR(100) NOT NULL,  -- CREATE_TENANT, UPDATE_USER, etc
     resource_type VARCHAR(100),

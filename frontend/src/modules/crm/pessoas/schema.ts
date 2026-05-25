@@ -20,7 +20,7 @@ export const STATUS_PESSOA = ['LEAD', 'CLIENTE'] as const
 
 export const pessoaSchema = z.object({
   id: z.string().uuid(),
-  tenantId: z.string().uuid(),
+  tenantId: z.number().int().positive(),
   tipoPessoa: z.enum(TIPO_PESSOA),
   documento: z.string().nullable().optional(),
   nomeContato: z.string().min(1).max(160),

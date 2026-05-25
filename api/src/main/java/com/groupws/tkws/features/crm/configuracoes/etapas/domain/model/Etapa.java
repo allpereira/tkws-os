@@ -5,10 +5,11 @@ import com.groupws.tkws.shared.domain.AggregateRoot;
 
 import java.time.Instant;
 import java.util.Objects;
-import java.util.UUID;
 
 /**
  * Aggregate Root · Etapa de um Pipeline.
+ *
+ * `tenantId` é o BIGINT local (PK em tenants.id).
  *
  * Carrega a regra crítica do funil: a flag {@code converteLeadEmCliente}.
  * Quando uma Oportunidade entra numa Etapa com essa flag, o domínio de
@@ -21,7 +22,7 @@ import java.util.UUID;
 public final class Etapa extends AggregateRoot<EtapaId> {
 
     private final EtapaId id;
-    private final UUID tenantId;
+    private final long tenantId;
     private final PipelineId pipelineId;
     private String codigo;
     private String nome;
@@ -35,12 +36,15 @@ public final class Etapa extends AggregateRoot<EtapaId> {
     private final Instant createdAt;
     private Instant updatedAt;
 
-    private Etapa(EtapaId id, UUID tenantId, PipelineId pipelineId, String codigo, String nome,
+    private Etapa(EtapaId id, long tenantId, PipelineId pipelineId, String codigo, String nome,
                   String descricao, String cor, int probabilidade, TipoEtapa tipo, int ordem,
                   boolean converteLeadEmCliente, boolean ativo,
                   Instant createdAt, Instant updatedAt) {
         this.id = Objects.requireNonNull(id);
-        this.tenantId = Objects.requireNonNull(tenantId);
+        if (tenantId <= 0) {
+            throw new IllegalArgumentException("tenantId deve ser positivo · recebeu: " + tenantId);
+        }
+        this.tenantId = tenantId;
         this.pipelineId = Objects.requireNonNull(pipelineId);
         this.codigo = required(codigo, "codigo");
         this.nome = required(nome, "nome");
@@ -55,7 +59,7 @@ public final class Etapa extends AggregateRoot<EtapaId> {
         this.updatedAt = Objects.requireNonNull(updatedAt);
     }
 
-    public static Etapa create(UUID tenantId, PipelineId pipelineId, String codigo, String nome,
+    public static Etapa create(long tenantId, PipelineId pipelineId, String codigo, String nome,
                                String descricao, String cor, int probabilidade, TipoEtapa tipo,
                                int ordem, boolean converteLeadEmCliente, boolean ativo) {
         Instant now = Instant.now();
@@ -63,7 +67,7 @@ public final class Etapa extends AggregateRoot<EtapaId> {
             cor, probabilidade, tipo, ordem, converteLeadEmCliente, ativo, now, now);
     }
 
-    public static Etapa reconstitute(EtapaId id, UUID tenantId, PipelineId pipelineId, String codigo,
+    public static Etapa reconstitute(EtapaId id, long tenantId, PipelineId pipelineId, String codigo,
                                      String nome, String descricao, String cor, int probabilidade,
                                      TipoEtapa tipo, int ordem, boolean converteLeadEmCliente,
                                      boolean ativo, Instant createdAt, Instant updatedAt) {
@@ -100,7 +104,7 @@ public final class Etapa extends AggregateRoot<EtapaId> {
     }
 
     @Override public EtapaId id() { return id; }
-    public UUID tenantId() { return tenantId; }
+    public long tenantId() { return tenantId; }
     public PipelineId pipelineId() { return pipelineId; }
     public String codigo() { return codigo; }
     public String nome() { return nome; }

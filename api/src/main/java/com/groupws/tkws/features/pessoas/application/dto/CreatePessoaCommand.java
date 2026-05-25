@@ -4,9 +4,8 @@ import com.groupws.tkws.features.pessoas.domain.model.TipoPessoa;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
-
-import java.util.UUID;
 
 /**
  * Comando para criar uma Pessoa nova (sempre como LEAD).
@@ -17,6 +16,10 @@ import java.util.UUID;
  *
  * Demais campos são opcionais no cadastro inicial e completados depois.
  *
+ * `tenantId` é o BIGINT local · resolvido pelo {@link
+ * com.groupws.tkws.shared.web.tenant.CurrentTenant} no controller (nunca vem
+ * do body diretamente do cliente).
+ *
  * Se `documento` for informado, o use case valida que casa com `tipoPessoa`
  * (CPF=11 dígitos para PF, CNPJ=14 dígitos para PJ) e que ainda não existe
  * outra Pessoa com o mesmo documento no tenant (UNIQUE constraint).
@@ -26,7 +29,7 @@ import java.util.UUID;
  * por documento — duplicidade de CPF/CNPJ continua bloqueada).
  */
 public record CreatePessoaCommand(
-    @NotNull UUID tenantId,
+    @Positive long tenantId,
     @NotNull TipoPessoa tipoPessoa,
     @Size(max = 20) String documento,
     @NotBlank @Size(max = 160) String nomeContato,

@@ -8,7 +8,6 @@ import com.groupws.tkws.features.crm.oportunidades.domain.port.EtapaLookup;
 import org.springframework.stereotype.Component;
 
 import java.util.Optional;
-import java.util.UUID;
 
 /**
  * Implementação do port {@link EtapaLookup} · usa o {@link EtapaService}
@@ -27,7 +26,7 @@ class EtapaLookupAdapter implements EtapaLookup {
     }
 
     @Override
-    public Optional<EtapaInfo> findEtapa(UUID tenantId, EtapaId etapaId) {
+    public Optional<EtapaInfo> findEtapa(long tenantId, EtapaId etapaId) {
         try {
             EtapaView view = etapaService.findById(tenantId, etapaId);
             return Optional.of(new EtapaInfo(EtapaId.of(view.id()), view.converteLeadEmCliente()));

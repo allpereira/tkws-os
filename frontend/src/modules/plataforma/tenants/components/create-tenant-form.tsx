@@ -4,7 +4,7 @@ import { useCreateTenant } from '@/modules/plataforma/tenants/hooks/use-tenants'
 import { createTenantSchema, type CreateTenantInput } from '@/modules/plataforma/tenants/types/tenant';
 
 interface Props {
-  onSuccess?: (tenantId: string) => void;
+  onSuccess?: (tenantId: number) => void;
 }
 
 export function CreateTenantForm({ onSuccess }: Props) {

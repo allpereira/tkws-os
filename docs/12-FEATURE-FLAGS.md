@@ -26,8 +26,8 @@ Tabela `feature_flags` no banco. Cada flag tem:
 |---|---|---|
 | `name` | string | Identificador único (kebab-case) |
 | `default_enabled` | bool | Ligada por padrão pra todos? |
-| `enabled_for_tenants` | UUID[] | Allowlist (usada quando `default_enabled=false`) |
-| `disabled_for_tenants` | UUID[] | Blocklist (usada quando `default_enabled=true`) |
+| `enabled_for_tenants` | BIGINT[] | Allowlist (usada quando `default_enabled=false`) · ver [ADR-021](adr/ADR-021-tenant-id-bigint.md) |
+| `disabled_for_tenants` | BIGINT[] | Blocklist (usada quando `default_enabled=true`) |
 
 Lógica:
 ```
@@ -45,7 +45,7 @@ public class CreateOrcamentoUseCase {
     // ...
 
     @Transactional
-    public OrcamentoView execute(CreateOrcamentoCommand cmd, UUID tenantId) {
+    public OrcamentoView execute(CreateOrcamentoCommand cmd, long tenantId) {
         if (!featureFlags.isEnabled("orcamento-v1", tenantId)) {
             throw new FeatureNotAvailableException("orcamento-v1");
         }
@@ -90,7 +90,7 @@ Via SQL direto (dev/staging) ou endpoint admin (prod, futuro):
 
 ```sql
 UPDATE feature_flags
-SET enabled_for_tenants = array_append(enabled_for_tenants, '<tenant-uuid>')
+SET enabled_for_tenants = array_append(enabled_for_tenants, <tenant_id_bigint>)
 WHERE name = 'crm-leads-v1';
 ```
 

@@ -6,26 +6,24 @@ import com.groupws.tkws.shared.domain.AggregateRoot;
 
 import java.time.Instant;
 import java.util.Objects;
-import java.util.UUID;
+import java.util.Optional;
 import java.util.regex.Pattern;
 
 /**
  * Aggregate Root representando um Tenant (escritório de arquitetura cliente).
- * Encapsula invariantes: slug válido, nome não vazio, mapeamento com Zitadel org.
  *
- * NOTA: Coluna `status` (TenantStatus enum) foi adicionada via migration V3 mas a
- * implementação completa do workflow (PENDING/ACTIVE/REJECTED/SUSPENDED) vem na
- * feature `onboarding-v1`. Hoje, factory `create()` produz tenant ACTIVE diretamente
- * (compatibilidade com fluxo system_admin atual). Endpoint de onboarding público vai
- * adicionar factory `requestRegistration(...)` que produz PENDING.
+ * `id` é BIGINT gerado pelo banco (IDENTITY column). Antes do primeiro save,
+ * o agregado é "transiente" (id null) — o adapter de persistência atribui o
+ * id após o INSERT e dispara `TenantCreatedEvent`.
  *
- * Ver ADR-014 e docs/13-ONBOARDING.md.
+ * Ver V1__initial_schema.sql, ADR-014, docs/13-ONBOARDING.md.
  */
 public final class Tenant extends AggregateRoot<TenantId> {
 
     private static final Pattern SLUG_PATTERN = Pattern.compile("^[a-z0-9]+(?:-[a-z0-9]+)*$");
 
-    private final TenantId id;
+    /** null antes do primeiro save (transient). */
+    private TenantId id;
     private final String zitadelOrgId;
     private String name;
     private String slug;
@@ -35,7 +33,7 @@ public final class Tenant extends AggregateRoot<TenantId> {
 
     private Tenant(TenantId id, String zitadelOrgId, String name, String slug,
                    boolean active, Instant createdAt, Instant updatedAt) {
-        this.id = Objects.requireNonNull(id, "id");
+        this.id = id; // pode ser null em estado transiente
         this.zitadelOrgId = Objects.requireNonNull(zitadelOrgId, "zitadelOrgId");
         this.name = validateName(name);
         this.slug = validateSlug(slug);
@@ -45,14 +43,13 @@ public final class Tenant extends AggregateRoot<TenantId> {
     }
 
     /**
-     * Factory para criar um novo Tenant (registra evento de criação).
+     * Factory para criar um novo Tenant (transiente · id ainda não atribuído).
+     * O evento de criação é registrado pelo adapter após o INSERT, quando o
+     * id real está disponível.
      */
     public static Tenant create(String zitadelOrgId, String name, String slug) {
         Instant now = Instant.now();
-        TenantId id = TenantId.generate();
-        Tenant tenant = new Tenant(id, zitadelOrgId, name, slug, true, now, now);
-        tenant.registerEvent(new TenantCreatedEvent(id, name, slug, now));
-        return tenant;
+        return new Tenant(null, zitadelOrgId, name, slug, true, now, now);
     }
 
     /**
@@ -60,7 +57,25 @@ public final class Tenant extends AggregateRoot<TenantId> {
      */
     public static Tenant reconstitute(TenantId id, String zitadelOrgId, String name, String slug,
                                       boolean active, Instant createdAt, Instant updatedAt) {
+        Objects.requireNonNull(id, "id em reconstitute · use create() para novos");
         return new Tenant(id, zitadelOrgId, name, slug, active, createdAt, updatedAt);
+    }
+
+    /**
+     * Chamado pelo adapter de persistência APÓS o INSERT, quando o id BIGINT
+     * gerado pelo banco está disponível. Dispara o evento de criação.
+     *
+     * Idempotente: se já tem id, no-op.
+     */
+    public void assignIdIfTransient(TenantId newId) {
+        if (this.id != null) return;
+        Objects.requireNonNull(newId, "newId");
+        this.id = newId;
+        registerEvent(new TenantCreatedEvent(newId, name, slug, this.createdAt));
+    }
+
+    public boolean isTransient() {
+        return this.id == null;
     }
 
     public void rename(String newName) {
@@ -95,7 +110,18 @@ public final class Tenant extends AggregateRoot<TenantId> {
         return slug;
     }
 
-    @Override public TenantId id() { return id; }
+    /**
+     * Retorna o id quando já persistido. Use {@link #idOrNull()} ou
+     * {@link #isTransient()} quando o estado pode ser transiente.
+     */
+    @Override
+    public TenantId id() {
+        if (id == null) throw new IllegalStateException("Tenant ainda transiente · sem id");
+        return id;
+    }
+
+    public Optional<TenantId> idOpt() { return Optional.ofNullable(id); }
+    public TenantId idOrNull() { return id; }
     public String zitadelOrgId() { return zitadelOrgId; }
     public String name() { return name; }
     public String slug() { return slug; }

@@ -3,7 +3,7 @@ import { z } from 'zod'
 /** Funções de Pessoas · ex: "Arquiteto líder", "Designer pleno", "Gerente de obra". */
 export const funcaoPessoaSchema = z.object({
   id: z.string().uuid(),
-  tenantId: z.string().uuid(),
+  tenantId: z.number().int().positive(),
   codigo: z.string().min(1).max(40),
   nome: z.string().min(1).max(80),
   ativo: z.boolean().default(true),

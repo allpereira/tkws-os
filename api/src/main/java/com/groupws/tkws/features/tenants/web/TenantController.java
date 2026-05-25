@@ -11,7 +11,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/tenants")
@@ -37,7 +36,7 @@ class TenantController {
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('SYSTEM_ADMIN', 'ORG_ADMIN')")
-    public ResponseEntity<TenantView> findById(@PathVariable UUID id) {
+    public ResponseEntity<TenantView> findById(@PathVariable long id) {
         return ResponseEntity.ok(findTenantUseCase.byId(TenantId.of(id)));
     }
 

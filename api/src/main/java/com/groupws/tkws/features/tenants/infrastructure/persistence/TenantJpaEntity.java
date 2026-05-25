@@ -10,6 +10,10 @@ import java.util.UUID;
  * Não é a mesma classe do Aggregate Root do domínio.
  * Conversão acontece em TenantJpaRepositoryAdapter.
  *
+ * `id` é BIGINT gerado pelo banco (IDENTITY column · V1__initial_schema.sql).
+ * Em INSERTs o id vem null e o Postgres atribui via sequência; em UPDATEs já
+ * vem populado pela leitura prévia.
+ *
  * Campos `status` e relacionados ao workflow de aprovação (V3__tenant_approval_workflow.sql)
  * estão mapeados aqui mas ainda não exposto no Aggregate Root.
  * Será refatorado na feature `onboarding-v1`.
@@ -19,8 +23,9 @@ import java.util.UUID;
 class TenantJpaEntity {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false, updatable = false)
-    UUID id;
+    Long id;
 
     @Column(name = "zitadel_org_id", nullable = false, unique = true)
     String zitadelOrgId;
@@ -72,9 +77,14 @@ class TenantJpaEntity {
 
     protected TenantJpaEntity() {}
 
-    TenantJpaEntity(UUID id, String zitadelOrgId, String name, String slug,
+    /**
+     * Construtor de INSERT · id null deixa o Postgres atribuir via IDENTITY.
+     * Após {@link jakarta.persistence.EntityManager#persist} o JPA preenche
+     * o campo {@link #id} com o valor gerado.
+     */
+    TenantJpaEntity(String zitadelOrgId, String name, String slug,
                     boolean active, Instant createdAt, Instant updatedAt) {
-        this.id = id;
+        this.id = null;
         this.zitadelOrgId = zitadelOrgId;
         this.name = name;
         this.slug = slug;

@@ -7,7 +7,7 @@ import java.util.UUID;
 
 public record EtapaView(
     UUID id,
-    UUID tenantId,
+    long tenantId,
     UUID pipelineId,
     String codigo,
     String nome,

@@ -7,7 +7,7 @@ export const currentUserSchema = z.object({
   email: z.string().email(),
   fullName: z.string().nullable(),
   avatarUrl: z.string().url().nullable(),
-  tenantId: z.string().uuid().nullable(),
+  tenantId: z.number().int().positive().nullable(),
   active: z.boolean(),
   lastLoginAt: z.string().datetime({ offset: true }).nullable(),
 });
