@@ -3,7 +3,8 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { FormDialogFooter } from '@/components/tkws/crud-page'
 import { Field, FieldHint, Input, Label, Textarea } from '@/components/ui/input'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { SelectField } from '@/components/ui/select-field'
+import { SelectField, type SelectOption } from '@/components/ui/select-field'
+import { DateField } from '@/components/ui/date-field'
 import { useEmpreendimentos } from '@/modules/organizacao/configuracoes/empreendimentos/api'
 import { useOfertas } from '@/modules/organizacao/configuracoes/ofertas/api'
 import type { Etapa } from '@/modules/crm/configuracoes/etapas/schema'
@@ -15,6 +16,33 @@ import {
   type CreateOportunidade,
   type Oportunidade,
 } from '../schema'
+
+/**
+ * Hint exibido abaixo de um Select quando a lista de opções está vazia
+ * porque o hook ainda está carregando ou porque não há cadastros / falta
+ * permissão. Mostra mensagem clara em vez do select abrir vazio "sem
+ * reação".
+ */
+function emptyHint(
+  query: { isLoading: boolean; isError: boolean; data: unknown[] | undefined },
+  cadastreUrl?: string,
+) {
+  if (query.isLoading) return 'Carregando…'
+  if (query.isError) return 'Falha ao carregar · verifique sua conexão e permissão'
+  if (!query.data || query.data.length === 0) {
+    return cadastreUrl
+      ? `Nenhum cadastro encontrado · cadastre em ${cadastreUrl}`
+      : 'Nenhum cadastro disponível'
+  }
+  return null
+}
+
+function toOptions<T extends { id: string }>(
+  data: T[] | undefined,
+  label: (item: T) => string,
+): SelectOption[] {
+  return (data ?? []).map((item) => ({ value: item.id, label: label(item) }))
+}
 
 export interface OportunidadeFormProps {
   initial?: Oportunidade
@@ -93,9 +121,14 @@ export function OportunidadeForm({
           <SelectField
             control={control}
             name="etapaId"
-            placeholder="Selecione a etapa"
+            placeholder={etapas.length === 0 ? 'Sem etapas neste pipeline' : 'Selecione a etapa'}
             options={etapas.map((e) => ({ value: e.id, label: e.nome }))}
+            state={errors.etapaId ? 'error' : 'default'}
           />
+          {etapas.length === 0 && (
+            <FieldHint>Cadastre etapas em Configurações → CRM → Etapas para este pipeline.</FieldHint>
+          )}
+          {errors.etapaId && <FieldHint state="error">{errors.etapaId.message}</FieldHint>}
         </Field>
         <Field>
           <Label htmlFor="valor">Valor (R$)</Label>
@@ -108,12 +141,14 @@ export function OportunidadeForm({
         <SelectField
           control={control}
           name="pessoaId"
-          placeholder="Selecione o contato"
-          options={(pessoas.data ?? []).map((p) => ({
-            value: p.id,
-            label: `${p.nomeContato}${p.nomeEmpresa ? ' · ' + p.nomeEmpresa : ''} (${p.status})`,
-          }))}
+          placeholder={pessoas.isLoading ? 'Carregando…' : 'Selecione o contato'}
+          options={toOptions(pessoas.data, (p) =>
+            `${p.nomeContato}${p.nomeEmpresa ? ' · ' + p.nomeEmpresa : ''} (${p.status})`,
+          )}
         />
+        {emptyHint(pessoas, 'CRM → Leads / Clientes') && (
+          <FieldHint>{emptyHint(pessoas, 'CRM → Leads / Clientes')}</FieldHint>
+        )}
       </Field>
 
       <div className="grid grid-cols-2 gap-3">
@@ -122,21 +157,26 @@ export function OportunidadeForm({
           <SelectField
             control={control}
             name="ofertaId"
-            placeholder="Nenhuma"
-            options={(ofertas.data ?? []).map((o) => ({ value: o.id, label: o.nome }))}
+            placeholder={ofertas.isLoading ? 'Carregando…' : 'Nenhuma'}
+            options={toOptions(ofertas.data, (o) => o.nome)}
           />
+          {emptyHint(ofertas, 'Configurações → Organização → Ofertas') && (
+            <FieldHint>{emptyHint(ofertas, 'Configurações → Organização → Ofertas')}</FieldHint>
+          )}
         </Field>
         <Field>
           <Label>Empreendimento</Label>
           <SelectField
             control={control}
             name="empreendimentoId"
-            placeholder="Nenhum"
-            options={(empreendimentos.data ?? []).map((e) => ({
-              value: e.id,
-              label: e.nome,
-            }))}
+            placeholder={empreendimentos.isLoading ? 'Carregando…' : 'Nenhum'}
+            options={toOptions(empreendimentos.data, (e) => e.nome)}
           />
+          {emptyHint(empreendimentos, 'Configurações → Organização → Empreendimentos') && (
+            <FieldHint>
+              {emptyHint(empreendimentos, 'Configurações → Organização → Empreendimentos')}
+            </FieldHint>
+          )}
         </Field>
       </div>
 
@@ -146,15 +186,20 @@ export function OportunidadeForm({
           <SelectField
             control={control}
             name="tipoPagamentoId"
-            placeholder="Não definido"
-            options={(tiposPagamento.data ?? []).map((t) => ({ value: t.id, label: t.nome }))}
+            placeholder={tiposPagamento.isLoading ? 'Carregando…' : 'Não definido'}
+            options={toOptions(tiposPagamento.data, (t) => t.nome)}
           />
+          {emptyHint(tiposPagamento, 'Configurações → CRM → Tipos de Pagamento') && (
+            <FieldHint>
+              {emptyHint(tiposPagamento, 'Configurações → CRM → Tipos de Pagamento')}
+            </FieldHint>
+          )}
         </Field>
       )}
 
       <Field>
         <Label htmlFor="prazoFechamento">Prazo de fechamento</Label>
-        <Input id="prazoFechamento" type="date" {...register('prazoFechamento')} />
+        <DateField control={control} name="prazoFechamento" placeholder="Selecione a data" />
       </Field>
 
       <Field>

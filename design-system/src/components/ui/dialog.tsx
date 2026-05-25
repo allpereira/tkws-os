@@ -3,6 +3,15 @@ import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
+/**
+ * Dialog · padrão TKWS OS · Radix Dialog.
+ *
+ * **Não usar `<dialog showModal>` HTML5** — a top layer do navegador impede que
+ * Select, Popover e outros overlays portaled no `document.body` recebam cliques.
+ *
+ * Select/Popover do DS usam `z-[100]`; overlay e content do modal ficam em `z-50`.
+ */
+
 export const Dialog = DialogPrimitive.Root
 export const DialogTrigger = DialogPrimitive.Trigger
 export const DialogPortal = DialogPrimitive.Portal
@@ -14,11 +23,8 @@ export const DialogOverlay = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Overlay
     ref={ref}
-    className={cn(
-      'fixed inset-0 z-50 data-[state=open]:animate-fade-in',
-      className
-    )}
-    style={{ background: 'rgba(6,24,40,0.78)', backdropFilter: 'blur(8px)' }}
+    className={cn('fixed inset-0 z-50 data-[state=open]:animate-fade-in', className)}
+    style={{ background: 'var(--overlay-strong)', backdropFilter: 'blur(8px)' }}
     {...props}
   />
 ))
@@ -33,26 +39,28 @@ export const DialogContent = React.forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        'fixed top-1/2 left-1/2 z-50 grid w-full max-w-[480px] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-[14px] border duration-200',
+        'fixed top-1/2 left-1/2 z-50 grid w-full max-w-lg max-h-[90vh] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-[14px] border p-0',
         'data-[state=open]:animate-fade-in',
-        className
+        className,
       )}
       style={{
         background: 'var(--surface-1)',
+        color: 'var(--text)',
         borderColor: 'var(--line-2)',
         boxShadow: 'var(--shadow-4)',
         ...style,
       }}
       {...props}
     >
-      {children}
       <DialogPrimitive.Close
-        className="absolute top-4 right-4 inline-flex h-7 w-7 items-center justify-center rounded-md transition-colors hover:brightness-125 focus:outline-none focus:ring-2 focus:ring-[var(--brand)] disabled:pointer-events-none"
-        style={{ color: 'var(--text-mute)' }}
+        type="button"
         aria-label="Fechar"
+        className="absolute top-3 right-3 z-10 inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--brand)]"
+        style={{ color: 'var(--text-mute)' }}
       >
         <X size={16} />
       </DialogPrimitive.Close>
+      {children}
     </DialogPrimitive.Content>
   </DialogPortal>
 ))
@@ -60,7 +68,6 @@ DialogContent.displayName = 'DialogContent'
 
 /**
  * Fiel ao HTML · ds-dialog-head: padding 20px 24px 16px · border-bottom line-1
- * h4: Fraunces 22px weight 400 · desc: 13px text-soft margin-top 6px
  */
 export function DialogHeader({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return (

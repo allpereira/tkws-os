@@ -72,6 +72,13 @@ export function SelectField<TFormValues extends FieldValues>({
 }: SelectFieldProps<TFormValues>) {
   const resolvedState: 'default' | 'error' | 'success' = state ?? (error ? 'error' : 'default')
 
+  // `optionsSig` força o Radix Select a remontar quando o conjunto de opções
+  // muda (workaround conhecido · Radix Select 1.x não recalcula `SelectContent`
+  // se as `Items` mudam de identidade após o mount). Quando a lista chega via
+  // hook (TanStack Query), o componente atualiza visualmente sem precisar
+  // fechar/abrir o modal de novo.
+  const optionsSig = options.map((o) => o.value).join('|')
+
   return (
     <Controller
       control={control}
@@ -80,6 +87,7 @@ export function SelectField<TFormValues extends FieldValues>({
         const value = field.value == null ? emptyValue : String(field.value)
         return (
           <Select
+            key={optionsSig}
             value={value || undefined}
             onValueChange={(v) => field.onChange(v)}
             disabled={disabled}

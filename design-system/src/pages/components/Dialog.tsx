@@ -15,23 +15,32 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input, Field } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import type { AIPrompt } from '@/lib/prompts'
 
 const prompt: AIPrompt = {
   componente: 'Dialog',
   import: "import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog'",
   contexto:
-    'Dialog modal centralizado. Use para confirmar ações que não são destrutivas (criar item, escolher opção) ou para forms quick-create de ≤3 campos. Para forms longos, use Sheet. Para ações destrutivas, use AlertDialog.',
+    'Dialog modal centralizado via **Radix Dialog** (nunca `<dialog showModal>` HTML5). Select, Popover e DatePicker portaled funcionam dentro do modal. Use para quick-create ou forms curtos; forms longos → Sheet; destrutivo → AlertDialog.',
   quandoUsar: [
-    'Quick-create modal · ≤ 3 campos',
+    'Quick-create modal · ≤ 3 campos (ou pouco mais com Select/Date)',
+    'Formulário com Select, Popover ou calendário no corpo do modal',
     'Diálogos informativos focados (Sobre, Política)',
-    'Escolha de modalidade quando muito visual (não cabe em Dropdown)',
+    'Estado controlado: `<Dialog open={open} onOpenChange={setOpen}>`',
   ],
   props: [
     { name: 'open / onOpenChange', type: 'controlled', description: 'Estado externo · útil com TanStack Query mutation' },
     { name: 'modal', type: 'boolean', description: 'Default true. False permite cliques fora.' },
   ],
   antiPatterns: [
+    '`<dialog showModal>` nativo · quebra Select/Popover (top layer do browser)',
     'Dialog com 10+ campos · vire Sheet ou Wizard',
     'Dialog para confirmação destrutiva · use AlertDialog',
     'Dialog para preview · use HoverCard ou Popover',
@@ -66,7 +75,7 @@ export function DialogPage() {
         category="Overlays · Dialog"
         title="Dialog"
         italic="modal centralizado"
-        description="Modal acessível via Radix. Use para quick-create (≤3 campos) ou informativo. Forms longos vão para Sheet."
+        description="Radix Dialog · compatível com Select e Popover no corpo. Nunca use `<dialog>` HTML5 com showModal."
       />
       <PromptCard prompt={prompt} />
 
@@ -104,6 +113,58 @@ export function DialogPage() {
                 <Button variant="ghost">Cancelar</Button>
               </DialogClose>
               <Button>Cadastrar cliente</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </Showcase>
+
+      <SubHead num="B" title="Com Select" italic="overlays no modal" />
+      <Showcase>
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button variant="outline">Nova oportunidade</Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Nova oportunidade</DialogTitle>
+              <DialogDescription>
+                Select e Popover portaled em z-[100] · modal em z-50. Clique nas opções para validar.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogBody>
+              <div className="grid grid-cols-2 gap-4">
+                <Field>
+                  <Label required>Etapa</Label>
+                  <Select defaultValue="briefing">
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a etapa" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="briefing">Briefing</SelectItem>
+                      <SelectItem value="proposta">Proposta</SelectItem>
+                      <SelectItem value="fechado">Fechado</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </Field>
+                <Field>
+                  <Label>Pessoa</Label>
+                  <Select>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o contato" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="a">Família Andrade</SelectItem>
+                      <SelectItem value="b">Studio Nogueira</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </Field>
+              </div>
+            </DialogBody>
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button variant="ghost">Cancelar</Button>
+              </DialogClose>
+              <Button>Salvar</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

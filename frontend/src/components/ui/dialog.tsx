@@ -1,22 +1,15 @@
 import * as React from 'react'
+import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 /**
- * Dialog · padrão TKWS OS · usando <dialog> HTML5.
- * Acessibilidade nativa (ESC fecha, focus trap, role=dialog).
+ * Dialog · padrão TKWS OS · Radix Dialog.
+ *
+ * Usa `@radix-ui/react-dialog` (não `<dialog showModal>`) para que Select,
+ * Popover e outros overlays portaled no `document.body` fiquem na mesma pilha
+ * de stacking e recebam cliques dentro de formulários em modal.
  */
-
-const DialogContext = React.createContext<{
-  open: boolean
-  onOpenChange: (open: boolean) => void
-} | null>(null)
-
-function useDialogContext() {
-  const ctx = React.useContext(DialogContext)
-  if (!ctx) throw new Error('Dialog components must be used within <Dialog>')
-  return ctx
-}
 
 export interface DialogProps {
   open: boolean
@@ -25,8 +18,29 @@ export interface DialogProps {
 }
 
 export function Dialog({ open, onOpenChange, children }: DialogProps) {
-  return <DialogContext.Provider value={{ open, onOpenChange }}>{children}</DialogContext.Provider>
+  return (
+    <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
+      {children}
+    </DialogPrimitive.Root>
+  )
 }
+
+export const DialogTrigger = DialogPrimitive.Trigger
+export const DialogClose = DialogPrimitive.Close
+export const DialogPortal = DialogPrimitive.Portal
+
+const DialogOverlay = React.forwardRef<
+  React.ElementRef<typeof DialogPrimitive.Overlay>,
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Overlay>
+>(({ className, ...props }, ref) => (
+  <DialogPrimitive.Overlay
+    ref={ref}
+    className={cn('fixed inset-0 z-50 data-[state=open]:animate-fade-in', className)}
+    style={{ background: 'var(--overlay-strong)', backdropFilter: 'blur(8px)' }}
+    {...props}
+  />
+))
+DialogOverlay.displayName = 'DialogOverlay'
 
 export function DialogContent({
   children,
@@ -37,60 +51,34 @@ export function DialogContent({
   className?: string
   style?: React.CSSProperties
 }) {
-  const { open, onOpenChange } = useDialogContext()
-  const ref = React.useRef<HTMLDialogElement>(null)
-
-  React.useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    if (open && !el.open) el.showModal()
-    if (!open && el.open) el.close()
-  }, [open])
-
   return (
-    <dialog
-      ref={ref}
-      onClose={() => onOpenChange(false)}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onOpenChange(false)
-      }}
-      className={cn(
-        'fixed inset-0 m-auto max-h-[90vh] w-full max-w-lg p-0',
-        'backdrop:backdrop-blur-sm',
-        'open:animate-fade-in',
-        className,
-      )}
-      style={{
-        background: 'var(--surface-1)',
-        color: 'var(--text)',
-        border: '1px solid var(--line-2)',
-        borderRadius: 14,
-        boxShadow: 'var(--shadow-4)',
-        ...style,
-      }}
-    >
-      <style>{`dialog::backdrop { background: var(--overlay-strong); }`}</style>
-      <div className="relative">
-        <button
+    <DialogPortal>
+      <DialogOverlay />
+      <DialogPrimitive.Content
+        className={cn(
+          'fixed top-1/2 left-1/2 z-50 grid w-full max-w-lg max-h-[90vh] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-[14px] border p-0',
+          'data-[state=open]:animate-fade-in',
+          className,
+        )}
+        style={{
+          background: 'var(--surface-1)',
+          color: 'var(--text)',
+          borderColor: 'var(--line-2)',
+          boxShadow: 'var(--shadow-4)',
+          ...style,
+        }}
+      >
+        <DialogPrimitive.Close
           type="button"
-          onClick={() => onOpenChange(false)}
           aria-label="Fechar"
-          className="absolute top-3 right-3 inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md transition-colors"
+          className="absolute top-3 right-3 z-10 inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--brand)]"
           style={{ color: 'var(--text-mute)' }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'var(--surface-2)'
-            e.currentTarget.style.color = 'var(--text)'
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'transparent'
-            e.currentTarget.style.color = 'var(--text-mute)'
-          }}
         >
           <X size={16} />
-        </button>
+        </DialogPrimitive.Close>
         {children}
-      </div>
-    </dialog>
+      </DialogPrimitive.Content>
+    </DialogPortal>
   )
 }
 
@@ -104,25 +92,31 @@ export function DialogHeader({ className, ...props }: React.HTMLAttributes<HTMLD
   )
 }
 
-export function DialogTitle({ className, ...props }: React.HTMLAttributes<HTMLHeadingElement>) {
-  return (
-    <h2
-      className={cn('serif text-[20px] font-normal leading-tight', className)}
-      style={{ color: 'var(--text)', letterSpacing: '-0.015em' }}
-      {...props}
-    />
-  )
-}
+export const DialogTitle = React.forwardRef<
+  React.ElementRef<typeof DialogPrimitive.Title>,
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Title>
+>(({ className, ...props }, ref) => (
+  <DialogPrimitive.Title
+    ref={ref}
+    className={cn('serif text-[20px] font-normal leading-tight', className)}
+    style={{ color: 'var(--text)', letterSpacing: '-0.015em' }}
+    {...props}
+  />
+))
+DialogTitle.displayName = 'DialogTitle'
 
-export function DialogDescription({ className, ...props }: React.HTMLAttributes<HTMLParagraphElement>) {
-  return (
-    <p
-      className={cn('text-[13px]', className)}
-      style={{ color: 'var(--text-soft)' }}
-      {...props}
-    />
-  )
-}
+export const DialogDescription = React.forwardRef<
+  React.ElementRef<typeof DialogPrimitive.Description>,
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Description>
+>(({ className, ...props }, ref) => (
+  <DialogPrimitive.Description
+    ref={ref}
+    className={cn('text-[13px]', className)}
+    style={{ color: 'var(--text-soft)' }}
+    {...props}
+  />
+))
+DialogDescription.displayName = 'DialogDescription'
 
 export function DialogBody({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return <div className={cn('px-6 py-5', className)} {...props} />

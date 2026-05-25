@@ -52,10 +52,10 @@ Esses já foram adaptados para a estética/tokens do produto e tipicamente **nã
 - `breadcrumb.tsx` (usa `Link` do TanStack Router em vez de `<a>`)
 - `button.tsx` (size `md` como alias de `default`)
 - `card.tsx` (suporte a `accent` lateral)
-- `dialog.tsx` (usa `<dialog>` HTML5 — não Radix)
+- `dialog.tsx` (frontend: wrapper controlado `Dialog({ open, onOpenChange })` · DS: `Dialog` = Radix Root — ambos Radix, não HTML5)
 - `empty-state.tsx`
 - `input.tsx` (também exporta `Textarea`, `Label`, `Field`, `FieldHint`)
-- `select.tsx` (native `<select>` — não Radix)
+- `select.tsx` (Radix · `SelectContent` em z-[100] para uso dentro de Dialog)
 - `spinner.tsx`
 - `table.tsx`
 
@@ -150,9 +150,11 @@ A lib mudou na v4: `PanelGroup` → `Group`, `PanelResizeHandle` → `Separator`
 
 O Input do frontend usa `state` em vez de `error: boolean`. Em componentes do DS que passem `error`, troque por `state={error ? 'error' : 'default'}`.
 
-### `prop "style" does not exist on DialogContent`
+### `Dialog` controlado no frontend vs. Root no DS
 
-O `DialogContent` do frontend usa `<dialog>` HTML5 e aceita `style` (foi adicionado). Se sobrescrever esse arquivo pelo do DS (que usa Radix), revise os consumidores.
+O DS exporta `Dialog` como `DialogPrimitive.Root` (aceita `open`/`onOpenChange` e `DialogTrigger`). O frontend usa um wrapper tipado `Dialog({ open, onOpenChange, children })` com a mesma API Radix por baixo. Ao sincronizar `dialog.tsx`, preserve o wrapper do frontend se existir — não volte para `<dialog showModal>` HTML5.
+
+`DialogContent` em ambos aceita `className` e `style` (Radix). Select/Popover: manter `z-[100]` no content portaled.
 
 ### Tailwind v4 vs v3
 
