@@ -48,6 +48,7 @@ export function RecoveryPage() {
           <em>linguagem.</em>"
         </>
       }
+      quoteCite="· TKWS OS"
       metaLeft="Recuperação"
       metaRight="token expira em 24h"
     >

@@ -196,6 +196,10 @@ const CrmFunnelPage = lazyPage(() => import('@/pages/components/CrmFunnel'), 'Cr
 const CRMPipelinePattern = lazyPage(() => import('@/pages/patterns/CRMPipeline'), 'CRMPipelinePattern')
 const CRMDashboardPattern = lazyPage(() => import('@/pages/patterns/CRMDashboard'), 'CRMDashboardPattern')
 const CRMContactDetailPattern = lazyPage(() => import('@/pages/patterns/CRMContactDetail'), 'CRMContactDetailPattern')
+const CRMOpportunitiesKanbanPattern = lazyPage(() => import('@/pages/patterns/CRMOpportunitiesKanban'), 'CRMOpportunitiesKanbanPattern')
+const CRMOpportunitiesListPattern = lazyPage(() => import('@/pages/patterns/CRMOpportunitiesList'), 'CRMOpportunitiesListPattern')
+const CRMOpportunityDetailPattern = lazyPage(() => import('@/pages/patterns/CRMOpportunityDetail'), 'CRMOpportunityDetailPattern')
+const CRMOpportunitiesDashboardPattern = lazyPage(() => import('@/pages/patterns/CRMOpportunitiesDashboard'), 'CRMOpportunitiesDashboardPattern')
 
 // =============================================================================
 // Fallback Suspense · spinner editorial enquanto carrega chunk
@@ -409,6 +413,10 @@ const routes = [
   route('/patterns/crm-pipeline', CRMPipelinePattern),
   route('/patterns/crm-dashboard', CRMDashboardPattern),
   route('/patterns/crm-contact-detail', CRMContactDetailPattern),
+  route('/patterns/crm-opportunities-kanban', CRMOpportunitiesKanbanPattern),
+  route('/patterns/crm-opportunities-list', CRMOpportunitiesListPattern),
+  route('/patterns/crm-opportunity-detail', CRMOpportunityDetailPattern),
+  route('/patterns/crm-opportunities-dashboard', CRMOpportunitiesDashboardPattern),
 ]
 
 const routeTree = rootRoute.addChildren(routes)

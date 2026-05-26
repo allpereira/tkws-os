@@ -12,6 +12,105 @@ import { Input } from './input'
  */
 
 // ============================================================================
+// Máscaras compartilhadas (InputAffix + *Input)
+// ============================================================================
+
+export type InputAffixMask = 'cpf' | 'cnpj' | 'cep' | 'phone' | 'date' | 'money-br' | 'digits'
+
+function maskCPF(raw: string) {
+  const d = raw.replace(/\D/g, '').slice(0, 11)
+  if (d.length <= 3) return d
+  if (d.length <= 6) return `${d.slice(0, 3)}.${d.slice(3)}`
+  if (d.length <= 9) return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6)}`
+  return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`
+}
+
+function maskCNPJ(raw: string) {
+  const d = raw.replace(/\D/g, '').slice(0, 14)
+  if (d.length <= 2) return d
+  if (d.length <= 5) return `${d.slice(0, 2)}.${d.slice(2)}`
+  if (d.length <= 8) return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5)}`
+  if (d.length <= 12) return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8)}`
+  return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12)}`
+}
+
+function maskCEP(raw: string) {
+  const d = raw.replace(/\D/g, '').slice(0, 8)
+  if (d.length <= 5) return d
+  return `${d.slice(0, 5)}-${d.slice(5)}`
+}
+
+function maskPhone(raw: string) {
+  const digits = raw.replace(/\D/g, '').slice(0, 11)
+  const len = digits.length
+  if (len === 0) return ''
+  if (len <= 2) return `(${digits}`
+  if (len <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`
+  if (len <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`
+}
+
+function maskDate(raw: string) {
+  const d = raw.replace(/\D/g, '').slice(0, 8)
+  if (d.length <= 2) return d
+  if (d.length <= 4) return `${d.slice(0, 2)}/${d.slice(2)}`
+  return `${d.slice(0, 2)}/${d.slice(2, 4)}/${d.slice(4)}`
+}
+
+function maskMoneyBr(raw: string) {
+  const d = raw.replace(/\D/g, '')
+  if (!d) return ''
+  return new Intl.NumberFormat('pt-BR').format(Number(d))
+}
+
+function maxDigitsForMask(mask: InputAffixMask, explicitMax?: number): number | undefined {
+  switch (mask) {
+    case 'cpf':
+      return 11
+    case 'cnpj':
+      return 14
+    case 'cep':
+      return 8
+    case 'phone':
+      return 11
+    case 'date':
+      return 8
+    case 'digits':
+      return explicitMax
+    case 'money-br':
+      return undefined
+  }
+}
+
+function formatAffixMask(mask: InputAffixMask, raw: string) {
+  switch (mask) {
+    case 'cpf':
+      return maskCPF(raw)
+    case 'cnpj':
+      return maskCNPJ(raw)
+    case 'cep':
+      return maskCEP(raw)
+    case 'phone':
+      return maskPhone(raw)
+    case 'date':
+      return maskDate(raw)
+    case 'money-br':
+      return maskMoneyBr(raw)
+    case 'digits':
+      return raw.replace(/\D/g, '')
+  }
+}
+
+function parseAffixMask(_mask: InputAffixMask, text: string) {
+  return text.replace(/\D/g, '')
+}
+
+function clampRawForMask(mask: InputAffixMask, digits: string, explicitMax?: number) {
+  const max = maxDigitsForMask(mask, explicitMax)
+  return max === undefined ? digits : digits.slice(0, max)
+}
+
+// ============================================================================
 // InputAffix · prefix/suffix com bandas surface-3 separadas por linha
 // ============================================================================
 /**
@@ -25,17 +124,56 @@ import { Input } from './input'
  *   err: border danger · success: border success
  */
 
-export interface InputAffixProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'prefix'> {
+export interface InputAffixProps
+  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'prefix' | 'value' | 'defaultValue' | 'onChange'> {
   prefix?: React.ReactNode
   suffix?: React.ReactNode
   state?: 'default' | 'success' | 'error'
   containerClassName?: string
+  /** Com `rawValue` + `onRawValueChange`, aplica máscara e guarda só dígitos. */
+  mask?: InputAffixMask
+  rawValue?: string
+  onRawValueChange?: (digits: string) => void
+  value?: string
+  defaultValue?: string
+  onChange?: React.ChangeEventHandler<HTMLInputElement>
 }
 
 export const InputAffix = React.forwardRef<HTMLInputElement, InputAffixProps>(
-  ({ prefix, suffix, state = 'default', containerClassName, className, ...inputProps }, ref) => {
+  (
+    {
+      prefix,
+      suffix,
+      state = 'default',
+      containerClassName,
+      className,
+      mask,
+      rawValue,
+      onRawValueChange,
+      value,
+      defaultValue,
+      onChange,
+      maxLength,
+      inputMode,
+      ...inputProps
+    },
+    ref,
+  ) => {
     const borderColor =
       state === 'error' ? 'var(--danger)' : state === 'success' ? 'var(--success)' : 'var(--line-2)'
+    const isMasked = mask != null && onRawValueChange != null
+    const displayValue = isMasked ? formatAffixMask(mask, rawValue ?? '') : value
+    const resolvedInputMode = inputMode ?? (isMasked ? 'numeric' : undefined)
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (isMasked) {
+        const digits = clampRawForMask(mask, parseAffixMask(mask, e.target.value), maxLength)
+        onRawValueChange(digits)
+        return
+      }
+      onChange?.(e)
+    }
+
     return (
       <div
         className={cn(
@@ -62,6 +200,12 @@ export const InputAffix = React.forwardRef<HTMLInputElement, InputAffixProps>(
         <input
           ref={ref}
           {...inputProps}
+          type={inputProps.type ?? 'text'}
+          inputMode={resolvedInputMode}
+          value={isMasked ? displayValue : value}
+          defaultValue={isMasked ? undefined : defaultValue}
+          onChange={handleChange}
+          maxLength={isMasked ? undefined : maxLength}
           className={cn(
             'num-tabular min-w-0 flex-1 bg-transparent px-[13px] py-[10px] text-[14px] outline-none placeholder:text-[var(--text-mute)]',
             'disabled:cursor-not-allowed disabled:opacity-50',
@@ -237,14 +381,6 @@ export interface MaskedProps {
 // ============================================================================
 // CPF · 000.000.000-00
 // ============================================================================
-function maskCPF(raw: string) {
-  const d = raw.replace(/\D/g, '').slice(0, 11)
-  if (d.length <= 3) return d
-  if (d.length <= 6) return `${d.slice(0, 3)}.${d.slice(3)}`
-  if (d.length <= 9) return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6)}`
-  return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`
-}
-
 export function CPFInput({ value, onChange, placeholder = '000.000.000-00', ...rest }: MaskedProps) {
   return (
     <Input
@@ -261,15 +397,6 @@ export function CPFInput({ value, onChange, placeholder = '000.000.000-00', ...r
 // ============================================================================
 // CNPJ · 00.000.000/0000-00
 // ============================================================================
-function maskCNPJ(raw: string) {
-  const d = raw.replace(/\D/g, '').slice(0, 14)
-  if (d.length <= 2) return d
-  if (d.length <= 5) return `${d.slice(0, 2)}.${d.slice(2)}`
-  if (d.length <= 8) return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5)}`
-  if (d.length <= 12) return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8)}`
-  return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12)}`
-}
-
 export function CNPJInput({ value, onChange, placeholder = '00.000.000/0000-00', ...rest }: MaskedProps) {
   return (
     <Input
@@ -286,12 +413,6 @@ export function CNPJInput({ value, onChange, placeholder = '00.000.000/0000-00',
 // ============================================================================
 // CEP · 00000-000
 // ============================================================================
-function maskCEP(raw: string) {
-  const d = raw.replace(/\D/g, '').slice(0, 8)
-  if (d.length <= 5) return d
-  return `${d.slice(0, 5)}-${d.slice(5)}`
-}
-
 export function CEPInput({ value, onChange, placeholder = '00000-000', ...rest }: MaskedProps) {
   return (
     <Input
@@ -356,6 +477,7 @@ export interface MoneyInputProps {
   /** centavos · 1250000 = R$ 12.500,00 */
   value: number | undefined
   onChange: (cents: number | undefined) => void
+  onBlur?: React.FocusEventHandler<HTMLInputElement>
   id?: string
   error?: boolean
   disabled?: boolean

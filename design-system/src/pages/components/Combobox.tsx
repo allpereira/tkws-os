@@ -1,5 +1,6 @@
-import { useMemo, useState, type FormEvent } from 'react'
-import { Check, ChevronDown, Plus } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { AlertTriangle, Check, ChevronDown, Plus } from 'lucide-react'
+import { Spinner } from '@/components/ui/spinner'
 import { PageHeader } from '@/components/docs/PageHeader'
 import { Showcase, SubHead } from '@/components/docs/Showcase'
 import { PromptCard } from '@/components/docs/PromptCard'
@@ -38,6 +39,9 @@ const prompt: AIPrompt = {
   antiPatterns: [
     'Combobox para 3 opções — use Select',
     'Combobox que aceita texto livre — vire Input ou MultiSelect',
+    'Async sem debounce · bate na API a cada tecla → trava o front e estoura rate-limit',
+    'Async sem AbortController · respostas antigas chegam depois e bagunçam a lista',
+    'Async filtrando localmente com shouldFilter padrão · resultado da API some quando o termo muda',
   ],
   exemplo: `const [value, setValue] = useState('')
 
@@ -386,6 +390,657 @@ function ComboboxModalCreate() {
   )
 }
 
+/* ─────────────────────────────────────────────────────────────────────────
+ * D · Combobox async (busca direto na API)
+ * ───────────────────────────────────────────────────────────────────────── */
+
+type Empresa = { value: string; label: string; cnpj: string; cidade: string }
+
+const MOCK_EMPRESAS: Empresa[] = [
+  ['Andrade Engenharia', '12.345.678/0001-90', 'Florianópolis/SC'],
+  ['Aço Forte Indústria', '23.456.789/0001-01', 'Joinville/SC'],
+  ['Atelier Litoral', '34.567.890/0001-12', 'Balneário Camboriú/SC'],
+  ['Bertotti Construtora', '45.678.901/0001-23', 'Curitiba/PR'],
+  ['Brasil Mármores', '56.789.012/0001-34', 'Cachoeiro do Itapemirim/ES'],
+  ['Campo Belo Investments', '67.890.123/0001-45', 'São Paulo/SP'],
+  ['Casa Cobogó', '78.901.234/0001-56', 'Recife/PE'],
+  ['Cobertura Titanium SPE', '89.012.345/0001-67', 'Itapema/SC'],
+  ['Decora & Cia', '90.123.456/0001-78', 'Porto Alegre/RS'],
+  ['Estofados Veneza', '01.234.567/0001-89', 'Bento Gonçalves/RS'],
+  ['Família Andrade Holding', '11.222.333/0001-44', 'Florianópolis/SC'],
+  ['Família Costa Investimentos', '22.333.444/0001-55', 'Itajaí/SC'],
+  ['Famiglia Oz Patrimônio', '33.444.555/0001-66', 'São Paulo/SP'],
+  ['Iluminação Premium SA', '44.555.666/0001-77', 'Campinas/SP'],
+  ['Madeireira Atlântica', '55.666.777/0001-88', 'Blumenau/SC'],
+  ['Mármores Veneza', '66.777.888/0001-99', 'Cachoeiro do Itapemirim/ES'],
+  ['Metalurgia Sul', '77.888.999/0001-00', 'Caxias do Sul/RS'],
+  ['Núcleo Arquitetura', '88.999.000/0001-11', 'Belo Horizonte/MG'],
+  ['Plenum Casa', '99.000.111/0001-22', 'Brasília/DF'],
+  ['Tecidos Donatelli', '10.111.222/0001-33', 'São Paulo/SP'],
+  ['WS Group Empreendimentos', '20.222.333/0001-44', 'Itapema/SC'],
+  ['Yachthouse 2104 SPE', '30.333.444/0001-55', 'Itajaí/SC'],
+].map(([label, cnpj, cidade]) => ({
+  value: slug(label),
+  label,
+  cnpj,
+  cidade,
+}))
+
+/**
+ * API simulada · 350-650ms de latência aleatória.
+ * No real, troque por `fetch('/api/empresas?q=' + encodeURIComponent(q), { signal })`.
+ */
+async function searchEmpresasApi(q: string, signal: AbortSignal): Promise<Empresa[]> {
+  const latency = 350 + Math.random() * 300
+  await new Promise<void>((resolve, reject) => {
+    const id = window.setTimeout(resolve, latency)
+    const onAbort = () => {
+      window.clearTimeout(id)
+      reject(new DOMException('Aborted', 'AbortError'))
+    }
+    if (signal.aborted) onAbort()
+    else signal.addEventListener('abort', onAbort, { once: true })
+  })
+  const norm = q.toLowerCase()
+  return MOCK_EMPRESAS.filter(
+    (e) => e.label.toLowerCase().includes(norm) || e.cnpj.replace(/\D/g, '').includes(norm.replace(/\D/g, '')),
+  ).slice(0, 8)
+}
+
+/** Hook genérico de debounce · adia o valor por `delay`ms desde a última mudança. */
+function useDebouncedValue<T>(value: T, delay: number): T {
+  const [debounced, setDebounced] = useState(value)
+  useEffect(() => {
+    const id = window.setTimeout(() => setDebounced(value), delay)
+    return () => window.clearTimeout(id)
+  }, [value, delay])
+  return debounced
+}
+
+const MIN_CHARS = 2
+const DEBOUNCE_MS = 280
+
+type FetchStatus = 'idle' | 'loading' | 'ok' | 'error'
+
+/**
+ * Hook compartilhado · busca async + merge com itens criados localmente.
+ *
+ * Mantém as 7 travas anti-trava-do-front:
+ *  - debounce no termo · não bate na API a cada tecla
+ *  - mínimo de chars · não dispara em texto curto
+ *  - cache por query · evita refetch
+ *  - AbortController · cancela request obsoleto
+ *  - seq tracker · descarta resposta tardia
+ *  - itens locais (criados na sessão) entram no merge — sem refetch
+ *  - status idle/loading/ok/error explícito
+ */
+function useAsyncEmpresaSearch(query: string, extraLocal: Empresa[]) {
+  const debounced = useDebouncedValue(query.trim(), DEBOUNCE_MS)
+
+  const [apiItems, setApiItems] = useState<Empresa[]>([])
+  const [status, setStatus] = useState<FetchStatus>('idle')
+
+  const cacheRef = useRef<Map<string, Empresa[]>>(new Map())
+  const abortRef = useRef<AbortController | null>(null)
+  const seqRef = useRef(0)
+
+  useEffect(() => {
+    if (debounced.length < MIN_CHARS) {
+      setApiItems([])
+      setStatus('idle')
+      abortRef.current?.abort()
+      return
+    }
+    const cached = cacheRef.current.get(debounced)
+    if (cached) {
+      setApiItems(cached)
+      setStatus('ok')
+      return
+    }
+    abortRef.current?.abort()
+    const ac = new AbortController()
+    abortRef.current = ac
+    const mySeq = ++seqRef.current
+    setStatus('loading')
+
+    searchEmpresasApi(debounced, ac.signal)
+      .then((res) => {
+        if (mySeq !== seqRef.current) return
+        cacheRef.current.set(debounced, res)
+        setApiItems(res)
+        setStatus('ok')
+      })
+      .catch((err: unknown) => {
+        if (err instanceof DOMException && err.name === 'AbortError') return
+        if (mySeq !== seqRef.current) return
+        setStatus('error')
+      })
+
+    return () => {
+      ac.abort()
+    }
+  }, [debounced])
+
+  // merge itens locais (criados nesta sessão) que casam com o termo
+  // local sempre vem primeiro · dedupe por value (local prevalece)
+  const items = useMemo(() => {
+    if (debounced.length < MIN_CHARS) return []
+    const norm = debounced.toLowerCase()
+    const normDigits = debounced.replace(/\D/g, '')
+    const localMatches = extraLocal.filter(
+      (e) =>
+        e.label.toLowerCase().includes(norm) ||
+        (normDigits && e.cnpj.replace(/\D/g, '').includes(normDigits)),
+    )
+    const localValues = new Set(localMatches.map((e) => e.value))
+    const apiOnly = apiItems.filter((e) => !localValues.has(e.value))
+    return [...localMatches, ...apiOnly]
+  }, [apiItems, extraLocal, debounced])
+
+  const exactMatch = useMemo(() => {
+    if (!debounced) return false
+    const norm = debounced.toLowerCase()
+    return items.some((e) => e.label.toLowerCase() === norm)
+  }, [items, debounced])
+
+  const isTyping = query.trim() !== debounced && query.trim().length >= MIN_CHARS
+
+  const reset = () => {
+    abortRef.current?.abort()
+    setApiItems([])
+    setStatus('idle')
+  }
+
+  return { items, status, debounced, exactMatch, isTyping, reset }
+}
+
+/**
+ * Renderiza os estados idle / loading / error / empty da busca async.
+ * Extraído pra evitar duplicação entre as 3 variantes (D, E, F).
+ */
+function AsyncSearchStates({
+  status,
+  hasItems,
+  debounced,
+  hasCreateAction,
+}: {
+  status: FetchStatus
+  hasItems: boolean
+  debounced: string
+  hasCreateAction: boolean
+}) {
+  return (
+    <>
+      {status === 'idle' && (
+        <div
+          className="px-4 py-6 text-center text-[12.5px]"
+          style={{ color: 'var(--text-mute)' }}
+        >
+          Digite pelo menos {MIN_CHARS} caracteres pra começar.
+        </div>
+      )}
+      {status === 'loading' && !hasItems && (
+        <div className="flex items-center justify-center gap-2 px-4 py-7">
+          <Spinner size="sm" tone="brand" label="Buscando…" />
+        </div>
+      )}
+      {status === 'error' && (
+        <div
+          className="flex items-center justify-center gap-2 px-4 py-6 text-[12.5px]"
+          style={{ color: 'var(--danger)' }}
+        >
+          <AlertTriangle size={14} />
+          Falha ao buscar. Verifique a conexão e tente outro termo.
+        </div>
+      )}
+      {/* Quando há "Criar" abaixo, não mostramos CommandEmpty (a ação assume o espaço). */}
+      {status === 'ok' && !hasItems && !hasCreateAction && (
+        <CommandEmpty>Nada encontrado para “{debounced}”.</CommandEmpty>
+      )}
+    </>
+  )
+}
+
+function EmpresaItem({
+  empresa,
+  selected,
+  onPick,
+  badge,
+}: {
+  empresa: Empresa
+  selected: Empresa | null
+  onPick: (e: Empresa) => void
+  badge?: string
+}) {
+  return (
+    <CommandItem
+      key={empresa.value}
+      value={empresa.value}
+      onSelect={() => onPick(empresa)}
+    >
+      <Check
+        size={13}
+        className={cn('mr-2', selected?.value === empresa.value ? 'opacity-100' : 'opacity-0')}
+        style={{ color: 'var(--brand)' }}
+      />
+      <span className="flex flex-1 flex-col">
+        <span className="flex items-center gap-1.5">
+          {empresa.label}
+          {badge && (
+            <span
+              className="mono rounded-[4px] border px-1 py-px text-[9px] font-semibold uppercase tracking-wider"
+              style={{
+                color: 'var(--brand)',
+                borderColor: 'var(--brand)',
+                background: 'var(--brand-soft)',
+              }}
+            >
+              {badge}
+            </span>
+          )}
+        </span>
+        <span className="mono text-[10.5px]" style={{ color: 'var(--text-mute)' }}>
+          {empresa.cnpj} · {empresa.cidade}
+        </span>
+      </span>
+    </CommandItem>
+  )
+}
+
+const NO_LOCAL: Empresa[] = []
+
+/* ─── D · Async puro · sem create ──────────────────────────────────────── */
+
+function ComboboxAsyncSearch() {
+  const [open, setOpen] = useState(false)
+  const [selected, setSelected] = useState<Empresa | null>(null)
+  const [query, setQuery] = useState('')
+
+  const { items, status, debounced, isTyping, reset } = useAsyncEmpresaSearch(query, NO_LOCAL)
+
+  const onOpenChange = (next: boolean) => {
+    setOpen(next)
+    if (!next) {
+      setQuery('')
+      reset()
+    }
+  }
+
+  const choose = (e: Empresa) => {
+    setSelected(e)
+    onOpenChange(false)
+  }
+
+  return (
+    <Field className="max-w-sm">
+      <Label htmlFor="emp-async">Empresa</Label>
+      <Popover open={open} onOpenChange={onOpenChange}>
+        <PopoverTrigger asChild>
+          <button
+            id="emp-async"
+            className={triggerCls}
+            style={{
+              background: 'var(--surface-2)',
+              borderColor: 'var(--line-2)',
+              color: selected ? 'var(--text)' : 'var(--text-mute)',
+            }}
+          >
+            <span className="truncate">{selected ? selected.label : 'Buscar empresa…'}</span>
+            <ChevronDown size={14} style={{ color: 'var(--text-mute)' }} />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[340px] p-0">
+          <Command shouldFilter={false}>
+            <CommandInput
+              value={query}
+              onValueChange={setQuery}
+              placeholder="Nome ou CNPJ…"
+              trailing={
+                (status === 'loading' || isTyping) && (
+                  <Spinner size="sm" tone="brand" aria-label="Buscando" />
+                )
+              }
+            />
+            <CommandList>
+              <AsyncSearchStates
+                status={status}
+                hasItems={items.length > 0}
+                debounced={debounced}
+                hasCreateAction={false}
+              />
+              {items.length > 0 && (
+                <CommandGroup
+                  heading={`${items.length} resultado${items.length === 1 ? '' : 's'}`}
+                >
+                  {items.map((e) => (
+                    <EmpresaItem key={e.value} empresa={e} selected={selected} onPick={choose} />
+                  ))}
+                </CommandGroup>
+              )}
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+      <FieldHint>
+        Debounce {DEBOUNCE_MS}ms · mín. {MIN_CHARS} chars · aborta requests obsoletos · cache em memória.
+      </FieldHint>
+    </Field>
+  )
+}
+
+/* ─── E · Async + adicionar inline ─────────────────────────────────────── */
+
+function ComboboxAsyncInlineCreate() {
+  const [open, setOpen] = useState(false)
+  const [selected, setSelected] = useState<Empresa | null>(null)
+  const [query, setQuery] = useState('')
+  const [createdItems, setCreatedItems] = useState<Empresa[]>([])
+
+  const { items, status, debounced, exactMatch, isTyping, reset } = useAsyncEmpresaSearch(
+    query,
+    createdItems,
+  )
+
+  const onOpenChange = (next: boolean) => {
+    setOpen(next)
+    if (!next) {
+      setQuery('')
+      reset()
+    }
+  }
+
+  const choose = (e: Empresa) => {
+    setSelected(e)
+    onOpenChange(false)
+  }
+
+  // só oferece criar quando a API já respondeu (ok ou error) e não há match exato
+  const canCreate =
+    debounced.length >= MIN_CHARS &&
+    !exactMatch &&
+    (status === 'ok' || status === 'error')
+
+  const createInline = () => {
+    const novo: Empresa = {
+      value: `${slug(debounced)}-${Date.now()}`,
+      label: debounced,
+      cnpj: '— a preencher —',
+      cidade: 'criado na sessão',
+    }
+    setCreatedItems((cur) => [novo, ...cur])
+    choose(novo)
+  }
+
+  return (
+    <Field className="max-w-sm">
+      <Label htmlFor="emp-async-inline">Empresa</Label>
+      <Popover open={open} onOpenChange={onOpenChange}>
+        <PopoverTrigger asChild>
+          <button
+            id="emp-async-inline"
+            className={triggerCls}
+            style={{
+              background: 'var(--surface-2)',
+              borderColor: 'var(--line-2)',
+              color: selected ? 'var(--text)' : 'var(--text-mute)',
+            }}
+          >
+            <span className="truncate">{selected ? selected.label : 'Buscar ou criar empresa…'}</span>
+            <ChevronDown size={14} style={{ color: 'var(--text-mute)' }} />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[360px] p-0">
+          <Command shouldFilter={false}>
+            <CommandInput
+              value={query}
+              onValueChange={setQuery}
+              placeholder="Nome ou CNPJ…"
+              trailing={
+                (status === 'loading' || isTyping) && (
+                  <Spinner size="sm" tone="brand" aria-label="Buscando" />
+                )
+              }
+            />
+            <CommandList>
+              <AsyncSearchStates
+                status={status}
+                hasItems={items.length > 0}
+                debounced={debounced}
+                hasCreateAction={canCreate}
+              />
+              {items.length > 0 && (
+                <CommandGroup
+                  heading={`${items.length} resultado${items.length === 1 ? '' : 's'}`}
+                >
+                  {items.map((e) => (
+                    <EmpresaItem
+                      key={e.value}
+                      empresa={e}
+                      selected={selected}
+                      onPick={choose}
+                      badge={createdItems.some((c) => c.value === e.value) ? 'novo' : undefined}
+                    />
+                  ))}
+                </CommandGroup>
+              )}
+              {canCreate && (
+                <>
+                  {items.length > 0 && <CommandSeparator />}
+                  <CommandGroup heading="Não encontrou?">
+                    <CommandItem value={`__create__${debounced}`} onSelect={createInline}>
+                      <Plus size={13} className="mr-2" style={{ color: 'var(--brand)' }} />
+                      <span>
+                        Criar “<strong style={{ color: 'var(--brand)' }}>{debounced}</strong>” na hora
+                      </span>
+                    </CommandItem>
+                  </CommandGroup>
+                </>
+              )}
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+      <FieldHint>
+        API busca + criação leve · novos entram no merge e ficam pesquisáveis na mesma sessão.
+      </FieldHint>
+    </Field>
+  )
+}
+
+/* ─── F · Async + adicionar via modal ──────────────────────────────────── */
+
+function ComboboxAsyncModalCreate() {
+  const [open, setOpen] = useState(false)
+  const [selected, setSelected] = useState<Empresa | null>(null)
+  const [query, setQuery] = useState('')
+  const [createdItems, setCreatedItems] = useState<Empresa[]>([])
+  const [modalOpen, setModalOpen] = useState(false)
+  const [form, setForm] = useState({ label: '', cnpj: '', cidade: '' })
+
+  const { items, status, debounced, exactMatch, isTyping, reset } = useAsyncEmpresaSearch(
+    query,
+    createdItems,
+  )
+
+  const closePopover = () => {
+    setOpen(false)
+    setQuery('')
+    reset()
+  }
+
+  const onOpenChange = (next: boolean) => {
+    if (!next) closePopover()
+    else setOpen(next)
+  }
+
+  const choose = (e: Empresa) => {
+    setSelected(e)
+    closePopover()
+  }
+
+  const canCreate =
+    debounced.length >= MIN_CHARS &&
+    !exactMatch &&
+    (status === 'ok' || status === 'error')
+
+  const openCreate = () => {
+    setForm({ label: debounced, cnpj: '', cidade: '' })
+    setOpen(false)
+    setModalOpen(true)
+  }
+
+  const save = (e: FormEvent) => {
+    e.preventDefault()
+    const label = form.label.trim()
+    if (!label) return
+    const novo: Empresa = {
+      value: `${slug(label)}-${Date.now()}`,
+      label,
+      cnpj: form.cnpj.trim() || '—',
+      cidade: form.cidade.trim() || '—',
+    }
+    setCreatedItems((cur) => [novo, ...cur])
+    setSelected(novo)
+    setQuery('')
+    reset()
+    setModalOpen(false)
+  }
+
+  return (
+    <>
+      <Field className="max-w-sm">
+        <Label htmlFor="emp-async-modal">Empresa</Label>
+        <Popover open={open} onOpenChange={onOpenChange}>
+          <PopoverTrigger asChild>
+            <button
+              id="emp-async-modal"
+              className={triggerCls}
+              style={{
+                background: 'var(--surface-2)',
+                borderColor: 'var(--line-2)',
+                color: selected ? 'var(--text)' : 'var(--text-mute)',
+              }}
+            >
+              <span className="truncate">
+                {selected ? selected.label : 'Buscar empresa…'}
+              </span>
+              <ChevronDown size={14} style={{ color: 'var(--text-mute)' }} />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-[360px] p-0">
+            <Command shouldFilter={false}>
+              <CommandInput
+                value={query}
+                onValueChange={setQuery}
+                placeholder="Nome ou CNPJ…"
+                trailing={
+                  (status === 'loading' || isTyping) && (
+                    <Spinner size="sm" tone="brand" aria-label="Buscando" />
+                  )
+                }
+              />
+              <CommandList>
+                <AsyncSearchStates
+                  status={status}
+                  hasItems={items.length > 0}
+                  debounced={debounced}
+                  hasCreateAction={canCreate}
+                />
+                {items.length > 0 && (
+                  <CommandGroup
+                    heading={`${items.length} resultado${items.length === 1 ? '' : 's'}`}
+                  >
+                    {items.map((e) => (
+                      <EmpresaItem
+                        key={e.value}
+                        empresa={e}
+                        selected={selected}
+                        onPick={choose}
+                        badge={createdItems.some((c) => c.value === e.value) ? 'novo' : undefined}
+                      />
+                    ))}
+                  </CommandGroup>
+                )}
+                {canCreate && (
+                  <>
+                    {items.length > 0 && <CommandSeparator />}
+                    <CommandGroup heading="Não encontrou?">
+                      <CommandItem value={`__create__${debounced}`} onSelect={openCreate}>
+                        <Plus size={13} className="mr-2" style={{ color: 'var(--brand)' }} />
+                        <span>
+                          Cadastrar “<strong style={{ color: 'var(--brand)' }}>{debounced}</strong>”…
+                        </span>
+                      </CommandItem>
+                    </CommandGroup>
+                  </>
+                )}
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
+        <FieldHint>
+          API busca + cadastro completo num Dialog · termo digitado vai pré-preenchido pro modal.
+        </FieldHint>
+      </Field>
+
+      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+        <DialogContent>
+          <form onSubmit={save}>
+            <DialogHeader>
+              <DialogTitle>Cadastrar empresa</DialogTitle>
+              <DialogDescription>
+                A empresa não foi encontrada na API. Cadastre o essencial agora — você refina depois.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogBody>
+              <div className="grid gap-3.5">
+                <Field>
+                  <Label htmlFor="a-label" required>
+                    Razão social
+                  </Label>
+                  <Input
+                    id="a-label"
+                    autoFocus
+                    value={form.label}
+                    onChange={(e) => setForm({ ...form, label: e.target.value })}
+                    placeholder="Nome da empresa"
+                  />
+                </Field>
+                <Field>
+                  <Label htmlFor="a-cnpj">CNPJ</Label>
+                  <Input
+                    id="a-cnpj"
+                    value={form.cnpj}
+                    onChange={(e) => setForm({ ...form, cnpj: e.target.value })}
+                    placeholder="00.000.000/0000-00"
+                  />
+                </Field>
+                <Field>
+                  <Label htmlFor="a-cidade">Cidade/UF</Label>
+                  <Input
+                    id="a-cidade"
+                    value={form.cidade}
+                    onChange={(e) => setForm({ ...form, cidade: e.target.value })}
+                    placeholder="Florianópolis/SC"
+                  />
+                </Field>
+              </div>
+            </DialogBody>
+            <DialogFooter>
+              <Button type="button" variant="ghost" onClick={() => setModalOpen(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={!form.label.trim()}>
+                Cadastrar e selecionar
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </>
+  )
+}
+
 export function ComboboxPage() {
   const [value, setValue] = useState('')
 
@@ -462,6 +1117,45 @@ export function ComboboxPage() {
         description="A busca pode disparar “Cadastrar …” que abre um Dialog com mais campos (CNPJ, categoria, validação). Útil para entidades de domínio (fornecedor, cliente, conta contábil). O termo digitado é levado pré-preenchido pro modal."
       >
         <ComboboxModalCreate />
+      </Showcase>
+
+      <SubHead
+        num="D"
+        title="Busca assíncrona"
+        italic="dados que vêm da API"
+        tag="async · debounced"
+      />
+      <Showcase
+        title="Async + debounce"
+        description={`Pra listas que vivem no backend (empresas, contas contábeis, produtos). Sete travas anti-trava-do-front: (1) shouldFilter={false} — a API decide o filtro · (2) debounce ${DEBOUNCE_MS}ms no termo · (3) mínimo de ${MIN_CHARS} caracteres antes da 1ª chamada · (4) AbortController cancela request em curso quando o termo muda · (5) seq-tracker descarta resposta antiga que chegue depois de uma nova · (6) cache em memória por termo · (7) estados explícitos idle/loading/ok/error (sem “tela em branco” enquanto carrega).`}
+      >
+        <ComboboxAsyncSearch />
+      </Showcase>
+
+      <SubHead
+        num="E"
+        title="Async + adicionar inline"
+        italic="busca na API e cria na hora se não achar"
+        tag="async · inline create"
+      />
+      <Showcase
+        title="Async + inline"
+        description="Mesma busca da API, mas se o termo não casar exatamente com nenhum resultado, aparece “Criar …” no fim da lista. Criar é leve (1 campo · só o nome) e o item entra no merge — fica pesquisável e marcado com badge “novo” na mesma sessão sem refetch."
+      >
+        <ComboboxAsyncInlineCreate />
+      </Showcase>
+
+      <SubHead
+        num="F"
+        title="Async + adicionar via modal"
+        italic="busca na API + cadastro completo num Dialog"
+        tag="async · modal create"
+      />
+      <Showcase
+        title="Async + modal"
+        description="Quando o cadastro pede mais campos (CNPJ, cidade, validação) o item “Cadastrar …” abre um Dialog com o termo digitado pré-preenchido. Ao salvar, entra no merge local e é selecionado. Reaproveita o mesmo hook async de D/E, só troca a ação de criação."
+      >
+        <ComboboxAsyncModalCreate />
       </Showcase>
     </div>
   )

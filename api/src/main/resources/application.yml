@@ -16,7 +16,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update
     properties:
       hibernate:
         format_sql: false
@@ -25,7 +25,7 @@ spring:
   flyway:
     enabled: true
     baseline-on-migrate: true
-    # Placeholder usado por R__seed_dev.sql para só rodar em ambiente dev.
+    # Placeholder usado por V7__seed_dev.sql para só rodar em ambiente dev.
     # Em staging/prod, ENVIRONMENT vem do env var e bloqueia o seed.
     placeholders:
       environment: ${ENVIRONMENT:dev}

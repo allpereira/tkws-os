@@ -48,11 +48,18 @@ export function CommandDialog({
 /**
  * Fiel ao HTML · ds-cmd .cmd-search:
  *   padding 14px 18px · bg transparent · border-bottom 1px line-1 · font 15px
+ *
+ * `trailing` aceita um slot à direita do input (ex.: spinner de loading async).
  */
+export interface CommandInputProps
+  extends React.ComponentPropsWithoutRef<typeof CommandPrimitive.Input> {
+  trailing?: React.ReactNode
+}
+
 export const CommandInput = React.forwardRef<
   React.ElementRef<typeof CommandPrimitive.Input>,
-  React.ComponentPropsWithoutRef<typeof CommandPrimitive.Input>
->(({ className, ...props }, ref) => (
+  CommandInputProps
+>(({ className, trailing, ...props }, ref) => (
   <div
     className="flex items-center gap-3 border-b px-[18px]"
     style={{ borderColor: 'var(--line-1)' }}
@@ -67,6 +74,7 @@ export const CommandInput = React.forwardRef<
       style={{ color: 'var(--text)' }}
       {...props}
     />
+    {trailing && <span className="flex shrink-0 items-center">{trailing}</span>}
   </div>
 ))
 CommandInput.displayName = 'CommandInput'

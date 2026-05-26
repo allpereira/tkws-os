@@ -1,6 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import type { CreatePessoa, DedupResult, Pessoa, StatusPessoa, UpdatePessoa } from './schema'
+import type {
+  CreatePessoa,
+  DedupResult,
+  Pessoa,
+  PessoaSearchResult,
+  StatusPessoa,
+  UpdatePessoa,
+} from './schema'
 
 /**
  * API de Pessoas · cadastro único Lead/Cliente.
@@ -29,6 +36,21 @@ export const pessoasApi = {
     const { data } = await api.get<DedupResult>(`${BASE}/buscar`, { params })
     return data
   },
+  /**
+   * Autocomplete usado pelo Combobox async. Aceita `signal` do AbortController
+   * pra cancelar request obsoleto quando o termo muda.
+   */
+  async search(
+    query: string,
+    limit = 10,
+    signal?: AbortSignal,
+  ): Promise<PessoaSearchResult[]> {
+    const { data } = await api.get<PessoaSearchResult[]>(`${BASE}/search`, {
+      params: { q: query, limit },
+      signal,
+    })
+    return data
+  },
   async create(input: CreatePessoa): Promise<Pessoa> {
     const { data } = await api.post<Pessoa>(BASE, input)
     return data
@@ -49,6 +71,25 @@ export const pessoasKeys = {
   all: ['pessoas'] as const,
   list: (params?: object) => [...pessoasKeys.all, 'list', params ?? {}] as const,
   detail: (id: string) => [...pessoasKeys.all, 'detail', id] as const,
+  search: (q: string) => [...pessoasKeys.all, 'search', q] as const,
+}
+
+/**
+ * Autocomplete · usado pelo Combobox async. TanStack Query já cuida de:
+ *  - cancelar request obsoleto via AbortSignal (passamos pro axios)
+ *  - cachear por queryKey (incluindo o termo) — 30s stale
+ *  - deduplicar requests concorrentes pra mesma key
+ *
+ * O caller já debouncia o termo · este hook só dispara quando `enabled` for
+ * verdadeiro (= termo com no mínimo 2 chars).
+ */
+export function usePessoaSearch(query: string, enabled: boolean) {
+  return useQuery({
+    queryKey: pessoasKeys.search(query),
+    queryFn: ({ signal }) => pessoasApi.search(query, 10, signal),
+    enabled: enabled && query.length >= 2,
+    staleTime: 30_000,
+  })
 }
 
 export function usePessoas(status?: StatusPessoa) {

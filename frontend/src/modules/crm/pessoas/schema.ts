@@ -61,3 +61,21 @@ export interface DedupResult {
   matchedByDocumento: Pessoa | null
   matchedSoft: Pessoa[]
 }
+
+/**
+ * View "leve" retornada pelo endpoint /search · usada no Combobox async.
+ * Não traz timestamps/endereco completo/notas — só o suficiente pra exibir
+ * uma linha no autocomplete.
+ */
+export const pessoaSearchResultSchema = z.object({
+  id: z.string().uuid(),
+  nomeContato: z.string(),
+  nomeEmpresa: z.string().nullable().optional(),
+  tipoPessoa: z.enum(TIPO_PESSOA),
+  documento: z.string().nullable().optional(),
+  cidade: z.string().nullable().optional(),
+  uf: z.string().nullable().optional(),
+  status: z.enum(STATUS_PESSOA),
+})
+
+export type PessoaSearchResult = z.infer<typeof pessoaSearchResultSchema>

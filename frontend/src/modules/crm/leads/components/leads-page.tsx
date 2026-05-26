@@ -1,9 +1,11 @@
-import { useForm } from 'react-hook-form'
+import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { CrudPage, FormDialogFooter } from '@/components/tkws/crud-page'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Field, FieldHint, Input, Label } from '@/components/ui/input'
+import { CNPJInput, CPFInput } from '@/components/ui/masked-input'
+import { PhoneInput } from '@/components/ui/phone-input'
 import { SelectField } from '@/components/ui/select-field'
 import { useCreatePessoa, usePessoas, useUpdatePessoa } from '@/modules/crm/pessoas/api'
 import {
@@ -68,10 +70,28 @@ function LeadForm({ initial, onSuccess }: { initial?: Pessoa; onSuccess: () => v
         </Field>
         <Field>
           <Label htmlFor="documento">{tipo === 'PJ' ? 'CNPJ' : 'CPF'}</Label>
-          <Input
-            id="documento"
-            placeholder={tipo === 'PJ' ? '00.000.000/0000-00' : '000.000.000-00'}
-            {...register('documento')}
+          <Controller
+            control={control}
+            name="documento"
+            render={({ field }) =>
+              tipo === 'PJ' ? (
+                <CNPJInput
+                  key="documento-pj"
+                  id="documento"
+                  value={field.value ?? ''}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                />
+              ) : (
+                <CPFInput
+                  key="documento-pf"
+                  id="documento"
+                  value={field.value ?? ''}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                />
+              )
+            }
           />
         </Field>
       </div>
@@ -100,7 +120,18 @@ function LeadForm({ initial, onSuccess }: { initial?: Pessoa; onSuccess: () => v
         </Field>
         <Field>
           <Label htmlFor="celularContato">Celular</Label>
-          <Input id="celularContato" placeholder="(47) 98xxx-xxxx" {...register('celularContato')} />
+          <Controller
+            control={control}
+            name="celularContato"
+            render={({ field }) => (
+              <PhoneInput
+                id="celularContato"
+                value={field.value ?? ''}
+                onChange={field.onChange}
+                onBlur={field.onBlur}
+              />
+            )}
+          />
         </Field>
       </div>
 

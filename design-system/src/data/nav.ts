@@ -225,6 +225,10 @@ export const navGroups: NavGroup[] = [
       { to: '/patterns/crm-pipeline', num: 'CRM.P1', name: 'Pipeline · Kanban + Funil' },
       { to: '/patterns/crm-dashboard', num: 'CRM.P2', name: 'CRM Dashboard' },
       { to: '/patterns/crm-contact-detail', num: 'CRM.P3', name: 'Contact Detail' },
+      { to: '/patterns/crm-opportunities-kanban', num: 'CRM.P4', name: 'Oportunidades · Kanban' },
+      { to: '/patterns/crm-opportunities-list', num: 'CRM.P5', name: 'Oportunidades · Lista' },
+      { to: '/patterns/crm-opportunity-detail', num: 'CRM.P6', name: 'Oportunidade · Detalhe' },
+      { to: '/patterns/crm-opportunities-dashboard', num: 'CRM.P7', name: 'Oportunidades · Dashboard' },
     ],
   },
   {

@@ -42,7 +42,23 @@ export function useMoveOportunidade() {
       const { data } = await api.patch<Oportunidade>(`/api/v1/crm/oportunidades/${id}/etapa`, { etapaId })
       return data
     },
-    onSuccess: () => {
+    onMutate: async ({ id, etapaId }) => {
+      await qc.cancelQueries({ queryKey: oportunidadesKeys.all })
+      const snapshots = qc.getQueriesData<Oportunidade[]>({
+        queryKey: [...oportunidadesKeys.all, 'by-pipeline'],
+      })
+      qc.setQueriesData<Oportunidade[]>(
+        { queryKey: [...oportunidadesKeys.all, 'by-pipeline'] },
+        (old) => old?.map((o) => (o.id === id ? { ...o, etapaId } : o)),
+      )
+      return { snapshots }
+    },
+    onError: (_err, _vars, context) => {
+      for (const [key, data] of context?.snapshots ?? []) {
+        qc.setQueryData(key, data)
+      }
+    },
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: oportunidadesKeys.all })
     },
   })

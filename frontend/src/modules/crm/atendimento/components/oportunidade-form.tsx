@@ -1,14 +1,16 @@
-import { useForm } from 'react-hook-form'
+import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { FormDialogFooter } from '@/components/tkws/crud-page'
 import { Field, FieldHint, Input, Label, Textarea } from '@/components/ui/input'
+import { MoneyInput } from '@/components/ui/masked-input'
+import { centsToReais, reaisToCents, roundReais } from '@/lib/money'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { SelectField, type SelectOption } from '@/components/ui/select-field'
 import { DateField } from '@/components/ui/date-field'
 import { useEmpreendimentos } from '@/modules/organizacao/configuracoes/empreendimentos/api'
 import { useOfertas } from '@/modules/organizacao/configuracoes/ofertas/api'
 import type { Etapa } from '@/modules/crm/configuracoes/etapas/schema'
-import { usePessoas } from '@/modules/crm/pessoas/api'
+import { PessoaComboboxField } from '@/modules/crm/pessoas/components/pessoa-combobox'
 import { useTiposPagamento } from '@/modules/crm/configuracoes/tipos-pagamentos/api'
 import { useCreateOportunidade, useUpdateOportunidade } from '../api'
 import {
@@ -60,7 +62,6 @@ export function OportunidadeForm({
   onSuccess,
 }: OportunidadeFormProps) {
   const isEdit = !!initial
-  const pessoas = usePessoas()
   const empreendimentos = useEmpreendimentos()
   const ofertas = useOfertas()
   const tiposPagamento = useTiposPagamento()
@@ -96,6 +97,7 @@ export function OportunidadeForm({
       empreendimentoId: data.empreendimentoId || null,
       responsavelId: data.responsavelId || null,
       prazoFechamento: data.prazoFechamento || null,
+      valor: roundReais(data.valor),
     }
     if (isEdit && initial) await updateMut.mutateAsync({ id: initial.id, input: payload })
     else await createMut.mutateAsync(payload)
@@ -132,23 +134,36 @@ export function OportunidadeForm({
         </Field>
         <Field>
           <Label htmlFor="valor">Valor (R$)</Label>
-          <Input id="valor" type="number" min={0} step={0.01} {...register('valor', { valueAsNumber: true })} />
+          <Controller
+            control={control}
+            name="valor"
+            render={({ field }) => (
+              <MoneyInput
+                id="valor"
+                error={!!errors.valor}
+                value={field.value > 0 ? reaisToCents(field.value) : undefined}
+                onChange={(cents) => {
+                  field.onChange(cents === undefined ? 0 : centsToReais(cents))
+                }}
+                onBlur={field.onBlur}
+              />
+            )}
+          />
+          {errors.valor && <FieldHint state="error">{errors.valor.message}</FieldHint>}
         </Field>
       </div>
 
       <Field>
         <Label>Pessoa (Lead ou Cliente)</Label>
-        <SelectField
+        <PessoaComboboxField
           control={control}
           name="pessoaId"
-          placeholder={pessoas.isLoading ? 'Carregando…' : 'Selecione o contato'}
-          options={toOptions(pessoas.data, (p) =>
-            `${p.nomeContato}${p.nomeEmpresa ? ' · ' + p.nomeEmpresa : ''} (${p.status})`,
-          )}
+          placeholder="Buscar lead ou cliente…"
+          state={errors.pessoaId ? 'error' : 'default'}
         />
-        {emptyHint(pessoas, 'CRM → Leads / Clientes') && (
-          <FieldHint>{emptyHint(pessoas, 'CRM → Leads / Clientes')}</FieldHint>
-        )}
+        <FieldHint>
+          Não encontrou? Digite o nome e clique em “Criar lead …” pra cadastrar inline.
+        </FieldHint>
       </Field>
 
       <div className="grid grid-cols-2 gap-3">

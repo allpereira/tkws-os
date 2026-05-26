@@ -42,5 +42,18 @@ public interface PessoaRepository {
      */
     List<Pessoa> list(long tenantId, StatusPessoa statusOuNull, int limit, int offset);
 
+    /**
+     * Busca livre por autocomplete · usada pelo Combobox async no frontend.
+     *
+     * Casa parcialmente (case-insensitive) em `nome_contato`, `nome_empresa`
+     * e também em `documento` quando o termo contém dígitos (procura pela
+     * sequência normalizada). Sempre tenant-scoped · ordena matches no
+     * início do nome primeiro, depois pelo `createdAt` desc.
+     *
+     * O caller passa a query crua (com ou sem máscara). A normalização para
+     * dígitos é feita pelo adapter.
+     */
+    List<Pessoa> search(long tenantId, String query, int limit);
+
     boolean existsByDocumento(long tenantId, String documentoNormalizado);
 }

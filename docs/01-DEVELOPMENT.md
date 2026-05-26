@@ -109,12 +109,21 @@ No cliente, conecte em `tkws` para ver `tenants`, `users`, `feature_flags`, `fly
 **Via container** (não precisa instalar `psql` no Mac):
 
 ```bash
-# Banco da aplicação
+# Banco da aplicação (sessão interativa)
 docker compose exec postgres psql -U tkws -d tkws
 
-# Banco do Zitadel
+# Banco do Zitadel (sessão interativa)
 docker compose exec postgres psql -U tkws -d zitadel
 ```
+
+**SQL avulso no container** (um comando só, sem abrir o `psql`):
+
+```bash
+# Rode na raiz do repositório (onde está o docker-compose.yml)
+docker compose exec -T postgres psql -U tkws -d tkws -c "SELECT version, description, success FROM flyway_schema_history ORDER BY installed_rank;"
+```
+
+O `-T` evita erro de TTY quando o terminal não é interativo (CI, scripts, Cursor).
 
 **Do host** (se tiver `psql` instalado, ex.: `brew install libpq`):
 
@@ -141,6 +150,27 @@ ORDER BY installed_rank;
 \d tenants   -- descreve colunas da tabela
 \q           -- sai
 ```
+
+#### Flyway e seed de desenvolvimento
+
+O seed local fica em **`api/src/main/resources/db/migration/V7__seed_dev.sql`** (migration **versionada**).
+Ele roda **uma única vez** por banco quando `ENVIRONMENT=dev` (placeholder do Flyway em `application.yml`).
+Não use mais `R__seed_dev.sql` — migrations repeatable reexecutam quando o checksum muda e podem conflitar com dados já existentes.
+
+| Situação | O que fazer |
+|---|---|
+| Banco novo | Subir a API; o Flyway aplica V1…V7 automaticamente |
+| Ver se V7 já rodou | `SELECT * FROM flyway_schema_history WHERE version = '7';` |
+| API falhou após migrar de `R__` para `V7` | Remover entrada antiga do repeatable (só se existir linha com esse script) |
+
+Limpar histórico do repeatable antigo (banco `tkws`, na raiz do repo):
+
+```bash
+docker compose exec -T postgres psql -U tkws -d tkws -c "DELETE FROM flyway_schema_history WHERE script = 'R__seed_dev.sql';"
+```
+
+Depois reinicie a API para o Flyway aplicar `V7__seed_dev.sql` se ainda não constar no histórico.
+Para **alterar** dados de seed depois da primeira carga, use a app ou crie uma migration `V8__…` pontual — editar o V7 em banco já migrado não reexecuta o script.
 
 ### Redis
 

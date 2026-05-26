@@ -1,5 +1,6 @@
 package com.groupws.tkws.features.pessoas.application.usecase;
 
+import com.groupws.tkws.features.pessoas.application.dto.PessoaSearchView;
 import com.groupws.tkws.features.pessoas.application.dto.PessoaView;
 import com.groupws.tkws.features.pessoas.domain.exception.PessoaNotFoundException;
 import com.groupws.tkws.features.pessoas.domain.model.PessoaId;
@@ -36,6 +37,18 @@ public class FindPessoaUseCase {
     public List<PessoaView> list(long tenantId, StatusPessoa statusOuNull, int limit, int offset) {
         return repository.list(tenantId, statusOuNull, limit, offset).stream()
             .map(PessoaView::from)
+            .toList();
+    }
+
+    /**
+     * Autocomplete · usado pelo Combobox async no frontend. Retorna view
+     * "leve" (PessoaSearchView) com só os campos necessários para escolha.
+     * Query vazia/em-branco retorna lista vazia · sem hit no banco.
+     */
+    @Transactional(readOnly = true)
+    public List<PessoaSearchView> search(long tenantId, String query, int limit) {
+        return repository.search(tenantId, query, limit).stream()
+            .map(PessoaSearchView::from)
             .toList();
     }
 }

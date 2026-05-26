@@ -5,9 +5,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Eye, EyeOff, ArrowRight } from 'lucide-react';
 
 import { loginSchema, type LoginFormValues } from '@/features/login/types/auth';
+import { loadSavedLogin, persistSavedLogin } from '@/features/login/lib/saved-login';
 import { useLoginFlowStore } from '@/features/login/store/login-flow-store';
 import { useLoginFlow } from '@/features/login/hooks/use-login-flow';
 import { Button } from '@/shared/ui/button';
+import { Checkbox } from '@/shared/ui/checkbox';
 import { Input } from '@/shared/ui/input';
 import { Field } from '@/shared/ui/field';
 import { Alert } from '@/shared/ui/alert';
@@ -20,6 +22,7 @@ export function LoginPage() {
   const setAuthRequestId = useLoginFlowStore((s) => s.setAuthRequestId);
   const { status, errorMessage, submit } = useLoginFlow();
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberDevice, setRememberDevice] = useState(false);
 
   // Persiste o authRequestId no store assim que a página carrega.
   // `search.authRequestId` já é `string | undefined` graças ao validateSearch da rota.
@@ -30,13 +33,31 @@ export function LoginPage() {
   const {
     register,
     handleSubmit,
+    reset,
     formState: { errors },
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: { loginName: '', password: '' },
   });
 
+  useEffect(() => {
+    void loadSavedLogin().then((saved) => {
+      if (!saved) return;
+      setRememberDevice(true);
+      reset({ loginName: saved.loginName, password: saved.password });
+    });
+  }, [reset]);
+
   const isLoading = status === 'loading';
+
+  const onSubmit = async (values: LoginFormValues) => {
+    await persistSavedLogin({
+      remember: rememberDevice,
+      loginName: values.loginName,
+      password: values.password,
+    });
+    await submit(values);
+  };
 
   return (
     <AuthStage
@@ -48,6 +69,8 @@ export function LoginPage() {
         </>
       }
       quoteCite="· OS do TKWS"
+      metaLeft="Login"
+      metaRight="sessão OIDC"
     >
       <p className="mb-[22px] font-mono text-[10px] uppercase tracking-[0.15em] text-ink-4">
         Entrar · TKWS OS
@@ -60,7 +83,7 @@ export function LoginPage() {
         Se for sua primeira vez, peça convite ao admin.
       </p>
 
-      <form onSubmit={handleSubmit(submit)} noValidate className="space-y-3.5">
+      <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-3.5">
         {errorMessage && <Alert variant="error" message={errorMessage} />}
 
         <Field
@@ -110,10 +133,22 @@ export function LoginPage() {
           </div>
         </Field>
 
-        <div className="-mt-1 flex justify-end">
+        <div className="-mt-1 flex items-center justify-between gap-3">
+          <label
+            htmlFor="rememberDevice"
+            className="flex cursor-pointer items-center gap-2.5"
+          >
+            <Checkbox
+              id="rememberDevice"
+              checked={rememberDevice}
+              onCheckedChange={(checked) => setRememberDevice(checked === true)}
+              disabled={isLoading}
+            />
+            <span className="text-[12.5px] text-ink-2">Lembrar deste dispositivo</span>
+          </label>
           <a
             href="/recovery"
-            className="text-xs font-semibold text-brand underline-offset-[3px] hover:underline"
+            className="shrink-0 text-xs font-semibold text-brand underline-offset-[3px] hover:underline"
           >
             Esqueci minha senha
           </a>

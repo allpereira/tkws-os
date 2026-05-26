@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.groupws.tkws.features.pessoas.application.dto.DedupResult;
+import com.groupws.tkws.features.pessoas.application.dto.PessoaSearchView;
 import com.groupws.tkws.features.pessoas.application.dto.PessoaView;
 import com.groupws.tkws.features.pessoas.application.usecase.CheckDuplicidadePessoaUseCase;
 import com.groupws.tkws.features.pessoas.application.usecase.ConvertPessoaToClienteUseCase;
@@ -41,6 +42,7 @@ import jakarta.validation.Valid;
  *   GET    /api/v1/pessoas                  · lista (filtra por status)
  *   GET    /api/v1/pessoas/{id}             · busca por ID
  *   GET    /api/v1/pessoas/buscar           · dedup (documento exato + soft)
+ *   GET    /api/v1/pessoas/search           · autocomplete (combobox async)
  *   POST   /api/v1/pessoas                  · cria como LEAD
  *   POST   /api/v1/pessoas/{id}/converter   · promove LEAD → CLIENTE
  */
@@ -82,6 +84,26 @@ class PessoaController {
         @CurrentTenant TenantContext tenant
     ) {
         return ResponseEntity.ok(findPessoa.byId(tenant.tenantId(), PessoaId.of(id)));
+    }
+
+    /**
+     * Autocomplete · usado pelo Combobox async no frontend para escolher
+     * Pessoa (Lead/Cliente) ao criar/editar uma Oportunidade.
+     *
+     * Casa parcialmente em nome do contato, nome da empresa e (quando o
+     * termo tem dígitos) no documento normalizado. Sempre tenant-scoped.
+     *
+     * Query vazia retorna lista vazia · evita hit no banco quando o
+     * combobox abre com o input em branco.
+     */
+    @GetMapping("/search")
+    @PreAuthorize("hasAnyRole('ORG_ADMIN', 'COMERCIAL_ATENDIMENTO', 'COMERCIAL_PROPOSTA')")
+    public ResponseEntity<List<PessoaSearchView>> search(
+        @CurrentTenant TenantContext tenant,
+        @RequestParam(name = "q") String query,
+        @RequestParam(defaultValue = "10") int limit
+    ) {
+        return ResponseEntity.ok(findPessoa.search(tenant.tenantId(), query, limit));
     }
 
     /**
