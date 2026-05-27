@@ -4,6 +4,7 @@ import com.groupws.tkws.features.crm.configuracoes.pipelines.application.Pipelin
 import com.groupws.tkws.features.crm.configuracoes.pipelines.application.PipelineView;
 import com.groupws.tkws.features.crm.configuracoes.pipelines.domain.model.ModuloPipeline;
 import com.groupws.tkws.features.crm.configuracoes.pipelines.domain.model.PipelineId;
+import com.groupws.tkws.shared.page.PageResponse;
 import com.groupws.tkws.shared.web.tenant.CurrentTenant;
 import com.groupws.tkws.shared.web.tenant.TenantContext;
 import jakarta.validation.Valid;
@@ -35,7 +36,7 @@ class PipelineController {
     }
 
     @GetMapping
-    public ResponseEntity<List<PipelineView>> list(
+    public ResponseEntity<PageResponse<PipelineView>> list(
         @CurrentTenant TenantContext tenant,
         @RequestParam(required = false) ModuloPipeline modulo
     ) {
@@ -55,11 +56,7 @@ class PipelineController {
         @CurrentTenant TenantContext tenant,
         @Valid @RequestBody PipelineRequest request
     ) {
-        PipelineView created = service.create(
-            tenant.tenantId(),
-            request.codigo(), request.nome(), request.descricao(),
-            request.modulo(), request.ordemOrZero(), request.ativoOrTrue()
-        );
+        PipelineView created = service.create(tenant.tenantId(), request.toCommand());
         return ResponseEntity.created(URI.create("/api/v1/crm/pipelines/" + created.id())).body(created);
     }
 
@@ -69,11 +66,7 @@ class PipelineController {
         @PathVariable UUID id,
         @Valid @RequestBody PipelineRequest request
     ) {
-        return ResponseEntity.ok(service.update(
-            tenant.tenantId(), PipelineId.of(id),
-            request.codigo(), request.nome(), request.descricao(),
-            request.modulo(), request.ordemOrZero(), request.ativoOrTrue()
-        ));
+        return ResponseEntity.ok(service.update(tenant.tenantId(), PipelineId.of(id), request.toCommand()));
     }
 
     @DeleteMapping("/{id}")

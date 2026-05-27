@@ -4,9 +4,9 @@ import com.groupws.tkws.features.crm.configuracoes.etapas.domain.exception.Etapa
 import com.groupws.tkws.features.crm.configuracoes.etapas.domain.exception.EtapaNotFoundException;
 import com.groupws.tkws.features.crm.configuracoes.etapas.domain.model.Etapa;
 import com.groupws.tkws.features.crm.configuracoes.etapas.domain.model.EtapaId;
-import com.groupws.tkws.features.crm.configuracoes.etapas.domain.model.TipoEtapa;
 import com.groupws.tkws.features.crm.configuracoes.etapas.domain.port.EtapaRepository;
 import com.groupws.tkws.features.crm.configuracoes.pipelines.domain.model.PipelineId;
+import com.groupws.tkws.shared.page.PageResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,12 +21,19 @@ public class EtapaService {
         this.repository = repository;
     }
 
+    /**
+     * Lista as etapas (opcionalmente de um pipeline), já ordenadas. Devolve no
+     * envelope {@link PageResponse} por consistência da API (ADR-022); como é uma
+     * lista de configuração pequena e finita, retorna tudo numa única página —
+     * sem count nem offset (ver ADR-022 · modo "página única").
+     */
     @Transactional(readOnly = true)
-    public List<EtapaView> list(long tenantId, PipelineId pipelineId) {
-        List<Etapa> etapas = pipelineId != null
+    public PageResponse<EtapaView> list(long tenantId, PipelineId pipelineId) {
+        List<EtapaView> etapas = (pipelineId != null
             ? repository.listByPipeline(tenantId, pipelineId)
-            : repository.listAll(tenantId);
-        return etapas.stream().map(EtapaView::from).toList();
+            : repository.listAll(tenantId))
+            .stream().map(EtapaView::from).toList();
+        return PageResponse.of(etapas, etapas.size(), 0, etapas.size());
     }
 
     @Transactional(readOnly = true)
@@ -37,28 +44,25 @@ public class EtapaService {
     }
 
     @Transactional
-    public EtapaView create(long tenantId, PipelineId pipelineId, String codigo, String nome,
-                            String descricao, String cor, int probabilidade, TipoEtapa tipo,
-                            int ordem, boolean converteLeadEmCliente, boolean ativo) {
-        if (repository.existsByCodigo(tenantId, codigo)) {
-            throw new EtapaCodigoDuplicadoException(codigo);
+    public EtapaView create(long tenantId, EtapaCommand cmd) {
+        if (repository.existsByCodigo(tenantId, cmd.codigo())) {
+            throw new EtapaCodigoDuplicadoException(cmd.codigo());
         }
-        Etapa etapa = Etapa.create(tenantId, pipelineId, codigo, nome, descricao, cor,
-            probabilidade, tipo, ordem, converteLeadEmCliente, ativo);
+        Etapa etapa = Etapa.create(tenantId, cmd.pipelineId(), cmd.codigo(), cmd.nome(),
+            cmd.descricao(), cmd.cor(), cmd.probabilidade(), cmd.tipo(), cmd.ordem(),
+            cmd.converteLeadEmCliente(), cmd.ativo());
         return EtapaView.from(repository.save(etapa));
     }
 
     @Transactional
-    public EtapaView update(long tenantId, EtapaId id, String codigo, String nome,
-                            String descricao, String cor, int probabilidade, TipoEtapa tipo,
-                            int ordem, boolean converteLeadEmCliente, boolean ativo) {
+    public EtapaView update(long tenantId, EtapaId id, EtapaCommand cmd) {
         Etapa etapa = repository.findById(tenantId, id)
             .orElseThrow(() -> new EtapaNotFoundException(id));
-        if (!etapa.codigo().equals(codigo) && repository.existsByCodigo(tenantId, codigo)) {
-            throw new EtapaCodigoDuplicadoException(codigo);
+        if (!etapa.codigo().equals(cmd.codigo()) && repository.existsByCodigo(tenantId, cmd.codigo())) {
+            throw new EtapaCodigoDuplicadoException(cmd.codigo());
         }
-        etapa.update(codigo, nome, descricao, cor, probabilidade, tipo, ordem,
-            converteLeadEmCliente, ativo);
+        etapa.update(cmd.codigo(), cmd.nome(), cmd.descricao(), cmd.cor(), cmd.probabilidade(),
+            cmd.tipo(), cmd.ordem(), cmd.converteLeadEmCliente(), cmd.ativo());
         return EtapaView.from(repository.save(etapa));
     }
 

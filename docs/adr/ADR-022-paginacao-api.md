@@ -76,11 +76,33 @@ Forma do envelope:
 
 ### Riscos
 
-- Listas pré-existentes que ainda retornam `List<DTO>` cru (oportunidades,
-  lookups) seguem fora do padrão até serem migradas — dívida conhecida, a ser
-  endereçada quando cada uma ganhar paginação real.
+- ~~Listas pré-existentes que ainda retornam `List<DTO>` cru (oportunidades,
+  lookups) seguem fora do padrão até serem migradas~~ — **resolvido (2026-05-27)**:
+  todas as listagens (lookups via `shared/crud`, oportunidades, etapas, pipelines,
+  invites) agora retornam `PageResponse<T>`.
+
+## Atualização (2026-05-27) — dívida quitada + dois modos de paginação
+
+Toda listagem do projeto passou a devolver `PageResponse<T>`. Para isso o helper
+`com.groupws.tkws.shared.page.Pagination` centraliza o clamp de `limit/offset`
+(1..100 / >= 0) e a conversão `offset/limit → PageRequest`, eliminando a lógica
+duplicada que existia inline em cada controller.
+
+Reconhecemos **dois modos legítimos** de paginação, conforme a natureza dos dados:
+
+| Modo | Quando usar | Como |
+|---|---|---|
+| **Paginação real** (`limit/offset` + `count`) | Listas que crescem com o uso: pessoas, oportunidades, invites | Controller aceita `limit/offset`; repo faz query paginada + `count`; `total` é real. |
+| **Página única** (envelope sem `count`) | Listas de **configuração pequenas e finitas**: lookups, etapas (≤ dezenas por pipeline), pipelines (poucos por módulo) | Retorna a lista ordenada inteira como uma página: `PageResponse.of(itens, itens.size(), 0, itens.size())`, `hasNext=false`. Sem `count` (evita query desperdiçada). |
+
+A regra 10 do `CLAUDE.md` ("nunca retornar `List<X>` cru") é satisfeita pelo
+**envelope uniforme** — não pela contagem. Forçar `count`/offset em listas de
+configuração que nunca passam de algumas dezenas de itens seria complexidade sem
+ganho. O frontend (`createCrudApi` em `lib/api.ts`) normaliza ambos os modos
+desembrulhando `.content`.
 
 ## Notas adicionais
 
 - Implementação inicial: feature `pessoas` (telas Leads/Clientes).
-- Relacionado: ADR-018 (Pessoas unificadas Lead/Cliente).
+- Generalização (2026-05-27): `shared/crud/Lookup*`, `shared/page/Pagination`.
+- Relacionado: ADR-018 (Pessoas unificadas Lead/Cliente), ADR-020 (lookup tables).

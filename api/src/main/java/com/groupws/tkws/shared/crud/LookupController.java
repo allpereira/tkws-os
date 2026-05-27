@@ -1,5 +1,7 @@
 package com.groupws.tkws.shared.crud;
 
+import com.groupws.tkws.shared.page.PageResponse;
+import com.groupws.tkws.shared.page.Pagination;
 import com.groupws.tkws.shared.web.tenant.CurrentTenant;
 import com.groupws.tkws.shared.web.tenant.TenantContext;
 import jakarta.validation.Valid;
@@ -10,9 +12,9 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.net.URI;
-import java.util.List;
 import java.util.UUID;
 
 /**
@@ -43,8 +45,12 @@ public abstract class LookupController<E extends LookupJpaEntity> {
     }
 
     @GetMapping
-    public ResponseEntity<List<LookupView>> list(@CurrentTenant TenantContext tenant) {
-        return ResponseEntity.ok(service.list(tenant.tenantId()));
+    public ResponseEntity<PageResponse<LookupView>> list(
+        @CurrentTenant TenantContext tenant,
+        @RequestParam(defaultValue = "" + Pagination.DEFAULT_LIMIT) int limit,
+        @RequestParam(defaultValue = "0") int offset
+    ) {
+        return ResponseEntity.ok(service.list(tenant.tenantId(), limit, offset));
     }
 
     @GetMapping("/{id}")

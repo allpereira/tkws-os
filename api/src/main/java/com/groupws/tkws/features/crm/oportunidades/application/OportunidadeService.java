@@ -8,6 +8,8 @@ import com.groupws.tkws.features.crm.oportunidades.domain.model.OportunidadeId;
 import com.groupws.tkws.features.crm.oportunidades.domain.port.EtapaLookup;
 import com.groupws.tkws.features.crm.oportunidades.domain.port.OportunidadeRepository;
 import com.groupws.tkws.features.pessoas.domain.model.PessoaId;
+import com.groupws.tkws.shared.page.PageResponse;
+import com.groupws.tkws.shared.page.Pagination;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,11 +40,11 @@ public class OportunidadeService {
     }
 
     @Transactional(readOnly = true)
-    public List<OportunidadeView> list(long tenantId, PipelineId pipelineId) {
-        List<Oportunidade> data = pipelineId != null
-            ? repository.listByPipeline(tenantId, pipelineId)
-            : repository.listAll(tenantId);
-        return data.stream().map(OportunidadeView::from).toList();
+    public PageResponse<OportunidadeView> list(long tenantId, PipelineId pipelineId, int limit, int offset) {
+        List<OportunidadeView> content = repository.list(tenantId, pipelineId, limit, offset)
+            .stream().map(OportunidadeView::from).toList();
+        return PageResponse.of(content, Pagination.clampLimit(limit), Pagination.clampOffset(offset),
+            repository.count(tenantId, pipelineId));
     }
 
     @Transactional(readOnly = true)

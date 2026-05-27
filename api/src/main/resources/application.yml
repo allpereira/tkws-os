@@ -11,16 +11,47 @@ spring:
     username: ${DB_USER:tkws}
     password: ${DB_PASSWORD:tkws}
     hikari:
+      pool-name: tkws-hikari
       maximum-pool-size: ${DB_POOL_SIZE:20}
-      minimum-idle: 5
+      minimum-idle: ${DB_POOL_MIN_IDLE:5}
+      # Tempo máximo esperando uma conexão livre antes de falhar (em vez de pendurar).
+      connection-timeout: 10000        # 10s
+      # Recicla conexões antes do idle/lifetime do PostgreSQL/RDS (evita usar conexão morta).
+      max-lifetime: 1740000            # 29min (< wait_timeout do PG, tipicamente 30min)
+      keepalive-time: 300000           # 5min — mantém conexões idle vivas (NAT/RDS)
+      idle-timeout: 600000             # 10min
+      validation-timeout: 5000
+      # Desliga autocommit no pool + delega o controle ao Hibernate: evita um
+      # round-trip de "SET autocommit" por transação (combina com
+      # provider_disables_autocommit abaixo).
+      auto-commit: false
 
   jpa:
     hibernate:
-      ddl-auto: update
+      # Flyway é o dono do schema (ADR). Em produção use `validate` (default abaixo):
+      # Hibernate só confere que as entidades batem com o schema migrado, sem alterá-lo.
+      # Dev pode sobrescrever com JPA_DDL_AUTO=update.
+      ddl-auto: ${JPA_DDL_AUTO:validate}
+    open-in-view: false               # já evita lazy-loading no render; mantém sessão curta
     properties:
       hibernate:
         format_sql: false
-    open-in-view: false
+        # Batching de INSERT/UPDATE: agrupa statements e reduz round-trips ao banco.
+        jdbc:
+          batch_size: 50
+          time_zone: UTC              # grava timestamps em UTC, consistente entre instâncias
+        order_inserts: true
+        order_updates: true
+        batch_versioned_data: true
+        # Mitiga N+1 ao carregar coleções/associações lazy (ex.: contatos de pessoas):
+        # busca em lotes de 25 em vez de 1 query por entidade.
+        default_batch_fetch_size: 25
+        # Reusa o plano de query quando a lista do IN tem tamanhos próximos (padding).
+        query:
+          in_clause_parameter_padding: true
+        # Hikari já desliga autocommit; deixa o Hibernate gerenciar — economiza round-trip.
+        connection:
+          provider_disables_autocommit: true
 
   flyway:
     enabled: true
@@ -40,6 +71,11 @@ spring:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6380}
+      # Timeouts curtos: cache/sessão nunca devem pendurar uma request.
+      timeout: 2s
+      connect-timeout: 2s
+      lettuce:
+        shutdown-timeout: 100ms
 
   security:
     oauth2:

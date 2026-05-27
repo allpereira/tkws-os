@@ -1,5 +1,6 @@
 package com.groupws.tkws.features.crm.configuracoes.pipelines.web;
 
+import com.groupws.tkws.features.crm.configuracoes.pipelines.application.PipelineCommand;
 import com.groupws.tkws.features.crm.configuracoes.pipelines.domain.model.ModuloPipeline;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -13,6 +14,12 @@ public record PipelineRequest(
     Integer ordem,
     Boolean ativo
 ) {
-    public int ordemOrZero() { return ordem == null ? 0 : ordem; }
-    public boolean ativoOrTrue() { return ativo == null || ativo; }
+    /** Converte para o command da application, aplicando defaults dos campos opcionais. */
+    public PipelineCommand toCommand() {
+        return new PipelineCommand(
+            codigo, nome, descricao, modulo,
+            ordem == null ? 0 : ordem,
+            ativo == null || ativo
+        );
+    }
 }

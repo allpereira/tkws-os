@@ -41,7 +41,12 @@ USER spring
 HEALTHCHECK --interval=30s --timeout=5s --start-period=90s --retries=3 \
   CMD curl -fs http://localhost:8080/actuator/health || exit 1
 
-ENV JAVA_OPTS="-XX:MaxRAMPercentage=75.0 -XX:+UseG1GC -XX:+UseStringDeduplication"
+# JVM tuning (container-aware · ver docs/16-PERFORMANCE.md):
+#   MaxRAMPercentage 75 + InitialRAMPercentage 50 → heap estável, sem resize churn
+#   G1GC + StringDeduplication → bom p/ workload web com muitas Strings (JSON/DTOs)
+#   ExitOnOutOfMemoryError → falha rápido p/ o Docker reiniciar (melhor que degradar)
+# Em produção o docker-compose.prod.yml sobrescreve com MaxRAMPercentage=70.
+ENV JAVA_OPTS="-XX:MaxRAMPercentage=75.0 -XX:InitialRAMPercentage=50.0 -XX:+UseG1GC -XX:+UseStringDeduplication -XX:+ExitOnOutOfMemoryError"
 
 EXPOSE 8080
 

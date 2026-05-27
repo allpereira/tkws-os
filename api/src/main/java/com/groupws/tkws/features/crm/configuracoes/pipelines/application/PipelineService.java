@@ -6,6 +6,7 @@ import com.groupws.tkws.features.crm.configuracoes.pipelines.domain.model.Modulo
 import com.groupws.tkws.features.crm.configuracoes.pipelines.domain.model.Pipeline;
 import com.groupws.tkws.features.crm.configuracoes.pipelines.domain.model.PipelineId;
 import com.groupws.tkws.features.crm.configuracoes.pipelines.domain.port.PipelineRepository;
+import com.groupws.tkws.shared.page.PageResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,9 +21,16 @@ public class PipelineService {
         this.repository = repository;
     }
 
+    /**
+     * Lista os pipelines (opcionalmente de um módulo), já ordenados. Envelope
+     * {@link PageResponse} por consistência (ADR-022); lista de configuração
+     * pequena e finita → uma única página, sem count nem offset (ver ADR-022 · modo "página única").
+     */
     @Transactional(readOnly = true)
-    public List<PipelineView> list(long tenantId, ModuloPipeline filtro) {
-        return repository.list(tenantId, filtro).stream().map(PipelineView::from).toList();
+    public PageResponse<PipelineView> list(long tenantId, ModuloPipeline filtro) {
+        List<PipelineView> pipelines = repository.list(tenantId, filtro)
+            .stream().map(PipelineView::from).toList();
+        return PageResponse.of(pipelines, pipelines.size(), 0, pipelines.size());
     }
 
     @Transactional(readOnly = true)
@@ -33,24 +41,23 @@ public class PipelineService {
     }
 
     @Transactional
-    public PipelineView create(long tenantId, String codigo, String nome, String descricao,
-                               ModuloPipeline modulo, int ordem, boolean ativo) {
-        if (repository.existsByCodigo(tenantId, codigo)) {
-            throw new PipelineCodigoDuplicadoException(codigo);
+    public PipelineView create(long tenantId, PipelineCommand cmd) {
+        if (repository.existsByCodigo(tenantId, cmd.codigo())) {
+            throw new PipelineCodigoDuplicadoException(cmd.codigo());
         }
-        Pipeline pipeline = Pipeline.create(tenantId, codigo, nome, descricao, modulo, ordem, ativo);
+        Pipeline pipeline = Pipeline.create(tenantId, cmd.codigo(), cmd.nome(), cmd.descricao(),
+            cmd.modulo(), cmd.ordem(), cmd.ativo());
         return PipelineView.from(repository.save(pipeline));
     }
 
     @Transactional
-    public PipelineView update(long tenantId, PipelineId id, String codigo, String nome,
-                               String descricao, ModuloPipeline modulo, int ordem, boolean ativo) {
+    public PipelineView update(long tenantId, PipelineId id, PipelineCommand cmd) {
         Pipeline pipeline = repository.findById(tenantId, id)
             .orElseThrow(() -> new PipelineNotFoundException(id));
-        if (!pipeline.codigo().equals(codigo) && repository.existsByCodigo(tenantId, codigo)) {
-            throw new PipelineCodigoDuplicadoException(codigo);
+        if (!pipeline.codigo().equals(cmd.codigo()) && repository.existsByCodigo(tenantId, cmd.codigo())) {
+            throw new PipelineCodigoDuplicadoException(cmd.codigo());
         }
-        pipeline.update(codigo, nome, descricao, modulo, ordem, ativo);
+        pipeline.update(cmd.codigo(), cmd.nome(), cmd.descricao(), cmd.modulo(), cmd.ordem(), cmd.ativo());
         return PipelineView.from(repository.save(pipeline));
     }
 

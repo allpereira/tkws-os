@@ -6,6 +6,8 @@ import com.groupws.tkws.features.crm.oportunidades.domain.model.Oportunidade;
 import com.groupws.tkws.features.crm.oportunidades.domain.model.OportunidadeId;
 import com.groupws.tkws.features.crm.oportunidades.domain.port.OportunidadeRepository;
 import com.groupws.tkws.features.pessoas.domain.model.PessoaId;
+import com.groupws.tkws.shared.page.Pagination;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -49,16 +51,22 @@ class OportunidadeJpaRepositoryAdapter implements OportunidadeRepository {
         return jpa.findByIdAndTenantId(id.value(), tenantId).map(this::toDomain);
     }
 
+    private static final Sort BY_UPDATED_DESC = Sort.by(Sort.Direction.DESC, "updatedAt");
+
     @Override
-    public List<Oportunidade> listByPipeline(long tenantId, PipelineId pipelineId) {
-        return jpa.findByTenantIdAndPipelineIdOrderByUpdatedAtDesc(tenantId, pipelineId.value())
-            .stream().map(this::toDomain).toList();
+    public List<Oportunidade> list(long tenantId, PipelineId pipelineId, int limit, int offset) {
+        var pageable = Pagination.pageRequest(limit, offset, BY_UPDATED_DESC);
+        var page = pipelineId != null
+            ? jpa.findByTenantIdAndPipelineId(tenantId, pipelineId.value(), pageable)
+            : jpa.findByTenantId(tenantId, pageable);
+        return page.getContent().stream().map(this::toDomain).toList();
     }
 
     @Override
-    public List<Oportunidade> listAll(long tenantId) {
-        return jpa.findByTenantIdOrderByUpdatedAtDesc(tenantId)
-            .stream().map(this::toDomain).toList();
+    public long count(long tenantId, PipelineId pipelineId) {
+        return pipelineId != null
+            ? jpa.countByTenantIdAndPipelineId(tenantId, pipelineId.value())
+            : jpa.countByTenantId(tenantId);
     }
 
     @Override

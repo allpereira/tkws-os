@@ -1,6 +1,8 @@
 package com.groupws.tkws.features.crm.configuracoes.etapas.web;
 
+import com.groupws.tkws.features.crm.configuracoes.etapas.application.EtapaCommand;
 import com.groupws.tkws.features.crm.configuracoes.etapas.domain.model.TipoEtapa;
+import com.groupws.tkws.features.crm.configuracoes.pipelines.domain.model.PipelineId;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -21,8 +23,14 @@ public record EtapaRequest(
     Boolean converteLeadEmCliente,
     Boolean ativo
 ) {
-    public int probOrDefault() { return probabilidade == null ? 50 : probabilidade; }
-    public int ordemOrZero() { return ordem == null ? 0 : ordem; }
-    public boolean converte() { return converteLeadEmCliente != null && converteLeadEmCliente; }
-    public boolean ativoOrTrue() { return ativo == null || ativo; }
+    /** Converte para o command da application, aplicando defaults dos campos opcionais. */
+    public EtapaCommand toCommand() {
+        return new EtapaCommand(
+            PipelineId.of(pipelineId), codigo, nome, descricao, cor,
+            probabilidade == null ? 50 : probabilidade, tipo,
+            ordem == null ? 0 : ordem,
+            converteLeadEmCliente != null && converteLeadEmCliente,
+            ativo == null || ativo
+        );
+    }
 }

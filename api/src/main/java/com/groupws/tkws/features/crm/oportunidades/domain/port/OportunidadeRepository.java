@@ -10,7 +10,12 @@ import java.util.Optional;
 public interface OportunidadeRepository {
     Oportunidade save(Oportunidade oportunidade);
     Optional<Oportunidade> findById(long tenantId, OportunidadeId id);
-    List<Oportunidade> listByPipeline(long tenantId, PipelineId pipelineId);
-    List<Oportunidade> listAll(long tenantId);
+
+    /** Página de oportunidades do tenant · {@code pipelineId} null lista todas. */
+    List<Oportunidade> list(long tenantId, PipelineId pipelineId, int limit, int offset);
+
+    /** Total que casa com o mesmo filtro de {@link #list}. */
+    long count(long tenantId, PipelineId pipelineId);
+
     void delete(long tenantId, OportunidadeId id);
 }

@@ -1,9 +1,12 @@
 package com.groupws.tkws.shared.crud;
 
+import com.groupws.tkws.shared.page.PageResponse;
+import com.groupws.tkws.shared.page.Pagination;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Sort;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.util.List;
 import java.util.UUID;
 import java.util.function.Supplier;
 
@@ -37,10 +40,12 @@ public final class LookupService<E extends LookupJpaEntity> {
     }
 
     @Transactional(readOnly = true)
-    public List<LookupView> list(long tenantId) {
-        return repository.findByTenantIdOrderByNomeAsc(tenantId).stream()
-            .map(LookupView::from)
-            .toList();
+    public PageResponse<LookupView> list(long tenantId, int limit, int offset) {
+        Page<E> page = repository.findByTenantId(
+            tenantId, Pagination.pageRequest(limit, offset, Sort.by(Sort.Direction.ASC, "nome")));
+        return PageResponse.of(
+            page.getContent().stream().map(LookupView::from).toList(),
+            Pagination.clampLimit(limit), Pagination.clampOffset(offset), page.getTotalElements());
     }
 
     @Transactional(readOnly = true)

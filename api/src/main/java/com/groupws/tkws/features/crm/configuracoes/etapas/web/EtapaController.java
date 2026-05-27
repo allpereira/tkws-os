@@ -20,6 +20,7 @@ import com.groupws.tkws.features.crm.configuracoes.etapas.application.EtapaServi
 import com.groupws.tkws.features.crm.configuracoes.etapas.application.EtapaView;
 import com.groupws.tkws.features.crm.configuracoes.etapas.domain.model.EtapaId;
 import com.groupws.tkws.features.crm.configuracoes.pipelines.domain.model.PipelineId;
+import com.groupws.tkws.shared.page.PageResponse;
 import com.groupws.tkws.shared.web.tenant.CurrentTenant;
 import com.groupws.tkws.shared.web.tenant.TenantContext;
 
@@ -37,7 +38,7 @@ class EtapaController {
     }
 
     @GetMapping
-    public ResponseEntity<List<EtapaView>> list(
+    public ResponseEntity<PageResponse<EtapaView>> list(
         @CurrentTenant TenantContext tenant,
         @RequestParam(required = false) UUID pipelineId
     ) {
@@ -59,12 +60,7 @@ class EtapaController {
         @CurrentTenant TenantContext tenant,
         @Valid @RequestBody EtapaRequest request
     ) {
-        EtapaView created = service.create(
-            tenant.tenantId(), PipelineId.of(request.pipelineId()),
-            request.codigo(), request.nome(), request.descricao(), request.cor(),
-            request.probOrDefault(), request.tipo(), request.ordemOrZero(),
-            request.converte(), request.ativoOrTrue()
-        );
+        EtapaView created = service.create(tenant.tenantId(), request.toCommand());
         return ResponseEntity.created(URI.create("/api/v1/crm/etapas/" + created.id())).body(created);
     }
 
@@ -74,12 +70,7 @@ class EtapaController {
         @PathVariable UUID id,
         @Valid @RequestBody EtapaRequest request
     ) {
-        return ResponseEntity.ok(service.update(
-            tenant.tenantId(), EtapaId.of(id),
-            request.codigo(), request.nome(), request.descricao(), request.cor(),
-            request.probOrDefault(), request.tipo(), request.ordemOrZero(),
-            request.converte(), request.ativoOrTrue()
-        ));
+        return ResponseEntity.ok(service.update(tenant.tenantId(), EtapaId.of(id), request.toCommand()));
     }
 
     @DeleteMapping("/{id}")

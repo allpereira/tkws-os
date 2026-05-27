@@ -5,6 +5,8 @@ import com.groupws.tkws.features.crm.configuracoes.pipelines.domain.model.Pipeli
 import com.groupws.tkws.features.crm.oportunidades.application.OportunidadeService;
 import com.groupws.tkws.features.crm.oportunidades.application.OportunidadeView;
 import com.groupws.tkws.features.crm.oportunidades.domain.model.OportunidadeId;
+import com.groupws.tkws.shared.page.PageResponse;
+import com.groupws.tkws.shared.page.Pagination;
 import com.groupws.tkws.shared.web.tenant.CurrentTenant;
 import com.groupws.tkws.shared.web.tenant.TenantContext;
 import jakarta.validation.Valid;
@@ -21,7 +23,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.net.URI;
-import java.util.List;
 import java.util.UUID;
 
 /**
@@ -47,13 +48,16 @@ class OportunidadeController {
     }
 
     @GetMapping
-    public ResponseEntity<List<OportunidadeView>> list(
+    public ResponseEntity<PageResponse<OportunidadeView>> list(
         @CurrentTenant TenantContext tenant,
-        @RequestParam(required = false) UUID pipelineId
+        @RequestParam(required = false) UUID pipelineId,
+        @RequestParam(defaultValue = "" + Pagination.DEFAULT_LIMIT) int limit,
+        @RequestParam(defaultValue = "0") int offset
     ) {
         return ResponseEntity.ok(service.list(
             tenant.tenantId(),
-            pipelineId != null ? PipelineId.of(pipelineId) : null
+            pipelineId != null ? PipelineId.of(pipelineId) : null,
+            limit, offset
         ));
     }
 
