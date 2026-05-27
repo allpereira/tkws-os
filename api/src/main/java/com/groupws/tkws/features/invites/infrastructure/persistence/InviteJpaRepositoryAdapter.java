@@ -6,8 +6,10 @@ import com.groupws.tkws.features.invites.domain.model.InviteRole;
 import com.groupws.tkws.features.invites.domain.model.InviteStatus;
 import com.groupws.tkws.features.invites.domain.port.InviteRepository;
 import com.groupws.tkws.features.tenants.domain.model.TenantId;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -44,6 +46,11 @@ class InviteJpaRepositoryAdapter implements InviteRepository {
     }
 
     @Override
+    public Optional<Invite> findByIdAndTenant(InviteId id, TenantId tenantId) {
+        return jpa.findByIdAndTenantId(id.value(), tenantId.value()).map(this::toDomain);
+    }
+
+    @Override
     public Optional<Invite> findByTokenHash(String tokenHash) {
         return jpa.findByTokenHash(tokenHash).map(this::toDomain);
     }
@@ -51,6 +58,22 @@ class InviteJpaRepositoryAdapter implements InviteRepository {
     @Override
     public boolean existsPending(TenantId tenantId, String email) {
         return jpa.existsPending(tenantId.value(), email);
+    }
+
+    @Override
+    public List<Invite> findByTenant(TenantId tenantId, InviteStatus statusFilter, int limit, int offset) {
+        String status = statusFilter == null ? null : statusFilter.name();
+        int page = limit > 0 ? offset / limit : 0;
+        return jpa.findByTenant(tenantId.value(), status, PageRequest.of(page, Math.max(1, limit)))
+            .stream()
+            .map(this::toDomain)
+            .toList();
+    }
+
+    @Override
+    public long countByTenant(TenantId tenantId, InviteStatus statusFilter) {
+        String status = statusFilter == null ? null : statusFilter.name();
+        return jpa.countByTenant(tenantId.value(), status);
     }
 
     private Invite toDomain(InviteJpaEntity e) {

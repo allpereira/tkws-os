@@ -62,8 +62,8 @@ public class CreateInviteUseCase {
     }
 
     @Transactional
-    public InviteView execute(CreateInviteCommand cmd, UUID issuedByUserId, String issuedByEmail) {
-        TenantId tenantId = TenantId.of(cmd.tenantId());
+    public InviteView execute(CreateInviteCommand cmd, long currentTenantId, UUID issuedByUserId, String issuedByEmail) {
+        TenantId tenantId = TenantId.of(currentTenantId);
         Tenant tenant = tenants.findById(tenantId)
             .orElseThrow(() -> new TenantNotFoundException(tenantId.toString()));
 

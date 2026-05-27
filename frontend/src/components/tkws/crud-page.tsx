@@ -57,7 +57,7 @@ export function CrudPage<T>({
   title,
   crumb,
   description,
-  newButtonLabel = '+ Novo',
+  newButtonLabel = 'Novo',
   emptyTitle,
   listQuery,
   removeMutation,
@@ -177,7 +177,7 @@ export function CrudPage<T>({
       </PageShell>
 
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>{formDialogTitle(editing)}</DialogTitle>
             {formDialogDescription && <DialogDescription>{formDialogDescription}</DialogDescription>}

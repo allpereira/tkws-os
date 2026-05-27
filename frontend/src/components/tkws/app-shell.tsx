@@ -43,6 +43,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { ThemeToggle } from '@/components/tkws/theme-toggle'
+import { useRoles } from '@/modules/plataforma/auth/use-roles'
 import { cn } from '@/lib/utils'
 
 /**
@@ -91,18 +92,41 @@ const navGroups: NavGroup[] = [
       { to: '/crm/propostas', label: 'Propostas', Icon: Briefcase },
     ],
   },
+]
+
+/**
+ * Árvore de "Configurações" · seção recolhível no sidebar (CRM · Organização),
+ * cada subseção com seus itens. Mantém o menu enxuto: fica fechada por padrão e
+ * abre automaticamente quando a rota atual está sob `/settings`.
+ */
+interface NavSection {
+  id: string
+  label: string
+  /** Prefixo de rota para detectar "está dentro desta seção". */
+  basePath: string
+  Icon: React.ComponentType<{ size?: number; strokeWidth?: number }>
+  items: NavItem[]
+  /** Só aparece para admins do escritório (org_admin / system_admin). */
+  requiresAdmin?: boolean
+}
+
+const settingsSections: NavSection[] = [
   {
     id: 'settings-crm',
-    label: 'Config · CRM',
+    label: 'CRM',
+    basePath: '/settings/crm',
+    Icon: KanbanIcon,
     items: [
-      { to: '/settings/crm/tipos-pagamentos', label: 'Tipos de Pagamentos', Icon: CreditCard },
       { to: '/settings/crm/pipelines', label: 'Pipelines', Icon: Network },
       { to: '/settings/crm/etapas', label: 'Etapas', Icon: Layers },
+      { to: '/settings/crm/tipos-pagamentos', label: 'Tipos de Pagamentos', Icon: CreditCard },
     ],
   },
   {
     id: 'settings-organizacao',
-    label: 'Config · Organização',
+    label: 'Organização',
+    basePath: '/settings/organizacao',
+    Icon: Building2,
     items: [
       { to: '/settings/organizacao/ofertas', label: 'Ofertas', Icon: ShoppingBag },
       { to: '/settings/organizacao/tipos-empresa', label: 'Tipos de Empresa', Icon: Building2 },
@@ -113,7 +137,17 @@ const navGroups: NavGroup[] = [
       { to: '/settings/organizacao/empreendimentos', label: 'Empreendimentos', Icon: HardHat },
     ],
   },
+  {
+    id: 'settings-plataforma',
+    label: 'Plataforma',
+    basePath: '/settings/usuarios',
+    Icon: Users,
+    requiresAdmin: true,
+    items: [{ to: '/settings/usuarios', label: 'Usuários', Icon: Users }],
+  },
 ]
+
+const SETTINGS_BASE = '/settings'
 
 // ---------------------------------------------------------------------------
 // Hooks
@@ -369,6 +403,155 @@ function SidebarItem({
   )
 }
 
+/**
+ * Folha de configuração · link indentado dentro de uma subseção.
+ */
+function SettingsLeaf({ item, currentPath }: { item: NavItem; currentPath: string }) {
+  const active = currentPath === item.to || currentPath.startsWith(`${item.to}/`)
+  return (
+    <li>
+      <Link
+        to={item.to as any}
+        className="grid grid-cols-[16px_1fr] items-center gap-2 rounded-[8px] px-2.5 py-1.5 text-[12.5px] font-medium transition-colors hover:bg-white/[0.06]"
+        style={{
+          background: active ? 'var(--brand-soft)' : 'transparent',
+          color: active ? 'var(--brand)' : 'var(--text-soft)',
+        }}
+      >
+        <span className="flex items-center justify-center">
+          <item.Icon size={13} strokeWidth={1.8} />
+        </span>
+        <span className="truncate">{item.label}</span>
+      </Link>
+    </li>
+  )
+}
+
+/**
+ * Subseção recolhível (CRM · Organização) dentro de "Configurações".
+ * Abre automaticamente quando a rota atual pertence a ela.
+ */
+function SettingsSection({ section, currentPath }: { section: NavSection; currentPath: string }) {
+  const inSection = currentPath.startsWith(section.basePath)
+  const [open, setOpen] = React.useState(inSection)
+  React.useEffect(() => {
+    if (inSection) setOpen(true)
+  }, [inSection])
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="flex w-full cursor-pointer items-center gap-2 rounded-[8px] px-2.5 py-1.5 text-[12.5px] font-semibold transition-colors hover:bg-white/[0.06]"
+        style={{ color: inSection ? 'var(--text)' : 'var(--text-soft)' }}
+      >
+        <span className="flex items-center justify-center">
+          <section.Icon size={13} strokeWidth={1.8} />
+        </span>
+        <span className="flex-1 text-left">{section.label}</span>
+        <ChevronRight
+          size={12}
+          className={cn('transition-transform duration-150', open && 'rotate-90')}
+          style={{ color: 'var(--text-mute)' }}
+        />
+      </button>
+      {open && (
+        <ul
+          className="ml-[15px] mt-px flex flex-col gap-px border-l pl-2"
+          style={{ borderColor: 'var(--line-1)' }}
+        >
+          {section.items.map((it) => (
+            <SettingsLeaf key={it.to} item={it} currentPath={currentPath} />
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
+
+/**
+ * Seção "Configurações" · raiz recolhível do sidebar. Recolhida por padrão
+ * (mantém o menu enxuto) e auto-aberta quando a rota está sob `/settings`.
+ * No modo sidebar-colapsado (60px) vira um ícone que reexpande o sidebar.
+ */
+function SettingsNav({
+  currentPath,
+  collapsed,
+  onExpand,
+}: {
+  currentPath: string
+  collapsed: boolean
+  onExpand: () => void
+}) {
+  const inSettings = currentPath.startsWith(SETTINGS_BASE)
+  const { isAdmin } = useRoles()
+  const visibleSections = settingsSections.filter((s) => !s.requiresAdmin || isAdmin)
+  const [open, setOpen] = React.useState(inSettings)
+  React.useEffect(() => {
+    if (inSettings) setOpen(true)
+  }, [inSettings])
+
+  if (collapsed) {
+    return (
+      <div className="px-3 pt-2">
+        <div className="mb-1 h-px" style={{ background: 'var(--line-1)' }} aria-hidden />
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(true)
+                onExpand()
+              }}
+              aria-label="Configurações"
+              className="flex h-9 w-full cursor-pointer items-center justify-center rounded-[8px] transition-colors hover:bg-white/[0.06]"
+              style={{
+                background: inSettings ? 'var(--brand-soft)' : 'transparent',
+                color: inSettings ? 'var(--brand)' : 'var(--text-soft)',
+              }}
+            >
+              <Settings size={14} strokeWidth={1.8} />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="right">Configurações</TooltipContent>
+        </Tooltip>
+      </div>
+    )
+  }
+
+  return (
+    <div className="px-3 pt-2">
+      <div className="mb-1 h-px" style={{ background: 'var(--line-1)' }} aria-hidden />
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="flex w-full cursor-pointer items-center gap-2.5 rounded-[8px] px-2.5 py-1.5 text-[13px] font-medium transition-colors hover:bg-white/[0.06]"
+        style={{ color: inSettings ? 'var(--brand)' : 'var(--text-soft)' }}
+      >
+        <span className="flex items-center justify-center">
+          <Settings size={14} strokeWidth={1.8} />
+        </span>
+        <span className="flex-1 text-left">Configurações</span>
+        <ChevronRight
+          size={13}
+          className={cn('transition-transform duration-150', open && 'rotate-90')}
+          style={{ color: 'var(--text-mute)' }}
+        />
+      </button>
+      {open && (
+        <div className="mt-0.5 flex flex-col gap-0.5">
+          {visibleSections.map((s) => (
+            <SettingsSection key={s.id} section={s} currentPath={currentPath} />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function SidebarFooter({
   collapsed,
   onToggle,
@@ -516,12 +699,15 @@ function UserDropdown({
 function Sidebar({
   collapsed,
   onToggle,
+  onExpand,
   currentPath,
   user,
   onItemClick,
 }: {
   collapsed: boolean
   onToggle: () => void
+  /** Reexpande o sidebar (usado pelo ícone de Configurações no modo colapsado). */
+  onExpand: () => void
   currentPath: string
   user?: { name?: string; email?: string }
   onItemClick?: () => void
@@ -544,6 +730,7 @@ function Sidebar({
             collapsed={collapsed}
           />
         ))}
+        <SettingsNav currentPath={currentPath} collapsed={collapsed} onExpand={onExpand} />
       </nav>
 
       <SidebarFooter collapsed={collapsed} onToggle={onToggle} user={user} />
@@ -695,6 +882,7 @@ export function AppShell({ children, user }: AppShellProps) {
         <Sidebar
           collapsed={collapsed}
           onToggle={() => setCollapsed((c) => !c)}
+          onExpand={() => setCollapsed(false)}
           currentPath={location.pathname}
           user={user}
         />
@@ -713,6 +901,7 @@ export function AppShell({ children, user }: AppShellProps) {
             <Sidebar
               collapsed={false}
               onToggle={() => setMobileOpen(false)}
+              onExpand={() => {}}
               currentPath={location.pathname}
               user={user}
               onItemClick={() => {

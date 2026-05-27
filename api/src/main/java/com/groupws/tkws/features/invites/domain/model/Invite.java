@@ -13,9 +13,9 @@ import java.util.Objects;
  *
  * <p>Invariantes:
  * <ul>
- *   <li>token_hash imutável após criação</li>
+ *   <li>token_hash só muda via {@link #rotateToken} (reenvio), sempre em estado PENDING</li>
  *   <li>status evolui apenas PENDING → ACCEPTED/EXPIRED/REVOKED (terminal)</li>
- *   <li>expires_at no futuro no momento da criação</li>
+ *   <li>expires_at no futuro no momento da criação / rotação</li>
  *   <li>email normalizado pra lowercase</li>
  * </ul>
  *
@@ -32,9 +32,9 @@ public final class Invite extends AggregateRoot<InviteId> {
     private final String email;
     private final String fullName;
     private final InviteRole role;
-    private final String tokenHash;
+    private String tokenHash;
     private InviteStatus status;
-    private final Instant expiresAt;
+    private Instant expiresAt;
     private final java.util.UUID createdByUserId;
     private final Instant createdAt;
     private Instant acceptedAt;
@@ -108,6 +108,20 @@ public final class Invite extends AggregateRoot<InviteId> {
         ensureAcceptable();
         this.status = InviteStatus.REVOKED;
         this.revokedAt = Instant.now();
+    }
+
+    /**
+     * Rotaciona o token (reenvio do convite) e estende a validade. Só é
+     * permitido em estado PENDING — invalida o link antigo e gera um novo.
+     */
+    public void rotateToken(String newTokenHash, java.time.Duration ttl) {
+        ensureAcceptable();
+        Objects.requireNonNull(newTokenHash, "newTokenHash");
+        if (ttl == null || ttl.isZero() || ttl.isNegative()) {
+            throw new IllegalArgumentException("ttl deve ser positivo");
+        }
+        this.tokenHash = newTokenHash;
+        this.expiresAt = Instant.now().plus(ttl);
     }
 
     /** Marca como expirado (job periódico ou sob demanda). */

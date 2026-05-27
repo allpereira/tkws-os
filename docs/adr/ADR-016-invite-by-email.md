@@ -94,10 +94,19 @@ TTL default 7 dias, configurável via `tkws.invites.ttl`.
 
 ## Notas adicionais
 
-- Implementação inicial em `api/.../features/invites/` (V4 migration) e
+- Implementação em `api/.../features/invites/` (V4 migration) e
   `login/src/features/accept-invite/`.
-- Tela admin (em `frontend/`) para listar / revogar / reenviar invites fica
-  pra próxima entrega — hoje o admin usa `curl` ou Swagger UI.
+- **Tela admin entregue** em `frontend/src/modules/plataforma/usuarios/`
+  (`/settings/usuarios`, gated por `org_admin`/`system_admin` via `useRoles`):
+  lista paginada, criar convite, reenviar e cancelar. Endpoints correspondentes:
+  - `GET    /api/v1/invites`             — listagem paginada (`PageResponse`, filtro por status)
+  - `POST   /api/v1/invites/{id}/revoke` — cancela um convite PENDING
+  - `POST   /api/v1/invites/{id}/resend` — rotaciona o token (invalida o link antigo) e reenvia
+- **Multi-tenancy**: `tenantId` saiu do `CreateInviteCommand` — agora é resolvido
+  via `@CurrentTenant` no controller (ADR-019). Revoke/resend são tenant-scoped
+  (`findByIdAndTenant`) → 404 para convite de outro tenant.
+- **Email**: corpo HTML (MimeMessage, multipart com fallback texto) com tom
+  editorial, rótulo de papel legível e CTA "Confirmar acesso e definir senha".
 - Notificação do operador via Telegram/Slack: implementar quando o tag de log
   começar a barulhar muito.
 - Spec visual: design-system V1 seção 09.6, demo "Aceitar convite".

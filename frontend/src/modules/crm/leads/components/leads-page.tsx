@@ -228,7 +228,7 @@ export function LeadsPage() {
       />
 
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>{editing ? `Editar · ${editing.nomeContato}` : 'Novo lead'}</DialogTitle>
           </DialogHeader>
