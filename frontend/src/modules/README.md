@@ -2,8 +2,7 @@
 
 Organização **domain-first**: cada feature mora dentro do seu módulo de negócio.
 
-Decisão completa em [ADR-017](../../../tkws-os-architeture/adr/ADR-017-modules-domain-first.md).
-Regras de execução em [AGENT.md](../../../tkws-os-architeture/AGENT.md).
+Decisão completa em [ADR-017](../../../docs/adr/ADR-017-frontend-modules-domain-first.md).
 
 ## Mapa atual
 
@@ -57,7 +56,7 @@ modules/
 └── __tests__/
 ```
 
-Subdividir em `api/`, `hooks/`, `types/` só quando colidir nome ou >5 arquivos do mesmo tipo (ver `plataforma/auth/` como exemplo de feature subdividida).
+Subdividir em `api/`, `hooks/`, `types/` só quando colidir nome ou houver >5 arquivos do mesmo tipo. Hoje **nenhuma** feature atinge esse limite — todas são flat (`schema.ts` + `api.ts`).
 
 ## Sub-pasta `configuracoes/` — quando criar
 

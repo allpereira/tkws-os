@@ -12,12 +12,12 @@ import { PageShell } from '@/components/tkws/page-shell'
 import { SystemFrame } from '@/components/tkws/system-frame'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
-import { useRequireAuth } from '@/modules/plataforma/auth/hooks/use-require-auth'
+import { useRequireAuth } from '@/modules/plataforma/auth/use-require-auth'
 import {
   AuthErrorPanel,
   AuthSetupRequired,
 } from '@/modules/plataforma/auth/components/auth-gate'
-import { useCurrentUser } from '@/modules/plataforma/users/hooks/use-current-user'
+import { useCurrentUser } from '@/modules/plataforma/users/api'
 
 // =============================================================================
 // LAZY pages · todas atrás de Suspense para baixar sob demanda
@@ -70,6 +70,12 @@ const FuncoesPessoasPage = lazyPage(
 const EmpreendimentosPage = lazyPage(
   () => import('@/modules/organizacao/configuracoes/empreendimentos/components/empreendimentos-page'),
   'EmpreendimentosPage',
+)
+
+// Settings · Plataforma (admin do escritório)
+const UsuariosPage = lazyPage(
+  () => import('@/modules/plataforma/usuarios/components/usuarios-page'),
+  'UsuariosPage',
 )
 
 // CRM
@@ -254,24 +260,25 @@ const indexRoute = createRoute({ getParentRoute: () => rootRoute, path: '/', com
 const callbackRoute = createRoute({ getParentRoute: () => rootRoute, path: '/callback', component: OidcCallbackPage })
 
 // Settings · CRM
-const settingsCrmTiposPagamentosRoute = createRoute({ getParentRoute: () => rootRoute, path: '/settings/crm/tipos-pagamentos', component: TiposPagamentoPage as any })
-const settingsCrmPipelinesRoute = createRoute({ getParentRoute: () => rootRoute, path: '/settings/crm/pipelines', component: PipelinesPage as any })
-const settingsCrmEtapasRoute = createRoute({ getParentRoute: () => rootRoute, path: '/settings/crm/etapas', component: EtapasPage as any })
+const settingsCrmTiposPagamentosRoute = createRoute({ getParentRoute: () => rootRoute, path: '/settings/crm/tipos-pagamentos', component: TiposPagamentoPage })
+const settingsCrmPipelinesRoute = createRoute({ getParentRoute: () => rootRoute, path: '/settings/crm/pipelines', component: PipelinesPage })
+const settingsCrmEtapasRoute = createRoute({ getParentRoute: () => rootRoute, path: '/settings/crm/etapas', component: EtapasPage })
 
 // Settings · Organização
-const settingsOrgOfertasRoute = createRoute({ getParentRoute: () => rootRoute, path: '/settings/organizacao/ofertas', component: OfertasPage as any })
-const settingsOrgTiposEmpresaRoute = createRoute({ getParentRoute: () => rootRoute, path: '/settings/organizacao/tipos-empresa', component: TiposEmpresaPage as any })
-const settingsOrgUnidadesRoute = createRoute({ getParentRoute: () => rootRoute, path: '/settings/organizacao/unidades', component: UnidadesPage as any })
-const settingsOrgSetoresRoute = createRoute({ getParentRoute: () => rootRoute, path: '/settings/organizacao/setores', component: SetoresPage as any })
-const settingsOrgTiposProjetosRoute = createRoute({ getParentRoute: () => rootRoute, path: '/settings/organizacao/tipos-projetos', component: TiposProjetoPage as any })
-const settingsOrgFuncoesPessoasRoute = createRoute({ getParentRoute: () => rootRoute, path: '/settings/organizacao/funcoes-pessoas', component: FuncoesPessoasPage as any })
-const settingsOrgEmpreendimentosRoute = createRoute({ getParentRoute: () => rootRoute, path: '/settings/organizacao/empreendimentos', component: EmpreendimentosPage as any })
+const settingsOrgOfertasRoute = createRoute({ getParentRoute: () => rootRoute, path: '/settings/organizacao/ofertas', component: OfertasPage })
+const settingsOrgTiposEmpresaRoute = createRoute({ getParentRoute: () => rootRoute, path: '/settings/organizacao/tipos-empresa', component: TiposEmpresaPage })
+const settingsOrgUnidadesRoute = createRoute({ getParentRoute: () => rootRoute, path: '/settings/organizacao/unidades', component: UnidadesPage })
+const settingsOrgSetoresRoute = createRoute({ getParentRoute: () => rootRoute, path: '/settings/organizacao/setores', component: SetoresPage })
+const settingsOrgTiposProjetosRoute = createRoute({ getParentRoute: () => rootRoute, path: '/settings/organizacao/tipos-projetos', component: TiposProjetoPage })
+const settingsOrgFuncoesPessoasRoute = createRoute({ getParentRoute: () => rootRoute, path: '/settings/organizacao/funcoes-pessoas', component: FuncoesPessoasPage })
+const settingsOrgEmpreendimentosRoute = createRoute({ getParentRoute: () => rootRoute, path: '/settings/organizacao/empreendimentos', component: EmpreendimentosPage })
+const settingsUsuariosRoute = createRoute({ getParentRoute: () => rootRoute, path: '/settings/usuarios', component: UsuariosPage })
 
 // CRM
-const crmLeadsRoute = createRoute({ getParentRoute: () => rootRoute, path: '/crm/leads', component: LeadsPage as any })
-const crmClientesRoute = createRoute({ getParentRoute: () => rootRoute, path: '/crm/clientes', component: ClientesPage as any })
-const crmAtendimentoRoute = createRoute({ getParentRoute: () => rootRoute, path: '/crm/atendimento', component: AtendimentoPage as any })
-const crmPropostasRoute = createRoute({ getParentRoute: () => rootRoute, path: '/crm/propostas', component: PropostasPage as any })
+const crmLeadsRoute = createRoute({ getParentRoute: () => rootRoute, path: '/crm/leads', component: LeadsPage })
+const crmClientesRoute = createRoute({ getParentRoute: () => rootRoute, path: '/crm/clientes', component: ClientesPage })
+const crmAtendimentoRoute = createRoute({ getParentRoute: () => rootRoute, path: '/crm/atendimento', component: AtendimentoPage })
+const crmPropostasRoute = createRoute({ getParentRoute: () => rootRoute, path: '/crm/propostas', component: PropostasPage })
 
 export const routeTree = rootRoute.addChildren([
   indexRoute,
@@ -287,6 +294,7 @@ export const routeTree = rootRoute.addChildren([
   settingsOrgTiposProjetosRoute,
   settingsOrgFuncoesPessoasRoute,
   settingsOrgEmpreendimentosRoute,
+  settingsUsuariosRoute,
   // CRM
   crmLeadsRoute,
   crmClientesRoute,

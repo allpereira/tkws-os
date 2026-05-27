@@ -15,7 +15,7 @@ export function OfertasPage() {
       crumb="Configurações · Organização"
       title="Ofertas"
       description="Catálogo de ofertas que a TKWS oferece aos clientes · usadas em propostas e orçamentos."
-      newButtonLabel="+ Nova oferta"
+      newButtonLabel="Nova oferta"
       listQuery={listQuery}
       removeMutation={removeMut}
       columns={[
@@ -42,8 +42,8 @@ export function OfertasPage() {
           initial={item}
           existingItems={listQuery.data}
           codePrefix="OFE"
-          createMutation={createMut as never}
-          updateMutation={updateMut as never}
+          createMutation={createMut}
+          updateMutation={updateMut}
           onSuccess={close}
           namePlaceholder="Marcenaria sob medida · m²"
         />

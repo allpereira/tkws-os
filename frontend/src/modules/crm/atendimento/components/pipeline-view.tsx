@@ -74,7 +74,7 @@ export function PipelineView({ modulo, title, description }: PipelineViewProps) 
     return map
   }, [etapasDoPipeline])
 
-  const oportunidades = oportunidadesQuery.data ?? []
+  const oportunidades = React.useMemo(() => oportunidadesQuery.data ?? [], [oportunidadesQuery.data])
 
   const pessoaById = React.useMemo(() => {
     const map = new Map<string, Pessoa>()

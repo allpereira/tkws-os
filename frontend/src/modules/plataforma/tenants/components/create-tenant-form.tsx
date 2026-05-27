@@ -1,7 +1,7 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useCreateTenant } from '@/modules/plataforma/tenants/hooks/use-tenants';
-import { createTenantSchema, type CreateTenantInput } from '@/modules/plataforma/tenants/types/tenant';
+import { useCreateTenant } from '@/modules/plataforma/tenants/api';
+import { createTenantSchema, type CreateTenantInput } from '@/modules/plataforma/tenants/schema';
 
 interface Props {
   onSuccess?: (tenantId: number) => void;
@@ -21,9 +21,13 @@ export function CreateTenantForm({ onSuccess }: Props) {
   const createTenant = useCreateTenant();
 
   const onSubmit = handleSubmit(async (data) => {
-    const created = await createTenant.mutateAsync(data);
-    reset();
-    onSuccess?.(created.id);
+    try {
+      const created = await createTenant.mutateAsync(data);
+      reset();
+      onSuccess?.(created.id);
+    } catch {
+      // Falha tratada na UI via `createTenant.isError`; não propaga a rejeição.
+    }
   });
 
   return (

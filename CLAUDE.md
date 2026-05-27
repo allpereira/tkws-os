@@ -82,16 +82,24 @@ features/{feature}/
 
 ### Frontend — estrutura de cada feature
 
+Organização **domain-first** (ver [ADR-017](docs/adr/ADR-017-frontend-modules-domain-first.md) e
+[`frontend/src/modules/README.md`](frontend/src/modules/README.md)): cada feature mora dentro do
+seu módulo de negócio em `src/modules/<domínio>/<feature>/`, com arquivos **flat**:
+
 ```
-features/{feature}/
-├── api/                       # Função pura que chama o backend
-├── components/                # Componentes específicos da feature
-├── hooks/                     # useX (TanStack Query)
-├── types/                     # Schemas Zod (fonte da verdade)
-└── __tests__/                 # Testes co-localizados
+modules/<domínio>/<feature>/
+├── schema.ts        # Schemas Zod · fonte da verdade dos tipos
+├── api.ts           # Funções de acesso + hooks TanStack Query
+├── store.ts         # Zustand (opcional)
+├── components/      # Componentes específicos da feature
+│   ├── <feature>-page.tsx
+│   └── <feature>-form.tsx
+└── __tests__/       # Testes co-localizados
 ```
 
-Código **compartilhado** vai em `src/shared/`. Código de **rotas e providers** vai em `src/app/`.
+Só subdivida em `api/`, `hooks/`, `types/` quando colidir nome **ou** houver >5 arquivos do
+mesmo tipo. Código **compartilhado** entre 2+ módulos vai em `src/shared/`; utilitário puro
+(sem domínio/rede) em `src/lib/`; **rotas e providers** em `src/app/`.
 
 ## TDD — workflow obrigatório para feature nova
 
@@ -132,7 +140,7 @@ Para CADA feature nova, a ordem é:
 | `docs/13-ONBOARDING.md` | Fluxo de onboarding de tenants (com aprovação manual) |
 | `docs/14-DESIGN-SYSTEM-SYNC.md` | **Antes de copiar/atualizar qualquer componente do `design-system/` para o `frontend/`** — runbook + lista de arquivos preservados |
 | `docs/15-API-BEST-PRACTICES.md` | **Antes de abrir endpoint novo ou escrever query JPQL** — verbos HTTP (evitar 405), params nullable no PostgreSQL (`CAST`), dedup em update |
-| `docs/adr/` | Decisões arquiteturais (por quê fizemos X em vez de Y) · 20 ADRs (gap em 017) |
+| `docs/adr/` | Decisões arquiteturais (por quê fizemos X em vez de Y) · ADR-001…023 |
 
 ## Princípios não-negociáveis
 

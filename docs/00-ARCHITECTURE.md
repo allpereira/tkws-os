@@ -213,13 +213,13 @@ Veja `docs/adr/` para o histórico completo de decisões.
 | `ADR-014` | Auto-cadastro de tenant com aprovação manual |
 | `ADR-015` | Custom Login V2 (SPA própria · porta 5174) |
 | `ADR-016` | Cadastro de membros via convite por email |
+| `ADR-017` | Frontend organizado por módulos de negócio (domain-first) |
 | `ADR-018` | Pessoas unificadas (Lead + Cliente em uma tabela) |
 | `ADR-019` | Tenant context resolvido do JWT (nunca de query/body) |
 | `ADR-020` | Lookup tables sem domain layer |
 | `ADR-021` | `tenants.id` como BIGINT, `zitadel_org_id` à parte |
 | `ADR-022` | Paginação de listagens via envelope `limit/offset` (`PageResponse<T>`) |
-
-> Gap: ADR-017 não existe (numeração pulada).
+| `ADR-023` | Cadastro direto de Cliente + Contatos da Pessoa |
 
 ## Features implementadas (estado atual)
 

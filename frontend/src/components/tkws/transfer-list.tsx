@@ -35,13 +35,15 @@ export function TransferList({
 
   function toggleSourceItem(id: string) {
     const next = new Set(sourceSel)
-    next.has(id) ? next.delete(id) : next.add(id)
+    if (next.has(id)) next.delete(id)
+    else next.add(id)
     setSourceSel(next)
   }
 
   function toggleTargetItem(id: string) {
     const next = new Set(targetSel)
-    next.has(id) ? next.delete(id) : next.add(id)
+    if (next.has(id)) next.delete(id)
+    else next.add(id)
     setTargetSel(next)
   }
 

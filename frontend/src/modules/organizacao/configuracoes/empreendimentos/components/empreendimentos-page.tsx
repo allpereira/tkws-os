@@ -20,7 +20,7 @@ export function EmpreendimentosPage() {
       crumb="Configurações · Organização"
       title="Empreendimentos"
       description="Prédios e condomínios onde projetos são executados."
-      newButtonLabel="+ Novo empreendimento"
+      newButtonLabel="Novo empreendimento"
       listQuery={listQuery}
       removeMutation={removeMut}
       columns={[
@@ -47,8 +47,8 @@ export function EmpreendimentosPage() {
           initial={item}
           existingItems={listQuery.data}
           codePrefix="EMP"
-          createMutation={createMut as never}
-          updateMutation={updateMut as never}
+          createMutation={createMut}
+          updateMutation={updateMut}
           onSuccess={close}
           namePlaceholder="Yachthouse Towers"
         />

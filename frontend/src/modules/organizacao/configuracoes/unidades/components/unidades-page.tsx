@@ -20,7 +20,7 @@ export function UnidadesPage() {
       crumb="Configurações · Organização"
       title="Unidades"
       description="Filiais e escritórios da organização (ex.: TKWS Florianópolis, TKWS Balneário Camboriú)."
-      newButtonLabel="+ Nova unidade"
+      newButtonLabel="Nova unidade"
       listQuery={listQuery}
       removeMutation={removeMut}
       columns={[
@@ -47,8 +47,8 @@ export function UnidadesPage() {
           initial={item}
           existingItems={listQuery.data}
           codePrefix="UNI"
-          createMutation={createMut as never}
-          updateMutation={updateMut as never}
+          createMutation={createMut}
+          updateMutation={updateMut}
           onSuccess={close}
           namePlaceholder="TKWS Balneário Camboriú"
         />

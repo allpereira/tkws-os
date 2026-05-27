@@ -35,9 +35,6 @@ ou revisado deve usar a forma em inglês.
 
 ## Index
 
-> **Gap intencional**: ADR-017 não foi escrito (número pulado). Não usar essa
-> numeração para ADRs futuros · prefira seguir a sequência (022, 023, ...).
-
 | # | Título | Status | Data |
 |---|---|---|---|
 | 001 | Clean Architecture + DDD tático + Feature-based | Accepted | 2025-05 |
@@ -56,9 +53,11 @@ ou revisado deve usar a forma em inglês.
 | 014 | Auto-cadastro com aprovação manual | Accepted | 2025-05 |
 | 015 | Custom Login V2 (SPA própria) | Accepted | 2026-05 |
 | 016 | Cadastro de membros via convite por email | Accepted | 2026-05 |
-| 017 | (não existe · gap intencional) | — | — |
+| 017 | Frontend organizado por módulos de negócio (domain-first) | Accepted | 2026-05 |
 | 018 | Pessoas unificadas (Lead + Cliente em uma tabela) | Accepted | 2026-05 |
 | 019 | Tenant context resolvido do JWT, nunca de query/body | Accepted | 2026-05 |
 | 020 | Lookup tables sem domain layer (Clean Architecture pragmática) | Accepted | 2026-05 |
 | 021 | `tenants.id` como BIGINT, `zitadel_org_id` à parte | Accepted | 2026-05 |
 | 022 | Paginação de listagens via envelope `limit/offset` (`PageResponse<T>`) | Accepted | 2026-05 |
+| 023 | Cadastro direto de Cliente + Contatos da Pessoa | Accepted | 2026-05 |
+| 024 | Status HTTP na própria DomainException (handler genérico) | Accepted | 2026-05 |

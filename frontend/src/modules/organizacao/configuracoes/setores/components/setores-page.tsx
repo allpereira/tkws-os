@@ -15,7 +15,7 @@ export function SetoresPage() {
       crumb="Configurações · Organização"
       title="Setores"
       description="Departamentos internos da organização."
-      newButtonLabel="+ Novo setor"
+      newButtonLabel="Novo setor"
       listQuery={listQuery}
       removeMutation={removeMut}
       columns={[
@@ -42,8 +42,8 @@ export function SetoresPage() {
           initial={item}
           existingItems={listQuery.data}
           codePrefix="SET"
-          createMutation={createMut as never}
-          updateMutation={updateMut as never}
+          createMutation={createMut}
+          updateMutation={updateMut}
           onSuccess={close}
           namePlaceholder="Marketing, Comercial, Operações…"
         />

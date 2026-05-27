@@ -20,7 +20,7 @@ export function TiposProjetoPage() {
       crumb="Configurações · Organização"
       title="Tipos de Projetos"
       description="Categorias de projetos (ex.: Residencial alto padrão, Comercial, Reforma)."
-      newButtonLabel="+ Novo tipo"
+      newButtonLabel="Novo tipo"
       listQuery={listQuery}
       removeMutation={removeMut}
       columns={[
@@ -47,8 +47,8 @@ export function TiposProjetoPage() {
           initial={item}
           existingItems={listQuery.data}
           codePrefix="TPR"
-          createMutation={createMut as never}
-          updateMutation={updateMut as never}
+          createMutation={createMut}
+          updateMutation={updateMut}
           onSuccess={close}
           namePlaceholder="Residencial alto padrão, Comercial, Reforma…"
         />

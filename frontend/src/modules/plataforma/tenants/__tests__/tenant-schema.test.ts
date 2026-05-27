@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createTenantSchema, tenantSchema } from '@/modules/plataforma/tenants/types/tenant';
+import { createTenantSchema, tenantSchema } from '@/modules/plataforma/tenants/schema';
 
 describe('Tenant Schemas', () => {
   describe('createTenantSchema', () => {
@@ -49,7 +49,7 @@ describe('Tenant Schemas', () => {
   describe('tenantSchema (resposta da API)', () => {
     it('deve aceitar resposta válida da API', () => {
       const result = tenantSchema.safeParse({
-        id: '00000000-0000-0000-0000-000000000001',
+        id: 1,
         zitadelOrgId: 'zitadel-1',
         name: 'Nome',
         slug: 'nome',
@@ -60,9 +60,10 @@ describe('Tenant Schemas', () => {
       expect(result.success).toBe(true);
     });
 
-    it('deve rejeitar id que não é UUID', () => {
+    // id é BIGINT no backend (ADR-021), não UUID — o schema espera um número positivo.
+    it('deve rejeitar id não numérico', () => {
       const result = tenantSchema.safeParse({
-        id: 'not-uuid',
+        id: 'not-a-number',
         zitadelOrgId: 'x',
         name: 'Nome',
         slug: 'slug',

@@ -189,11 +189,14 @@ frontend/src/
 │   ├── msw-server.ts                 # Server setup
 │   ├── msw-handlers.ts               # Mocks padrão da API
 │   └── test-utils.tsx                # renderWithProviders helper
-└── features/{feature}/__tests__/
+└── modules/<domínio>/<feature>/__tests__/
     ├── {feature}-schema.test.ts        # Validação Zod
-    ├── use-{feature}.test.tsx          # Hooks (via MSW)
+    ├── {feature}-api.test.tsx          # Hooks TanStack Query (via MSW)
     └── {component}.test.tsx            # Componentes
 ```
+
+> Os specs E2E (Playwright) ficam em `frontend/e2e/` e são excluídos do Vitest
+> (`vite.config.ts` · `test.exclude`). Rode-os com `npm run e2e`.
 
 ### Por que MSW
 

@@ -316,7 +316,7 @@ export function Treemap({ cells, width = 600, height = 320, className }: Treemap
   const sorted = [...cells].sort((a, b) => b.value - a.value)
 
   // layout simples · primeira ocupa metade, depois divide horizontal/vertical alternado
-  let placed: { cell: TreemapCell; x: number; y: number; w: number; h: number }[] = []
+  const placed: { cell: TreemapCell; x: number; y: number; w: number; h: number }[] = []
   let cursorX = 0
   let cursorY = 0
   let remainingW = width

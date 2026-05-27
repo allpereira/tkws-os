@@ -149,7 +149,7 @@ function PessoaComboboxImpl({
   // TanStack Query · cuida de abort/cache/dedupe. Só dispara quando popover
   // aberto E termo >= MIN_CHARS (`enabled`).
   const searchQuery = usePessoaSearch(debounced, open)
-  const apiItems: PessoaSearchResult[] = searchQuery.data ?? []
+  const apiItems = useMemo<PessoaSearchResult[]>(() => searchQuery.data ?? [], [searchQuery.data])
   const isLoading = open && debounced.length >= MIN_CHARS && searchQuery.isFetching
   const isTyping = query.trim() !== debounced && query.trim().length >= MIN_CHARS
 

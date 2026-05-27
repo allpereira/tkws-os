@@ -19,6 +19,15 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
     css: true,
+    // Vitest cobre apenas os testes em src/. Os specs de e2e/ rodam no Playwright.
+    include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    exclude: ['node_modules', 'dist', 'e2e/**'],
+    // Env determinístico: testes não devem depender do .env.local do dev.
+    env: {
+      VITE_ZITADEL_AUTHORITY: '',
+      VITE_ZITADEL_CLIENT_ID: '',
+      VITE_ZITADEL_PROJECT_ID: '',
+    },
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html', 'lcov'],

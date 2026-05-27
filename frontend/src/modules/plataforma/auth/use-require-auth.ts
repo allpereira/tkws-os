@@ -1,6 +1,6 @@
 import { useAuth } from 'react-oidc-context';
 import { useEffect, useState } from 'react';
-import { isOidcConfigured } from '@/modules/plataforma/auth/api/oidc-config';
+import { isOidcConfigured } from '@/modules/plataforma/auth/oidc-config';
 
 export function useRequireAuth() {
   const auth = useAuth();

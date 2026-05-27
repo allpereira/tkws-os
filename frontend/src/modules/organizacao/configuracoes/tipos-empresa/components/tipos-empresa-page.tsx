@@ -20,7 +20,7 @@ export function TiposEmpresaPage() {
       crumb="Configurações · Organização"
       title="Tipos de Empresa"
       description="Taxonomia das empresas externas (Clientes, Fornecedores, Construtoras / Incorporadoras, Parceiros…)."
-      newButtonLabel="+ Novo tipo"
+      newButtonLabel="Novo tipo"
       listQuery={listQuery}
       removeMutation={removeMut}
       columns={[
@@ -47,8 +47,8 @@ export function TiposEmpresaPage() {
           initial={item}
           existingItems={listQuery.data}
           codePrefix="TEM"
-          createMutation={createMut as never}
-          updateMutation={updateMut as never}
+          createMutation={createMut}
+          updateMutation={updateMut}
           onSuccess={close}
           namePlaceholder="Cliente, Fornecedor, Construtora, Parceiro…"
         />

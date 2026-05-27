@@ -81,6 +81,29 @@ describe('CreateTenantForm', () => {
   });
 
   it('deve desabilitar botão durante submissão', async () => {
+    // Segura a resposta da API para observar o estado "pending" sem corrida.
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    server.use(
+      http.post('http://localhost:8080/api/v1/tenants', async () => {
+        await gate;
+        return HttpResponse.json(
+          {
+            id: 1,
+            zitadelOrgId: 'org-1',
+            name: 'Studio Test',
+            slug: 'studio-test',
+            active: true,
+            createdAt: '2025-01-01T00:00:00Z',
+            updatedAt: '2025-01-01T00:00:00Z',
+          },
+          { status: 201 }
+        );
+      })
+    );
+
     const user = userEvent.setup();
     renderWithProviders(<CreateTenantForm />);
 
@@ -91,6 +114,8 @@ describe('CreateTenantForm', () => {
     const button = screen.getByRole('button', { name: /criar tenant/i });
     await user.click(button);
 
-    expect(button).toBeDisabled();
+    await waitFor(() => expect(button).toBeDisabled());
+
+    release(); // libera a request pendente
   });
 });

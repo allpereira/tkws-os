@@ -3,7 +3,7 @@ import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { http, HttpResponse } from 'msw';
 import { server } from '@/test/msw-server';
-import { useCurrentUser } from '@/modules/plataforma/users/hooks/use-current-user';
+import { useCurrentUser } from '@/modules/plataforma/users/api';
 import { ReactNode } from 'react';
 
 function wrapper({ children }: { children: ReactNode }) {

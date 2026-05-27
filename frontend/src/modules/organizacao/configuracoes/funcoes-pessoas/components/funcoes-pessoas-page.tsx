@@ -20,7 +20,7 @@ export function FuncoesPessoasPage() {
       crumb="Configurações · Organização"
       title="Funções de Pessoas"
       description="Cargos e papéis · usados em equipes e organograma."
-      newButtonLabel="+ Nova função"
+      newButtonLabel="Nova função"
       listQuery={listQuery}
       removeMutation={removeMut}
       columns={[
@@ -47,8 +47,8 @@ export function FuncoesPessoasPage() {
           initial={item}
           existingItems={listQuery.data}
           codePrefix="FUN"
-          createMutation={createMut as never}
-          updateMutation={updateMut as never}
+          createMutation={createMut}
+          updateMutation={updateMut}
           onSuccess={close}
           namePlaceholder="Arquiteto líder, Designer pleno, Gerente de obra…"
         />

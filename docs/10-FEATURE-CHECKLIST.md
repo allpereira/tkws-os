@@ -217,15 +217,21 @@ Roda automaticamente. Se falhou, conserte:
 
 ### 8. Estrutura de pastas
 
+Organização **domain-first** ([ADR-017](adr/ADR-017-frontend-modules-domain-first.md)): a feature
+mora dentro do seu módulo de negócio, com arquivos **flat** (`schema.ts` + `api.ts`):
+
 ```bash
-mkdir -p frontend/src/features/orcamento/{api,components,hooks,types,__tests__}
+mkdir -p frontend/src/modules/orcamentos/orcamento/{components,__tests__}
 ```
+
+> Só subdivida em `api/`, `hooks/`, `types/` quando colidir nome ou houver >5 arquivos do mesmo
+> tipo. Configurações de admin vão em `modules/<domínio>/configuracoes/<feature>/`.
 
 ### 9. Schema Zod
 
 #### 9.1 — Schema test (RED)
 
-`frontend/src/features/orcamento/__tests__/orcamento-schema.test.ts`
+`frontend/src/modules/orcamentos/orcamento/__tests__/orcamento-schema.test.ts`
 
 - [ ] `describe` por schema
 - [ ] Cobre casos felizes e inválidos
@@ -233,39 +239,32 @@ mkdir -p frontend/src/features/orcamento/{api,components,hooks,types,__tests__}
 
 #### 9.2 — Schema (GREEN)
 
-`frontend/src/features/orcamento/types/orcamento.ts`
+`frontend/src/modules/orcamentos/orcamento/schema.ts`
 
 - [ ] Schemas Zod como fonte da verdade
 - [ ] Tipos derivados via `z.infer<typeof schema>`
 
-### 10. API client
+### 10. API + hooks
 
-`frontend/src/features/orcamento/api/orcamento-api.ts`
+`frontend/src/modules/orcamentos/orcamento/api.ts` — funções de acesso **e** hooks TanStack Query
+no mesmo arquivo (CRUDs simples podem usar `createCrudApi`/`createCrudHooks` de `@/lib`).
 
-- [ ] Funções puras chamando o axios `api`
+- [ ] Funções puras chamando o axios `api` (`@/lib/api`)
 - [ ] Retornam tipos Zod-validated
+- [ ] Exporta `keys` factory; mutations fazem `invalidateQueries` no sucesso
 - [ ] Sem lógica de UI
 
 ### 11. MSW handlers
 
 Adicionar handlers em `frontend/src/test/msw-handlers.ts` para os endpoints da nova feature.
 
-### 12. Hooks (TanStack Query)
+### 12. Teste de hooks (TanStack Query)
 
-#### 12.1 — Hook test (RED)
-
-`__tests__/use-orcamentos.test.tsx`
+`__tests__/orcamento-api.test.tsx`
 
 - [ ] `renderHook` com QueryClient
 - [ ] Cobre sucesso, erro (via `server.use(...)`), loading
-
-#### 12.2 — Hook (GREEN)
-
-`hooks/use-orcamentos.ts`
-
-- [ ] Exporta `queryKeys` factory
-- [ ] `useOrcamentos`, `useOrcamentoById`, `useCreateOrcamento`
-- [ ] Mutations fazem `invalidateQueries` no sucesso
+- [ ] Hooks expostos: `useOrcamentos`, `useOrcamentoById`, `useCreateOrcamento`
 
 ### 13. Componentes
 

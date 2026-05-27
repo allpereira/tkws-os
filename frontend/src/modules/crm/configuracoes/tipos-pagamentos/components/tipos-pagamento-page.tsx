@@ -20,7 +20,7 @@ export function TiposPagamentoPage() {
       crumb="Configurações · CRM"
       title="Tipos de Pagamento"
       description="Modalidades disponíveis nas propostas."
-      newButtonLabel="+ Novo tipo"
+      newButtonLabel="Novo tipo"
       listQuery={listQuery}
       removeMutation={removeMut}
       columns={[
@@ -47,8 +47,8 @@ export function TiposPagamentoPage() {
           initial={item}
           existingItems={listQuery.data}
           codePrefix="TPG"
-          createMutation={createMut as never}
-          updateMutation={updateMut as never}
+          createMutation={createMut}
+          updateMutation={updateMut}
           onSuccess={close}
           namePlaceholder="À vista 10% desconto, 8× sem juros, Boleto 30 dias…"
         />

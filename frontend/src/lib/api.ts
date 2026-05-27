@@ -1,6 +1,6 @@
 import axios, { AxiosError } from 'axios'
 import { User } from 'oidc-client-ts'
-import { ZITADEL_AUTHORITY, ZITADEL_CLIENT_ID } from '@/modules/plataforma/auth/api/oidc-config'
+import { ZITADEL_AUTHORITY, ZITADEL_CLIENT_ID } from '@/modules/plataforma/auth/oidc-config'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'
 
@@ -63,11 +63,23 @@ api.interceptors.response.use(
  * Uso:
  *   const tiposPropostaApi = createCrudApi<TipoProposta, CreateTipoProposta>('/api/v1/crm/tipos-proposta')
  */
+/**
+ * Resposta de listagem do backend · pode vir como array cru (legado) ou como
+ * envelope paginado `PageResponse<T>` (ADR-022). `unwrapList` normaliza para `T[]`,
+ * mantendo os consumidores simples — a maioria das telas de CRUD/config não pagina
+ * de fato: pede um `limit` alto e usa todos os itens.
+ */
+function unwrapList<T>(data: T[] | { content: T[] }): T[] {
+  return Array.isArray(data) ? data : (data?.content ?? [])
+}
+
 export function createCrudApi<T, CreateInput, UpdateInput = Partial<CreateInput>>(basePath: string) {
   return {
     async list(params?: Record<string, string | number | boolean>): Promise<T[]> {
-      const { data } = await api.get<T[]>(basePath, { params })
-      return data
+      const { data } = await api.get<T[] | { content: T[] }>(basePath, {
+        params: { limit: 100, ...params },
+      })
+      return unwrapList(data)
     },
     async findById(id: string): Promise<T> {
       const { data } = await api.get<T>(`${basePath}/${id}`)
