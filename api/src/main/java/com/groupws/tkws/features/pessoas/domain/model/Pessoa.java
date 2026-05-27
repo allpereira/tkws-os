@@ -88,10 +88,9 @@ public final class Pessoa extends AggregateRoot<PessoaId> {
     /**
      * Factory · cria uma Pessoa nova com o {@code status} inicial informado.
      *
-     * Aceita apenas {@link StatusPessoa#LEAD} ou {@link StatusPessoa#CLIENTE}
-     * (ADR-023). Quando nasce CLIENTE, marca {@code convertidoEm = now} e emite
-     * também o {@link PessoaConvertedToClienteEvent}, para os consumidores da
-     * conversão por funil não precisarem de caso especial.
+     * Aceita {@link StatusPessoa#LEAD}, {@link StatusPessoa#CLIENTE} ou
+     * {@link StatusPessoa#PARCEIRO} (ADR-023). Quando nasce CLIENTE, marca
+     * {@code convertidoEm = now} e emite também o {@link PessoaConvertedToClienteEvent}.
      *
      * Use case de criação deve verificar duplicidade de documento ANTES.
      */
@@ -99,9 +98,11 @@ public final class Pessoa extends AggregateRoot<PessoaId> {
                                 String nomeContato, String emailContato, String celularContato,
                                 String nomeEmpresa, StatusPessoa status) {
         Objects.requireNonNull(status, "status");
-        if (status != StatusPessoa.LEAD && status != StatusPessoa.CLIENTE) {
+        if (status != StatusPessoa.LEAD
+            && status != StatusPessoa.CLIENTE
+            && status != StatusPessoa.PARCEIRO) {
             throw new IllegalArgumentException(
-                "Criação de Pessoa só aceita status LEAD ou CLIENTE · recebeu: " + status);
+                "Criação de Pessoa só aceita status LEAD, CLIENTE ou PARCEIRO · recebeu: " + status);
         }
         Instant now = Instant.now();
         PessoaId id = PessoaId.generate();

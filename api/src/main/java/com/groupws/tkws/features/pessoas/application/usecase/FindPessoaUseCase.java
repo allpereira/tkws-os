@@ -55,8 +55,9 @@ public class FindPessoaUseCase {
      * Query vazia/em-branco retorna lista vazia · sem hit no banco.
      */
     @Transactional(readOnly = true)
-    public List<PessoaSearchView> search(long tenantId, String query, int limit) {
-        return repository.search(tenantId, query, limit).stream()
+    public List<PessoaSearchView> search(long tenantId, String query, int limit,
+                                         com.groupws.tkws.features.pessoas.domain.model.StatusPessoa status) {
+        return repository.search(tenantId, query, limit, status).stream()
             .map(PessoaSearchView::from)
             .toList();
     }

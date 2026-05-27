@@ -2,6 +2,7 @@ package com.groupws.tkws.features.pessoas.domain.port;
 
 import com.groupws.tkws.features.pessoas.domain.model.Pessoa;
 import com.groupws.tkws.features.pessoas.domain.model.PessoaId;
+import com.groupws.tkws.features.pessoas.domain.model.StatusPessoa;
 
 import java.util.List;
 import java.util.Optional;
@@ -59,7 +60,10 @@ public interface PessoaRepository {
      * O caller passa a query crua (com ou sem máscara). A normalização para
      * dígitos é feita pelo adapter.
      */
-    List<Pessoa> search(long tenantId, String query, int limit);
+    /**
+     * @param status quando informado, restringe ao status (ex.: PARCEIRO no combobox de parceiros)
+     */
+    List<Pessoa> search(long tenantId, String query, int limit, StatusPessoa status);
 
     boolean existsByDocumento(long tenantId, String documentoNormalizado);
 }

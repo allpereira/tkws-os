@@ -1,9 +1,9 @@
-import { Controller, useForm } from 'react-hook-form'
+import { Controller, useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Trash2 } from 'lucide-react'
 import { FormDialogFooter } from '@/components/tkws/crud-page'
 import { Button } from '@/components/ui/button'
-import { Field, FieldHint, Input, Label, Textarea } from '@/components/ui/input'
+import { Field, FieldHint, Input, Label } from '@/components/ui/input'
 import { MoneyInput } from '@/components/ui/masked-input'
 import { centsToReais, reaisToCents, roundReais } from '@/lib/money'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -13,20 +13,17 @@ import { useEmpreendimentos } from '@/modules/organizacao/configuracoes/empreend
 import { useOfertas } from '@/modules/organizacao/configuracoes/ofertas/api'
 import type { Etapa } from '@/modules/crm/configuracoes/etapas/schema'
 import { PessoaComboboxField } from '@/modules/crm/pessoas/components/pessoa-combobox'
+import { ParceiroComboboxField } from '@/modules/crm/pessoas/components/parceiro-combobox'
 import { useTiposPagamento } from '@/modules/crm/configuracoes/tipos-pagamentos/api'
 import { useCreateOportunidade, useUpdateOportunidade } from '../api'
 import {
   createOportunidadeSchema,
+  ORIGEM_NEGOCIO,
+  ORIGEM_NEGOCIO_LABELS,
   type CreateOportunidade,
   type Oportunidade,
 } from '../schema'
 
-/**
- * Hint exibido abaixo de um Select quando a lista de opções está vazia
- * porque o hook ainda está carregando ou porque não há cadastros / falta
- * permissão. Mostra mensagem clara em vez do select abrir vazio "sem
- * reação".
- */
 function emptyHint(
   query: { isLoading: boolean; isError: boolean; data: unknown[] | undefined },
   cadastreUrl?: string,
@@ -48,13 +45,17 @@ function toOptions<T extends { id: string }>(
   return (data ?? []).map((item) => ({ value: item.id, label: label(item) }))
 }
 
+const origemOptions: SelectOption[] = ORIGEM_NEGOCIO.map((value) => ({
+  value,
+  label: ORIGEM_NEGOCIO_LABELS[value],
+}))
+
 export interface OportunidadeFormProps {
   initial?: Oportunidade
   pipelineId: string
   modulo: 'atendimento' | 'proposta'
   etapas: Etapa[]
   onSuccess: () => void
-  /** Dispara fluxo de exclusão · só aparece em modo edição. */
   onRequestDelete?: () => void
 }
 
@@ -79,18 +80,21 @@ export function OportunidadeForm({
     defaultValues: {
       pipelineId,
       etapaId: initial?.etapaId ?? etapas[0]?.id ?? '',
-      titulo: initial?.titulo ?? '',
       descricao: initial?.descricao ?? '',
       pessoaId: initial?.pessoaId ?? null,
       ofertaId: initial?.ofertaId ?? null,
       tipoPagamentoId: initial?.tipoPagamentoId ?? null,
       empreendimentoId: initial?.empreendimentoId ?? null,
       responsavelId: initial?.responsavelId ?? null,
+      parceiroId: initial?.parceiroId ?? null,
       valor: initial?.valor ?? 0,
-      prazoFechamento: initial?.prazoFechamento ?? null,
-      notas: initial?.notas ?? '',
+      previsaoFechamento: initial?.previsaoFechamento ?? null,
+      origem: initial?.origem ?? 'OUTROS',
+      origemOutros: initial?.origemOutros ?? '',
     },
   })
+
+  const origem = useWatch({ control, name: 'origem' })
 
   const onSubmit = handleSubmit(async (data) => {
     const payload = {
@@ -101,7 +105,9 @@ export function OportunidadeForm({
       tipoPagamentoId: data.tipoPagamentoId || null,
       empreendimentoId: data.empreendimentoId || null,
       responsavelId: data.responsavelId || null,
-      prazoFechamento: data.prazoFechamento || null,
+      parceiroId: data.origem === 'INDICACAO_PARCEIRO' ? data.parceiroId || null : null,
+      previsaoFechamento: data.previsaoFechamento || null,
+      origemOutros: data.origem === 'OUTROS' ? data.origemOutros?.trim() || null : null,
       valor: roundReais(data.valor),
     }
     if (isEdit && initial) await updateMut.mutateAsync({ id: initial.id, input: payload })
@@ -112,51 +118,15 @@ export function OportunidadeForm({
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-4">
       <Field>
-        <Label htmlFor="titulo" required>Título</Label>
-        <Input id="titulo" state={errors.titulo ? 'error' : 'default'} placeholder="Apto Yachthouse 2104 · briefing" {...register('titulo')} />
-        {errors.titulo && <FieldHint state="error">{errors.titulo.message}</FieldHint>}
+        <Label htmlFor="descricao" required>Descrição</Label>
+        <Input
+          id="descricao"
+          state={errors.descricao ? 'error' : 'default'}
+          placeholder="Apto Yachthouse 2104 · briefing"
+          {...register('descricao')}
+        />
+        {errors.descricao && <FieldHint state="error">{errors.descricao.message}</FieldHint>}
       </Field>
-
-      <Field>
-        <Label htmlFor="descricao">Descrição</Label>
-        <Textarea id="descricao" rows={3} {...register('descricao')} />
-      </Field>
-
-      <div className="grid grid-cols-2 gap-3">
-        <Field>
-          <Label required>Etapa</Label>
-          <SelectField
-            control={control}
-            name="etapaId"
-            placeholder={etapas.length === 0 ? 'Sem etapas neste pipeline' : 'Selecione a etapa'}
-            options={etapas.map((e) => ({ value: e.id, label: e.nome }))}
-            state={errors.etapaId ? 'error' : 'default'}
-          />
-          {etapas.length === 0 && (
-            <FieldHint>Cadastre etapas em Configurações → CRM → Etapas para este pipeline.</FieldHint>
-          )}
-          {errors.etapaId && <FieldHint state="error">{errors.etapaId.message}</FieldHint>}
-        </Field>
-        <Field>
-          <Label htmlFor="valor">Valor (R$)</Label>
-          <Controller
-            control={control}
-            name="valor"
-            render={({ field }) => (
-              <MoneyInput
-                id="valor"
-                error={!!errors.valor}
-                value={field.value > 0 ? reaisToCents(field.value) : undefined}
-                onChange={(cents) => {
-                  field.onChange(cents === undefined ? 0 : centsToReais(cents))
-                }}
-                onBlur={field.onBlur}
-              />
-            )}
-          />
-          {errors.valor && <FieldHint state="error">{errors.valor.message}</FieldHint>}
-        </Field>
-      </div>
 
       <Field>
         <Label>Pessoa (Lead ou Cliente)</Label>
@@ -185,6 +155,28 @@ export function OportunidadeForm({
           )}
         </Field>
         <Field>
+          <Label htmlFor="valor">Valor (R$)</Label>
+          <Controller
+            control={control}
+            name="valor"
+            render={({ field }) => (
+              <MoneyInput
+                id="valor"
+                error={!!errors.valor}
+                value={field.value > 0 ? reaisToCents(field.value) : undefined}
+                onChange={(cents) => {
+                  field.onChange(cents === undefined ? 0 : centsToReais(cents))
+                }}
+                onBlur={field.onBlur}
+              />
+            )}
+          />
+          {errors.valor && <FieldHint state="error">{errors.valor.message}</FieldHint>}
+        </Field>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <Field>
           <Label>Empreendimento</Label>
           <SelectField
             control={control}
@@ -198,7 +190,68 @@ export function OportunidadeForm({
             </FieldHint>
           )}
         </Field>
+        <Field>
+          <Label htmlFor="previsaoFechamento">Previsão fechamento</Label>
+          <DateField control={control} name="previsaoFechamento" placeholder="Selecione a data" />
+        </Field>
       </div>
+
+      <Field>
+        <Label required>Etapa</Label>
+        <SelectField
+          control={control}
+          name="etapaId"
+          placeholder={etapas.length === 0 ? 'Sem etapas neste pipeline' : 'Selecione a etapa'}
+          options={etapas.map((e) => ({ value: e.id, label: e.nome }))}
+          state={errors.etapaId ? 'error' : 'default'}
+        />
+        {etapas.length === 0 && (
+          <FieldHint>Cadastre etapas em Configurações → CRM → Etapas para este pipeline.</FieldHint>
+        )}
+        {errors.etapaId && <FieldHint state="error">{errors.etapaId.message}</FieldHint>}
+      </Field>
+
+      <Field>
+        <Label required>Origem</Label>
+        <SelectField
+          control={control}
+          name="origem"
+          placeholder="Selecione a origem"
+          options={origemOptions}
+          state={errors.origem ? 'error' : 'default'}
+        />
+        {errors.origem && <FieldHint state="error">{errors.origem.message}</FieldHint>}
+      </Field>
+
+      {origem === 'INDICACAO_PARCEIRO' && (
+        <Field>
+          <Label>Parceiro</Label>
+          <ParceiroComboboxField
+            control={control}
+            name="parceiroId"
+            state={errors.parceiroId ? 'error' : 'default'}
+          />
+          <FieldHint>
+            Não encontrou? Digite o nome e clique em “Criar parceiro …” pra cadastrar inline.
+          </FieldHint>
+          {errors.parceiroId && <FieldHint state="error">{errors.parceiroId.message}</FieldHint>}
+        </Field>
+      )}
+
+      {origem === 'OUTROS' && (
+        <Field>
+          <Label htmlFor="origemOutros" required>Qual origem?</Label>
+          <Input
+            id="origemOutros"
+            state={errors.origemOutros ? 'error' : 'default'}
+            placeholder="Ex.: indicação de vizinho, outdoor…"
+            {...register('origemOutros')}
+          />
+          {errors.origemOutros && (
+            <FieldHint state="error">{errors.origemOutros.message}</FieldHint>
+          )}
+        </Field>
+      )}
 
       {modulo === 'proposta' && (
         <Field>
@@ -216,16 +269,6 @@ export function OportunidadeForm({
           )}
         </Field>
       )}
-
-      <Field>
-        <Label htmlFor="prazoFechamento">Prazo de fechamento</Label>
-        <DateField control={control} name="prazoFechamento" placeholder="Selecione a data" />
-      </Field>
-
-      <Field>
-        <Label htmlFor="notas">Notas internas</Label>
-        <Textarea id="notas" rows={2} {...register('notas')} />
-      </Field>
 
       {mutation.isError && (
         <Alert tone="danger">

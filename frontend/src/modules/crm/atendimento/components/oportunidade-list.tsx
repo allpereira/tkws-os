@@ -65,8 +65,8 @@ function applySavedView(
       return opps.filter((o) => staleDays(o.updatedAt) !== undefined)
     case 'closing':
       return opps.filter((o) => {
-        if (!o.prazoFechamento) return false
-        const t = new Date(o.prazoFechamento).getTime()
+        if (!o.previsaoFechamento) return false
+        const t = new Date(o.previsaoFechamento).getTime()
         return !Number.isNaN(t) && t <= in30d
       })
     case 'high':
@@ -397,7 +397,7 @@ export function OportunidadeList({
                             className="serif mt-0.5 truncate text-[14px] font-normal leading-tight"
                             style={{ color: 'var(--text)', letterSpacing: '-0.01em' }}
                           >
-                            {op.titulo}
+                            {op.descricao}
                           </div>
                         </div>
                       </div>
@@ -437,7 +437,7 @@ export function OportunidadeList({
                     </td>
                     <td className="px-3 py-3">
                       <span className="mono text-[11.5px]" style={{ color: 'var(--text-soft)' }}>
-                        {formatCloseShort(op.prazoFechamento)}
+                        {formatCloseShort(op.previsaoFechamento)}
                       </span>
                     </td>
                     <td className="px-3 py-3">

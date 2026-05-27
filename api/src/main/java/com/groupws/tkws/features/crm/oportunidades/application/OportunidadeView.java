@@ -1,6 +1,7 @@
 package com.groupws.tkws.features.crm.oportunidades.application;
 
 import com.groupws.tkws.features.crm.oportunidades.domain.model.Oportunidade;
+import com.groupws.tkws.features.crm.oportunidades.domain.model.OrigemNegocio;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -18,11 +19,13 @@ public record OportunidadeView(
     UUID empreendimentoId,
     UUID tipoProjetoId,
     UUID responsavelId,
-    String titulo,
+    UUID parceiroId,
     String descricao,
     BigDecimal valor,
     BigDecimal metragemM2,
-    LocalDate prazoFechamento,
+    LocalDate previsaoFechamento,
+    OrigemNegocio origem,
+    String origemOutros,
     String notas,
     Instant createdAt,
     Instant updatedAt
@@ -33,9 +36,9 @@ public record OportunidadeView(
             o.pessoaId().map(p -> p.value()).orElse(null),
             o.ofertaId().orElse(null), o.tipoPagamentoId().orElse(null),
             o.empreendimentoId().orElse(null), o.tipoProjetoId().orElse(null),
-            o.responsavelId().orElse(null),
-            o.titulo(), o.descricao().orElse(null),
-            o.valor(), o.metragemM2().orElse(null), o.prazoFechamento().orElse(null),
+            o.responsavelId().orElse(null), o.parceiroId().orElse(null),
+            o.descricao(), o.valor(), o.metragemM2().orElse(null),
+            o.previsaoFechamento().orElse(null), o.origem(), o.origemOutros().orElse(null),
             o.notas().orElse(null), o.createdAt(), o.updatedAt()
         );
     }

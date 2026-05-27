@@ -213,7 +213,7 @@ export function PipelineView({ modulo, title, description }: PipelineViewProps) 
           <DialogHeader>
             <DialogTitle>
               {editing
-                ? `Editar · ${editing.titulo}`
+                ? `Editar · ${editing.descricao}`
                 : `Nova ${modulo === 'proposta' ? 'proposta' : 'oportunidade'}`}
             </DialogTitle>
           </DialogHeader>
@@ -233,7 +233,7 @@ export function PipelineView({ modulo, title, description }: PipelineViewProps) 
       <ConfirmDialog
         open={!!toDelete}
         onOpenChange={(o) => !o && setToDelete(undefined)}
-        title={toDelete ? `Excluir “${toDelete.titulo}”?` : 'Excluir oportunidade'}
+        title={toDelete ? `Excluir “${toDelete.descricao}”?` : 'Excluir oportunidade'}
         description={
           modulo === 'proposta'
             ? 'A proposta será removida permanentemente do pipeline.'

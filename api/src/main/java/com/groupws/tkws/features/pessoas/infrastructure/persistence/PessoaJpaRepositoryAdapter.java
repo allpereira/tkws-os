@@ -110,13 +110,15 @@ class PessoaJpaRepositoryAdapter implements PessoaRepository {
     }
 
     @Override
-    public List<Pessoa> search(long tenantId, String query, int limit) {
+    public List<Pessoa> search(long tenantId, String query, int limit,
+                               com.groupws.tkws.features.pessoas.domain.model.StatusPessoa status) {
         String trimmed = query == null ? "" : query.trim();
         if (trimmed.isEmpty()) return List.of();
         int safeLimit = Math.max(1, Math.min(limit, 20));
         String termDigits = trimmed.replaceAll("\\D", "");
         return jpa.search(
                 tenantId,
+                status,
                 trimmed,
                 termDigits,
                 PageRequest.of(0, safeLimit)

@@ -30,8 +30,7 @@ import jakarta.validation.constraints.Size;
  * por documento — duplicidade de CPF/CNPJ continua bloqueada).
  *
  * `status` é o estado inicial (ADR-023): `null`/`LEAD` cria um Lead (default);
- * `CLIENTE` cria um Cliente direto (tela de Clientes). Outros valores são
- * rejeitados pelo agregado.
+ * `CLIENTE` cria um Cliente direto; `PARCEIRO` para indicações comerciais.
  */
 public record CreatePessoaCommand(
     @Positive long tenantId,

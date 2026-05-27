@@ -126,9 +126,10 @@ class PessoaController {
     public ResponseEntity<List<PessoaSearchView>> search(
         @CurrentTenant TenantContext tenant,
         @RequestParam(name = "q") String query,
-        @RequestParam(defaultValue = "10") int limit
+        @RequestParam(defaultValue = "10") int limit,
+        @RequestParam(required = false) com.groupws.tkws.features.pessoas.domain.model.StatusPessoa status
     ) {
-        return ResponseEntity.ok(findPessoa.search(tenant.tenantId(), query, limit));
+        return ResponseEntity.ok(findPessoa.search(tenant.tenantId(), query, limit, status));
     }
 
     /**

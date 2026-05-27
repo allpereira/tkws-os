@@ -4,7 +4,6 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { Plus } from 'lucide-react'
 import { FormDialogFooter } from '@/components/tkws/crud-page'
 import { ErrorAlert } from '@/components/tkws/error-alert'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -25,7 +24,6 @@ import {
   type Pessoa,
 } from '@/modules/crm/pessoas/schema'
 import { PessoaListing } from '@/modules/crm/pessoas/components/pessoa-listing'
-import { formatDocumento } from '@/modules/crm/pessoas/components/pessoa-card'
 import { ContatosTab } from './contatos-tab'
 
 /**
@@ -256,47 +254,6 @@ export function ClientesPage() {
             <Plus size={14} /> Novo cliente
           </Button>
         }
-        columns={[
-          {
-            key: 'nomeContato',
-            header: 'Nome',
-            cell: (r) => (
-              <span className="font-medium">
-                {r.tipoPessoa === 'PJ' && r.nomeEmpresa ? r.nomeEmpresa : r.nomeContato}
-              </span>
-            ),
-          },
-          {
-            key: 'tipoPessoa',
-            header: 'Tipo',
-            width: 'w-16',
-            cell: (r) => (
-              <Badge tone={r.tipoPessoa === 'PJ' ? 'purple' : 'brand'}>{r.tipoPessoa}</Badge>
-            ),
-          },
-          {
-            key: 'nomeEmpresa',
-            header: 'Empresa',
-            cell: (r) => <span className="text-muted-foreground">{r.nomeEmpresa ?? '—'}</span>,
-          },
-          {
-            key: 'documento',
-            header: 'Documento',
-            width: 'w-44',
-            cell: (r) => (
-              <span className="font-mono text-xs">
-                {formatDocumento(r.documento, r.tipoPessoa) ?? '—'}
-              </span>
-            ),
-          },
-          {
-            key: 'convertidoEm',
-            header: 'Cliente desde',
-            cell: (r) => (
-              <span className="text-muted-foreground text-xs">{formatData(r.convertidoEm)}</span>
-            ),
-          },
-        ]}
       />
 
       <Dialog open={formOpen} onOpenChange={setFormOpen}>

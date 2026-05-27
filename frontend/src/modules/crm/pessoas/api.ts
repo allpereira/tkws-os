@@ -51,9 +51,10 @@ export const pessoasApi = {
     query: string,
     limit = 10,
     signal?: AbortSignal,
+    status?: StatusPessoa,
   ): Promise<PessoaSearchResult[]> {
     const { data } = await api.get<PessoaSearchResult[]>(`${BASE}/search`, {
-      params: { q: query, limit },
+      params: { q: query, limit, ...(status ? { status } : {}) },
       signal,
     })
     return data
@@ -78,7 +79,8 @@ export const pessoasKeys = {
   all: ['pessoas'] as const,
   list: (params?: object) => [...pessoasKeys.all, 'list', params ?? {}] as const,
   detail: (id: string) => [...pessoasKeys.all, 'detail', id] as const,
-  search: (q: string) => [...pessoasKeys.all, 'search', q] as const,
+  search: (q: string, status?: StatusPessoa) =>
+    [...pessoasKeys.all, 'search', q, status ?? 'all'] as const,
 }
 
 /**
@@ -90,10 +92,10 @@ export const pessoasKeys = {
  * O caller já debouncia o termo · este hook só dispara quando `enabled` for
  * verdadeiro (= termo com no mínimo 2 chars).
  */
-export function usePessoaSearch(query: string, enabled: boolean) {
+export function usePessoaSearch(query: string, enabled: boolean, status?: StatusPessoa) {
   return useQuery({
-    queryKey: pessoasKeys.search(query),
-    queryFn: ({ signal }) => pessoasApi.search(query, 10, signal),
+    queryKey: pessoasKeys.search(query, status),
+    queryFn: ({ signal }) => pessoasApi.search(query, 10, signal, status),
     enabled: enabled && query.length >= 2,
     staleTime: 30_000,
   })

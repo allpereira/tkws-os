@@ -1,7 +1,9 @@
 import * as React from 'react'
 import {
+  Building2,
   ChevronLeft,
   ChevronRight,
+  Download,
   Inbox,
   LayoutGrid,
   Pencil,
@@ -10,7 +12,10 @@ import {
   Table as TableIcon,
   X,
 } from 'lucide-react'
+import { Avatar, initialsOf } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Field, Input } from '@/components/ui/input'
 import {
@@ -22,13 +27,14 @@ import {
 } from '@/components/ui/select'
 import { Spinner } from '@/components/ui/spinner'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle'
-import { DataTable, type DataTableColumn } from '@/components/tkws/data-table'
+import { BulkActionBar } from '@/components/tkws/bulk-action-bar'
 import { PageShell } from '@/components/tkws/page-shell'
 import { SystemFrame } from '@/components/tkws/system-frame'
 import { formatApiErrorInfo, parseApiError, toneForStatus } from '@/lib/api-error'
+import { cn } from '@/lib/utils'
 import { usePessoasPage } from '../api'
 import type { Pessoa, PessoaListParams, SortPessoa, StatusPessoa, TipoPessoa } from '../schema'
-import { PessoaCard } from './pessoa-card'
+import { PessoaCard, formatDocumento } from './pessoa-card'
 
 type ViewMode = 'table' | 'cards'
 
@@ -79,9 +85,7 @@ export interface PessoaListingProps {
   description?: string
   /** Ações do cabeçalho · ex.: botão "Novo lead". */
   headerActions?: React.ReactNode
-  /** Colunas da tabela (sem coluna de ações — é injetada quando há onEdit). */
-  columns: DataTableColumn<Pessoa>[]
-  /** Habilita "Editar" (menu no card / coluna na tabela) e clique para abrir. */
+  /** Habilita "Editar" (menu no card / ação na linha) e clique para abrir. */
   onEdit?: (p: Pessoa) => void
   /** Metadado extra no rodapé do card · ex.: data de conversão. */
   cardMeta?: (p: Pessoa) => React.ReactNode
@@ -97,11 +101,26 @@ export interface PessoaListingProps {
   emptyAction?: React.ReactNode
 }
 
+interface SavedView {
+  id: string
+  label: string
+  tipo: TipoPessoa | ''
+}
+
+const SAVED_VIEWS: SavedView[] = [
+  { id: 'all', label: 'Todos', tipo: '' },
+  { id: 'pf', label: 'Pessoas', tipo: 'PF' },
+  { id: 'pj', label: 'Empresas', tipo: 'PJ' },
+]
+
 /**
- * Listagem reutilizável de Pessoas (Leads/Clientes) com:
- *  - busca textual, filtros (tipo PF/PJ · cidade · UF) e ordenação — server-side
- *  - alternância Tabela ⇄ Cards (preferência lembrada no navegador)
- *  - paginação inteligente integrada à API (envelope com `total`)
+ * Listagem reutilizável de Pessoas (Leads/Clientes) no padrão "Lista" do CRM
+ * (espelha `/crm/atendimento`):
+ *  - **visões salvas** (chips Todos · Pessoas · Empresas)
+ *  - **filtros ativos** explícitos e removíveis (busca · cidade · UF)
+ *  - **tabela editorial** (avatar + nome serif + rótulo mono + ações no hover)
+ *  - **seleção em massa** com BulkActionBar (exportar CSV dos selecionados)
+ *  - alternância Tabela ⇄ Cards · paginação server-side (envelope com `total`)
  *
  * Toda a UI vem do design-system (regra "DS → Frontend é espelho").
  */
@@ -111,7 +130,6 @@ export function PessoaListing({
   title,
   description,
   headerActions,
-  columns,
   onEdit,
   cardMeta,
   showConversaoSort,
@@ -134,12 +152,18 @@ export function PessoaListing({
   const [pageSize, setPageSize] = React.useState<number>(DEFAULT_PAGE_SIZE)
   const [offset, setOffset] = React.useState(0)
 
+  const [selected, setSelected] = React.useState<Set<string>>(new Set())
+
   const hasFilters = !!q || !!cidade || !!tipo || !!uf
 
-  // Qualquer mudança de filtro/ordenação/tamanho volta para a primeira página.
+  // Qualquer mudança de filtro/ordenação/tamanho volta para a 1ª página e
+  // limpa a seleção (que é por página · evita seleção fantasma cross-page).
   React.useEffect(() => {
     setOffset(0)
   }, [q, cidade, tipo, uf, sort, pageSize, status])
+  React.useEffect(() => {
+    setSelected(new Set())
+  }, [q, cidade, tipo, uf, sort, pageSize, offset, status])
 
   const params: PessoaListParams = {
     status,
@@ -163,103 +187,89 @@ export function PessoaListing({
     setUf('')
   }
 
-  // Coluna de ações (Editar) injetada na tabela quando aplicável.
-  const tableColumns: DataTableColumn<Pessoa>[] = onEdit
-    ? [
-        ...columns,
-        {
-          key: '__actions__',
-          header: '',
-          align: 'right',
-          width: 'w-16',
-          cell: (row) => (
-            <div className="flex justify-end">
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label={`Editar ${row.nomeContato}`}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onEdit(row)
-                }}
-              >
-                <Pencil size={14} />
-              </Button>
-            </div>
-          ),
-        },
-      ]
-    : columns
+  const activeViewId = SAVED_VIEWS.find((v) => v.tipo === tipo)?.id ?? 'all'
+
+  const selectedRows = items.filter((p) => selected.has(p.id))
+  const allOnPageSelected = items.length > 0 && items.every((p) => selected.has(p.id))
+
+  const toggleAll = () => {
+    setSelected((prev) => {
+      if (items.every((p) => prev.has(p.id))) {
+        const next = new Set(prev)
+        items.forEach((p) => next.delete(p.id))
+        return next
+      }
+      const next = new Set(prev)
+      items.forEach((p) => next.add(p.id))
+      return next
+    })
+  }
+  const toggleOne = (id: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
 
   const toolbar = (
     <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-        <Field className="min-w-[220px] flex-1">
-          <Input
-            icon={<Search size={15} />}
-            placeholder="Buscar por nome, empresa, e-mail ou documento…"
-            value={qInput}
-            onChange={(e) => setQInput(e.target.value)}
-            aria-label="Buscar"
-          />
-        </Field>
-
-        <ToggleGroup
-          type="single"
-          value={tipo || 'ALL'}
-          onValueChange={(v: string) => v && setTipo(v === 'ALL' ? '' : (v as TipoPessoa))}
-          aria-label="Filtrar por tipo"
-        >
-          <ToggleGroupItem value="ALL">Todos</ToggleGroupItem>
-          <ToggleGroupItem value="PF">PF</ToggleGroupItem>
-          <ToggleGroupItem value="PJ">PJ</ToggleGroupItem>
-        </ToggleGroup>
-
+      <Field className="min-w-[220px] flex-1">
         <Input
-          className="w-[150px]"
-          placeholder="Cidade"
-          value={cidadeInput}
-          onChange={(e) => setCidadeInput(e.target.value)}
-          aria-label="Filtrar por cidade"
+          icon={<Search size={15} />}
+          placeholder="Buscar por nome, empresa, e-mail ou documento…"
+          value={qInput}
+          onChange={(e) => setQInput(e.target.value)}
+          aria-label="Buscar"
         />
+      </Field>
 
-        <Select value={uf || 'ALL'} onValueChange={(v) => setUf(v === 'ALL' ? '' : v)}>
-          <SelectTrigger className="w-[110px]" aria-label="Filtrar por UF">
-            <SelectValue placeholder="UF" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">Todas UFs</SelectItem>
-            {UFS.map((u) => (
-              <SelectItem key={u} value={u}>
-                {u}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <Input
+        className="w-[150px]"
+        placeholder="Cidade"
+        value={cidadeInput}
+        onChange={(e) => setCidadeInput(e.target.value)}
+        aria-label="Filtrar por cidade"
+      />
 
-        <Select value={sort} onValueChange={(v) => setSort(v as SortPessoa)}>
-          <SelectTrigger className="w-[170px]" aria-label="Ordenar">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="RECENTE">Mais recentes</SelectItem>
-            <SelectItem value="NOME">Nome (A–Z)</SelectItem>
-            {showConversaoSort && <SelectItem value="CONVERSAO">Convertido recente</SelectItem>}
-          </SelectContent>
-        </Select>
+      <Select value={uf || 'ALL'} onValueChange={(v) => setUf(v === 'ALL' ? '' : v)}>
+        <SelectTrigger className="w-[110px]" aria-label="Filtrar por UF">
+          <SelectValue placeholder="UF" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="ALL">Todas UFs</SelectItem>
+          {UFS.map((u) => (
+            <SelectItem key={u} value={u}>
+              {u}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
-        <ToggleGroup
-          type="single"
-          value={view}
-          onValueChange={(v: string) => v && setView(v as ViewMode)}
-          aria-label="Modo de visualização"
-        >
-          <ToggleGroupItem value="table" aria-label="Tabela">
-            <TableIcon size={15} />
-          </ToggleGroupItem>
-          <ToggleGroupItem value="cards" aria-label="Cards">
-            <LayoutGrid size={15} />
-          </ToggleGroupItem>
-        </ToggleGroup>
+      <Select value={sort} onValueChange={(v) => setSort(v as SortPessoa)}>
+        <SelectTrigger className="w-[170px]" aria-label="Ordenar">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="RECENTE">Mais recentes</SelectItem>
+          <SelectItem value="NOME">Nome (A–Z)</SelectItem>
+          {showConversaoSort && <SelectItem value="CONVERSAO">Convertido recente</SelectItem>}
+        </SelectContent>
+      </Select>
+
+      <ToggleGroup
+        type="single"
+        value={view}
+        onValueChange={(v: string) => v && setView(v as ViewMode)}
+        aria-label="Modo de visualização"
+      >
+        <ToggleGroupItem value="table" aria-label="Tabela">
+          <TableIcon size={15} />
+        </ToggleGroupItem>
+        <ToggleGroupItem value="cards" aria-label="Cards">
+          <LayoutGrid size={15} />
+        </ToggleGroupItem>
+      </ToggleGroup>
     </div>
   )
 
@@ -271,19 +281,64 @@ export function PessoaListing({
       actions={headerActions}
       toolbar={toolbar}
     >
-      {hasFilters && (
-        <div className="mb-3 flex items-center gap-2 text-[12.5px]" style={{ color: 'var(--text-soft)' }}>
-          <span>
+      {/* Visões salvas (chips) · padrão Lista do Atendimento */}
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <span
+          className="mono text-[9.5px] font-bold uppercase tracking-[1.4px]"
+          style={{ color: 'var(--text-mute)' }}
+        >
+          Visões
+        </span>
+        {SAVED_VIEWS.map((v) => {
+          const active = v.id === activeViewId
+          return (
+            <button
+              key={v.id}
+              type="button"
+              onClick={() => setTipo(v.tipo)}
+              aria-pressed={active}
+              className={cn(
+                'mono inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors',
+                active ? 'cursor-default' : 'cursor-pointer hover:brightness-110',
+              )}
+              style={{
+                background: active ? 'var(--brand-soft)' : 'var(--surface-2)',
+                borderColor: active ? 'var(--brand)' : 'var(--line-2)',
+                color: active ? 'var(--brand)' : 'var(--text-soft)',
+              }}
+            >
+              {v.label}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Filtros ativos · chips removíveis */}
+      {(hasFilters || query.isFetching) && (
+        <div className="mb-3 flex flex-wrap items-center gap-2 text-[12.5px]">
+          <span style={{ color: 'var(--text-mute)' }}>
             {query.isPending ? 'Buscando…' : `${total} ${total === 1 ? 'resultado' : 'resultados'}`}
           </span>
-          <button
-            type="button"
-            onClick={clearFilters}
-            className="inline-flex items-center gap-1 hover:underline"
-            style={{ color: 'var(--brand)' }}
-          >
-            <X size={12} /> Limpar filtros
-          </button>
+          {q && <FilterChip label="Busca" value={`“${q}”`} onClear={() => setQInput('')} />}
+          {tipo && (
+            <FilterChip
+              label="Tipo"
+              value={tipo === 'PF' ? 'Pessoa Física' : 'Pessoa Jurídica'}
+              onClear={() => setTipo('')}
+            />
+          )}
+          {cidade && <FilterChip label="Cidade" value={cidade} onClear={() => setCidadeInput('')} />}
+          {uf && <FilterChip label="UF" value={uf} onClear={() => setUf('')} />}
+          {hasFilters && (
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="inline-flex items-center gap-1 hover:underline"
+              style={{ color: 'var(--brand)' }}
+            >
+              <X size={12} /> Limpar tudo
+            </button>
+          )}
         </div>
       )}
 
@@ -347,11 +402,14 @@ export function PessoaListing({
               ))}
             </div>
           ) : (
-            <DataTable
-              data={items}
-              columns={tableColumns}
-              getRowKey={(r) => r.id}
-              onRowClick={onEdit}
+            <PessoaEditorialTable
+              items={items}
+              status={status}
+              selected={selected}
+              allOnPageSelected={allOnPageSelected}
+              onToggleAll={toggleAll}
+              onToggleOne={toggleOne}
+              onEdit={onEdit}
             />
           )}
 
@@ -368,8 +426,234 @@ export function PessoaListing({
           />
         </div>
       )}
+
+      {/* Barra de ações em massa · flutuante (DS) */}
+      <BulkActionBar count={selected.size} onClear={() => setSelected(new Set())}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => exportPessoasCsv(selectedRows, title)}
+          disabled={selectedRows.length === 0}
+        >
+          <Download size={13} /> Exportar CSV
+        </Button>
+      </BulkActionBar>
     </PageShell>
   )
+}
+
+/** Chip de filtro ativo · removível. */
+function FilterChip({
+  label,
+  value,
+  onClear,
+}: {
+  label: string
+  value: string
+  onClear: () => void
+}) {
+  return (
+    <span
+      className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11.5px]"
+      style={{ background: 'var(--surface-2)', borderColor: 'var(--line-2)', color: 'var(--text-soft)' }}
+    >
+      <span className="mono text-[9.5px] font-bold uppercase tracking-[1px]" style={{ color: 'var(--text-mute)' }}>
+        {label}
+      </span>
+      <span style={{ color: 'var(--text)' }}>{value}</span>
+      <button
+        type="button"
+        onClick={onClear}
+        aria-label={`Remover filtro ${label}`}
+        className="inline-flex items-center justify-center rounded-full transition-colors hover:text-[var(--danger)]"
+        style={{ color: 'var(--text-mute)' }}
+      >
+        <X size={12} />
+      </button>
+    </span>
+  )
+}
+
+/**
+ * Tabela editorial de Pessoas · espelha o "Lista" do Atendimento:
+ * checkbox de seleção, avatar + rótulo mono + nome serif, ação no hover.
+ */
+function PessoaEditorialTable({
+  items,
+  status,
+  selected,
+  allOnPageSelected,
+  onToggleAll,
+  onToggleOne,
+  onEdit,
+}: {
+  items: Pessoa[]
+  status: StatusPessoa
+  selected: Set<string>
+  allOnPageSelected: boolean
+  onToggleAll: () => void
+  onToggleOne: (id: string) => void
+  onEdit?: (p: Pessoa) => void
+}) {
+  const showConvertido = status === 'CLIENTE'
+
+  return (
+    <div className="overflow-x-auto rounded-[12px] border" style={{ borderColor: 'var(--line-1)' }}>
+      <table className="w-full text-[13px]" style={{ color: 'var(--text)' }}>
+        <thead>
+          <tr className="border-b" style={{ background: 'var(--surface-2)', borderColor: 'var(--line-1)' }}>
+            <th className="w-[40px] px-4 py-2.5 text-left">
+              <Checkbox
+                checked={allOnPageSelected}
+                onCheckedChange={onToggleAll}
+                aria-label="Selecionar todos"
+              />
+            </th>
+            <Th>Nome</Th>
+            <Th className="w-[80px]">Tipo</Th>
+            <Th>Contato</Th>
+            <Th className="w-[170px]">Documento</Th>
+            {showConvertido && <Th className="w-[140px]">Cliente desde</Th>}
+            <th className="w-[64px] px-3 py-2.5" />
+          </tr>
+        </thead>
+        <tbody>
+          {items.map((p) => {
+            const isPJ = p.tipoPessoa === 'PJ'
+            const primary = isPJ && p.nomeEmpresa ? p.nomeEmpresa : p.nomeContato
+            const secondary = isPJ
+              ? p.nomeContato || 'Pessoa Jurídica'
+              : [p.cidade, p.uf].filter(Boolean).join(' · ') || 'Pessoa Física'
+            const doc = formatDocumento(p.documento, p.tipoPessoa)
+            const isSelected = selected.has(p.id)
+
+            return (
+              <tr
+                key={p.id}
+                onClick={onEdit ? () => onEdit(p) : undefined}
+                className={cn(
+                  'group border-b transition-colors',
+                  onEdit && 'cursor-pointer',
+                  isSelected ? 'bg-[var(--brand-soft)]' : 'hover:bg-white/[0.025]',
+                )}
+                style={{ borderColor: 'var(--line-1)' }}
+              >
+                <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                  <Checkbox
+                    checked={isSelected}
+                    onCheckedChange={() => onToggleOne(p.id)}
+                    aria-label={`Selecionar ${primary}`}
+                  />
+                </td>
+                <td className="px-3 py-3">
+                  <div className="flex items-center gap-2.5">
+                    <Avatar size="sm" style={{ background: 'var(--brand-soft)', color: 'var(--brand)' }}>
+                      {isPJ ? <Building2 size={14} /> : initialsOf(primary)}
+                    </Avatar>
+                    <div className="min-w-0">
+                      <div
+                        className="mono truncate text-[9.5px] font-semibold uppercase tracking-[1.1px]"
+                        style={{ color: 'var(--text-mute)' }}
+                      >
+                        {secondary}
+                      </div>
+                      <div
+                        className="serif mt-0.5 truncate text-[14px] font-normal leading-tight"
+                        style={{ color: 'var(--text)', letterSpacing: '-0.01em' }}
+                      >
+                        {primary}
+                      </div>
+                    </div>
+                  </div>
+                </td>
+                <td className="px-3 py-3">
+                  <Badge tone={isPJ ? 'purple' : 'brand'}>{p.tipoPessoa}</Badge>
+                </td>
+                <td className="px-3 py-3">
+                  <div className="flex flex-col text-[12px]" style={{ color: 'var(--text-soft)' }}>
+                    <span className="truncate">{p.emailContato ?? '—'}</span>
+                    {p.celularContato && <span className="mono text-[11.5px]">{p.celularContato}</span>}
+                  </div>
+                </td>
+                <td className="px-3 py-3">
+                  <span className="mono text-[11.5px]" style={{ color: doc ? 'var(--text)' : 'var(--text-mute)' }}>
+                    {doc ?? '—'}
+                  </span>
+                </td>
+                {showConvertido && (
+                  <td className="px-3 py-3">
+                    <span className="mono text-[11.5px]" style={{ color: 'var(--text-soft)' }}>
+                      {p.convertidoEm ? new Date(p.convertidoEm).toLocaleDateString('pt-BR') : '—'}
+                    </span>
+                  </td>
+                )}
+                <td className="px-3 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                  {onEdit && (
+                    <div className="inline-flex opacity-0 transition-opacity group-hover:opacity-100">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label={`Editar ${primary}`}
+                        onClick={() => onEdit(p)}
+                      >
+                        <Pencil size={14} />
+                      </Button>
+                    </div>
+                  )}
+                </td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+function Th({ children, className }: { children?: React.ReactNode; className?: string }) {
+  return (
+    <th
+      className={cn(
+        'mono px-3 py-2.5 text-left text-[9.5px] font-bold uppercase tracking-[1.3px]',
+        className,
+      )}
+      style={{ color: 'var(--text-mute)' }}
+    >
+      {children}
+    </th>
+  )
+}
+
+/** Exporta os registros selecionados como CSV (client-side · sem backend). */
+function exportPessoasCsv(rows: Pessoa[], title: string) {
+  if (rows.length === 0) return
+  const headers = ['Nome', 'Tipo', 'Empresa', 'Email', 'Celular', 'Documento', 'Cidade', 'UF']
+  const escape = (v: string | null | undefined) => {
+    const s = (v ?? '').replace(/"/g, '""')
+    return /[",\n;]/.test(s) ? `"${s}"` : s
+  }
+  const lines = rows.map((p) =>
+    [
+      p.nomeContato,
+      p.tipoPessoa,
+      p.nomeEmpresa,
+      p.emailContato,
+      p.celularContato,
+      formatDocumento(p.documento, p.tipoPessoa),
+      p.cidade,
+      p.uf,
+    ]
+      .map(escape)
+      .join(';'),
+  )
+  const csv = [headers.join(';'), ...lines].join('\n')
+  const blob = new Blob([`﻿${csv}`], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `${title.toLowerCase().replace(/\s+/g, '-')}-${rows.length}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
 }
 
 interface PaginationFooterProps {

@@ -15,7 +15,19 @@ import {
 import { Spinner } from '@/components/ui/spinner'
 import { cn } from '@/lib/utils'
 import { pessoasApi, pessoasKeys, usePessoaById, usePessoaSearch } from '../api'
-import type { PessoaSearchResult } from '../schema'
+import type { PessoaSearchResult, StatusPessoa } from '../schema'
+
+export type PessoaComboboxInlineCreate = {
+  status: StatusPessoa
+  actionLabel: (name: string) => string
+  hint?: string
+}
+
+const DEFAULT_INLINE_CREATE: PessoaComboboxInlineCreate = {
+  status: 'LEAD',
+  actionLabel: (name) => `Criar lead “${name}”`,
+  hint: 'Cadastrado como PF · refine depois em CRM → Leads',
+}
 
 /**
  * PessoaCombobox · busca async de Pessoas (Lead/Cliente) com opção de
@@ -43,10 +55,17 @@ function useDebouncedValue<T>(value: T, delay: number): T {
   return debounced
 }
 
-function statusBadge(status: 'LEAD' | 'CLIENTE'): { label: string; color: string; bg: string } {
-  return status === 'CLIENTE'
-    ? { label: 'cliente', color: 'var(--success)', bg: 'var(--success-soft, rgba(46, 160, 67, 0.12))' }
-    : { label: 'lead', color: 'var(--text-mute)', bg: 'var(--surface-2)' }
+function statusBadge(status: StatusPessoa): { label: string; color: string; bg: string } {
+  switch (status) {
+    case 'CLIENTE':
+      return { label: 'cliente', color: 'var(--success)', bg: 'var(--success-soft, rgba(46, 160, 67, 0.12))' }
+    case 'PARCEIRO':
+      return { label: 'parceiro', color: 'var(--brand)', bg: 'var(--brand-soft)' }
+    case 'FORNECEDOR':
+      return { label: 'fornecedor', color: 'var(--text-mute)', bg: 'var(--surface-2)' }
+    default:
+      return { label: 'lead', color: 'var(--text-mute)', bg: 'var(--surface-2)' }
+  }
 }
 
 function formatDoc(doc: string | null | undefined, tipo: 'PF' | 'PJ'): string | null {
@@ -81,6 +100,10 @@ export interface PessoaComboboxFieldProps<TFormValues extends FieldValues> {
   state?: 'default' | 'error' | 'success'
   disabled?: boolean
   className?: string
+  /** Restringe busca a um status (ex.: PARCEIRO). */
+  statusFilter?: StatusPessoa
+  /** Configura criação inline; `false` desabilita. */
+  inlineCreate?: PessoaComboboxInlineCreate | false
 }
 
 export function PessoaComboboxField<TFormValues extends FieldValues>({
@@ -90,6 +113,8 @@ export function PessoaComboboxField<TFormValues extends FieldValues>({
   state,
   disabled,
   className,
+  statusFilter,
+  inlineCreate = DEFAULT_INLINE_CREATE,
 }: PessoaComboboxFieldProps<TFormValues>) {
   return (
     <Controller
@@ -104,6 +129,8 @@ export function PessoaComboboxField<TFormValues extends FieldValues>({
           state={state}
           disabled={disabled}
           className={className}
+          statusFilter={statusFilter}
+          inlineCreate={inlineCreate}
         />
       )}
     />
@@ -120,6 +147,8 @@ interface PessoaComboboxImplProps {
   state?: 'default' | 'error' | 'success'
   disabled?: boolean
   className?: string
+  statusFilter?: StatusPessoa
+  inlineCreate?: PessoaComboboxInlineCreate | false
 }
 
 function borderForState(s: 'default' | 'error' | 'success' | undefined): string {
@@ -136,6 +165,8 @@ function PessoaComboboxImpl({
   state = 'default',
   disabled,
   className,
+  statusFilter,
+  inlineCreate = DEFAULT_INLINE_CREATE,
 }: PessoaComboboxImplProps) {
   const qc = useQueryClient()
   const [open, setOpen] = useState(false)
@@ -148,7 +179,7 @@ function PessoaComboboxImpl({
 
   // TanStack Query · cuida de abort/cache/dedupe. Só dispara quando popover
   // aberto E termo >= MIN_CHARS (`enabled`).
-  const searchQuery = usePessoaSearch(debounced, open)
+  const searchQuery = usePessoaSearch(debounced, open, statusFilter)
   const apiItems = useMemo<PessoaSearchResult[]>(() => searchQuery.data ?? [], [searchQuery.data])
   const isLoading = open && debounced.length >= MIN_CHARS && searchQuery.isFetching
   const isTyping = query.trim() !== debounced && query.trim().length >= MIN_CHARS
@@ -210,7 +241,10 @@ function PessoaComboboxImpl({
 
   const triggerLoading = !!value && !displayedLabel && pessoaById.isLoading
 
+  const createConfig = inlineCreate === false ? null : inlineCreate
+
   const canCreate =
+    createConfig !== null &&
     !creating &&
     debounced.length >= MIN_CHARS &&
     !exactMatch &&
@@ -236,6 +270,7 @@ function PessoaComboboxImpl({
       const created = await pessoasApi.create({
         tipoPessoa: 'PF',
         nomeContato: debounced,
+        status: createConfig?.status,
       })
       const light: PessoaSearchResult = {
         id: created.id,
@@ -255,7 +290,7 @@ function PessoaComboboxImpl({
       setCreateError(
         e instanceof Error
           ? e.message
-          : 'Não foi possível criar o lead. Verifique sua permissão e tente novamente.',
+          : 'Não foi possível criar o cadastro. Verifique sua permissão e tente novamente.',
       )
     } finally {
       setCreating(false)
@@ -416,15 +451,16 @@ function PessoaComboboxImpl({
                     )}
                     <span className="flex flex-col">
                       <span>
-                        Criar lead “
-                        <strong style={{ color: 'var(--brand)' }}>{debounced}</strong>”
+                        {createConfig ? createConfig.actionLabel(debounced) : debounced}
                       </span>
-                      <span
-                        className="mono text-[10.5px]"
-                        style={{ color: 'var(--text-mute)' }}
-                      >
-                        Cadastrado como PF · refine depois em CRM → Leads
-                      </span>
+                      {createConfig?.hint && (
+                        <span
+                          className="mono text-[10.5px]"
+                          style={{ color: 'var(--text-mute)' }}
+                        >
+                          {createConfig.hint}
+                        </span>
+                      )}
                     </span>
                   </CommandItem>
                 </CommandGroup>

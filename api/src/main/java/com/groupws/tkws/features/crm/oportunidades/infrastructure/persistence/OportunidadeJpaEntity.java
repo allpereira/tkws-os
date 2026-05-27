@@ -1,7 +1,10 @@
 package com.groupws.tkws.features.crm.oportunidades.infrastructure.persistence;
 
+import com.groupws.tkws.features.crm.oportunidades.domain.model.OrigemNegocio;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
@@ -23,11 +26,14 @@ class OportunidadeJpaEntity {
     @Column(name = "empreendimento_id") UUID empreendimentoId;
     @Column(name = "tipo_projeto_id") UUID tipoProjetoId;
     @Column(name = "responsavel_id") UUID responsavelId;
-    @Column(name = "titulo", nullable = false, length = 200) String titulo;
-    @Column(name = "descricao", columnDefinition = "TEXT") String descricao;
+    @Column(name = "parceiro_id") UUID parceiroId;
+    @Column(name = "descricao", nullable = false, length = 200) String descricao;
     @Column(name = "valor", nullable = false, precision = 14, scale = 2) BigDecimal valor;
     @Column(name = "metragem_m2", precision = 10, scale = 2) BigDecimal metragemM2;
-    @Column(name = "prazo_fechamento") LocalDate prazoFechamento;
+    @Column(name = "previsao_fechamento") LocalDate previsaoFechamento;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "origem", nullable = false, length = 40) OrigemNegocio origem;
+    @Column(name = "origem_outros", length = 160) String origemOutros;
     @Column(name = "notas", columnDefinition = "TEXT") String notas;
     @Column(name = "created_at", nullable = false, updatable = false) Instant createdAt;
     @Column(name = "updated_at", nullable = false) Instant updatedAt;

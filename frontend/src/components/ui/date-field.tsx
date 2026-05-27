@@ -11,14 +11,14 @@ import { cn } from '@/lib/utils'
  * DateField · wrapper do Calendar/Popover integrado com RHF via `Controller`.
  *
  * Internamente o `field.value` é uma **string ISO `yyyy-MM-dd`** (formato que
- * o backend `Oportunidade.prazoFechamento` espera · ver schema Zod
+ * o backend `Oportunidade.previsaoFechamento` espera · ver schema Zod
  * `z.string().date()`). O usuário vê e clica no formato `dd/MM/yyyy` pt-BR
  * via DayPicker.
  *
  * Uso:
  *   <DateField
  *     control={control}
- *     name="prazoFechamento"
+ *     name="previsaoFechamento"
  *     placeholder="Selecione a data"
  *   />
  */

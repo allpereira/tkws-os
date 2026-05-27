@@ -112,6 +112,7 @@ interface PessoaJpaRepository extends JpaRepository<PessoaJpaEntity, UUID> {
     @Query("""
         SELECT p FROM PessoaJpaEntity p
         WHERE p.tenantId = :tenantId
+          AND (:status IS NULL OR p.status = :status)
           AND (
                 LOWER(p.nomeContato) LIKE LOWER(CONCAT('%', :term, '%'))
              OR (p.nomeEmpresa IS NOT NULL AND LOWER(p.nomeEmpresa) LIKE LOWER(CONCAT('%', :term, '%')))
@@ -125,6 +126,7 @@ interface PessoaJpaRepository extends JpaRepository<PessoaJpaEntity, UUID> {
     """)
     List<PessoaJpaEntity> search(
         @Param("tenantId") Long tenantId,
+        @Param("status") com.groupws.tkws.features.pessoas.domain.model.StatusPessoa status,
         @Param("term") String term,
         @Param("termDigits") String termDigits,
         Pageable pageable

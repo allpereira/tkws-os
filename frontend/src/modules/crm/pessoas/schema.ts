@@ -8,6 +8,7 @@ import { z } from 'zod'
  *   CLIENTE  · fechou ao menos uma proposta (promovido automaticamente
  *              quando uma Oportunidade entra em etapa com
  *              `converteLeadEmCliente=true`)
+ *   PARCEIRO · indicação comercial / parceiro externo
  *
  * As páginas "Leads" e "Clientes" do CRM são VIEWS sobre essa mesma
  * tabela, filtradas por `?status=LEAD` ou `?status=CLIENTE`.
@@ -16,7 +17,7 @@ import { z } from 'zod'
  */
 
 export const TIPO_PESSOA = ['PF', 'PJ'] as const
-export const STATUS_PESSOA = ['LEAD', 'CLIENTE'] as const
+export const STATUS_PESSOA = ['LEAD', 'CLIENTE', 'FORNECEDOR', 'PARCEIRO'] as const
 
 /** Ordenações suportadas pela listagem (espelha PessoaSort do backend). */
 export const SORT_PESSOA = ['RECENTE', 'NOME', 'CONVERSAO'] as const

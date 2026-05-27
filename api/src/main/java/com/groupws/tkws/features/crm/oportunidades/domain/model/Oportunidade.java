@@ -30,17 +30,19 @@ public final class Oportunidade extends AggregateRoot<OportunidadeId> {
     private final long tenantId;
     private PipelineId pipelineId;
     private EtapaId etapaId;
-    private PessoaId pessoaId;          // pode ser null antes de associar
-    private UUID ofertaId;               // Tipo de Oferta (ADR-018 · substituiu Tipo de Proposta)
+    private PessoaId pessoaId;
+    private UUID ofertaId;
     private UUID tipoPagamentoId;
     private UUID empreendimentoId;
     private UUID tipoProjetoId;
     private UUID responsavelId;
-    private String titulo;
+    private UUID parceiroId;
     private String descricao;
     private BigDecimal valor;
     private BigDecimal metragemM2;
-    private LocalDate prazoFechamento;
+    private LocalDate previsaoFechamento;
+    private OrigemNegocio origem;
+    private String origemOutros;
     private String notas;
     private final Instant createdAt;
     private Instant updatedAt;
@@ -48,9 +50,9 @@ public final class Oportunidade extends AggregateRoot<OportunidadeId> {
     private Oportunidade(OportunidadeId id, long tenantId, PipelineId pipelineId, EtapaId etapaId,
                          PessoaId pessoaId, UUID ofertaId, UUID tipoPagamentoId,
                          UUID empreendimentoId, UUID tipoProjetoId, UUID responsavelId,
-                         String titulo, String descricao, BigDecimal valor, BigDecimal metragemM2,
-                         LocalDate prazoFechamento, String notas,
-                         Instant createdAt, Instant updatedAt) {
+                         UUID parceiroId, String descricao, BigDecimal valor, BigDecimal metragemM2,
+                         LocalDate previsaoFechamento, OrigemNegocio origem, String origemOutros,
+                         String notas, Instant createdAt, Instant updatedAt) {
         this.id = Objects.requireNonNull(id);
         if (tenantId <= 0) {
             throw new IllegalArgumentException("tenantId deve ser positivo · recebeu: " + tenantId);
@@ -64,11 +66,13 @@ public final class Oportunidade extends AggregateRoot<OportunidadeId> {
         this.empreendimentoId = empreendimentoId;
         this.tipoProjetoId = tipoProjetoId;
         this.responsavelId = responsavelId;
-        this.titulo = required(titulo, "titulo");
-        this.descricao = blankToNull(descricao);
+        this.parceiroId = parceiroId;
+        this.descricao = required(descricao, "descricao");
         this.valor = valor == null ? BigDecimal.ZERO : valor;
         this.metragemM2 = metragemM2;
-        this.prazoFechamento = prazoFechamento;
+        this.previsaoFechamento = previsaoFechamento;
+        this.origem = Objects.requireNonNull(origem, "origem");
+        this.origemOutros = blankToNull(origemOutros);
         this.notas = blankToNull(notas);
         this.createdAt = Objects.requireNonNull(createdAt);
         this.updatedAt = Objects.requireNonNull(updatedAt);
@@ -77,31 +81,34 @@ public final class Oportunidade extends AggregateRoot<OportunidadeId> {
     public static Oportunidade create(long tenantId, PipelineId pipelineId, EtapaId etapaId,
                                       PessoaId pessoaId, UUID ofertaId, UUID tipoPagamentoId,
                                       UUID empreendimentoId, UUID tipoProjetoId, UUID responsavelId,
-                                      String titulo, String descricao, BigDecimal valor,
-                                      BigDecimal metragemM2, LocalDate prazoFechamento, String notas) {
+                                      UUID parceiroId, String descricao, BigDecimal valor,
+                                      BigDecimal metragemM2, LocalDate previsaoFechamento,
+                                      OrigemNegocio origem, String origemOutros, String notas) {
         Instant now = Instant.now();
+        OrigemNegocio origemEfetiva = Objects.requireNonNull(origem, "origem");
+        UUID parceiroEfetivo = normalizeParceiroId(origemEfetiva, parceiroId);
+        String origemOutrosEfetiva = normalizeOrigemOutros(origemEfetiva, origemOutros);
+        validateOrigem(origemEfetiva, origemOutrosEfetiva, parceiroEfetivo);
         return new Oportunidade(OportunidadeId.generate(), tenantId, pipelineId, etapaId,
             pessoaId, ofertaId, tipoPagamentoId, empreendimentoId, tipoProjetoId, responsavelId,
-            titulo, descricao, valor, metragemM2, prazoFechamento, notas, now, now);
+            parceiroEfetivo, descricao, valor, metragemM2, previsaoFechamento,
+            origemEfetiva, origemOutrosEfetiva, notas, now, now);
     }
 
     public static Oportunidade reconstitute(OportunidadeId id, long tenantId, PipelineId pipelineId,
                                             EtapaId etapaId, PessoaId pessoaId, UUID ofertaId,
                                             UUID tipoPagamentoId, UUID empreendimentoId,
-                                            UUID tipoProjetoId, UUID responsavelId,
-                                            String titulo, String descricao, BigDecimal valor,
-                                            BigDecimal metragemM2, LocalDate prazoFechamento,
-                                            String notas, Instant createdAt, Instant updatedAt) {
+                                            UUID tipoProjetoId, UUID responsavelId, UUID parceiroId,
+                                            String descricao, BigDecimal valor, BigDecimal metragemM2,
+                                            LocalDate previsaoFechamento, OrigemNegocio origem,
+                                            String origemOutros, String notas,
+                                            Instant createdAt, Instant updatedAt) {
         return new Oportunidade(id, tenantId, pipelineId, etapaId, pessoaId, ofertaId,
-            tipoPagamentoId, empreendimentoId, tipoProjetoId, responsavelId,
-            titulo, descricao, valor, metragemM2, prazoFechamento, notas, createdAt, updatedAt);
+            tipoPagamentoId, empreendimentoId, tipoProjetoId, responsavelId, parceiroId,
+            descricao, valor, metragemM2, previsaoFechamento, origem, origemOutros, notas,
+            createdAt, updatedAt);
     }
 
-    /**
-     * Move para nova etapa. Se a etapa nova **converte lead em cliente** e a
-     * Oportunidade tem `pessoaId` associada, emite evento para o módulo de
-     * Pessoas promover a Pessoa.
-     */
     public void moveToEtapa(EtapaId novaEtapa, boolean novaEtapaConverteLead) {
         Objects.requireNonNull(novaEtapa, "novaEtapa");
         boolean mudou = !novaEtapa.equals(this.etapaId);
@@ -114,15 +121,18 @@ public final class Oportunidade extends AggregateRoot<OportunidadeId> {
         }
     }
 
-    public void updateDetalhes(String titulo, String descricao, BigDecimal valor,
-                               BigDecimal metragemM2, LocalDate prazoFechamento, String notas,
-                               UUID ofertaId, UUID tipoPagamentoId, UUID empreendimentoId,
-                               UUID tipoProjetoId, UUID responsavelId, PessoaId pessoaId) {
-        this.titulo = required(titulo, "titulo");
-        this.descricao = blankToNull(descricao);
+    public void updateDetalhes(String descricao, BigDecimal valor, BigDecimal metragemM2,
+                               LocalDate previsaoFechamento, OrigemNegocio origem, String origemOutros,
+                               String notas, UUID ofertaId, UUID tipoPagamentoId, UUID empreendimentoId,
+                               UUID tipoProjetoId, UUID responsavelId, PessoaId pessoaId,
+                               UUID parceiroId) {
+        this.descricao = required(descricao, "descricao");
         this.valor = valor == null ? BigDecimal.ZERO : valor;
         this.metragemM2 = metragemM2;
-        this.prazoFechamento = prazoFechamento;
+        this.previsaoFechamento = previsaoFechamento;
+        this.origem = Objects.requireNonNull(origem, "origem");
+        this.origemOutros = normalizeOrigemOutros(origem, origemOutros);
+        this.parceiroId = normalizeParceiroId(origem, parceiroId);
         this.notas = blankToNull(notas);
         this.ofertaId = ofertaId;
         this.tipoPagamentoId = tipoPagamentoId;
@@ -131,6 +141,24 @@ public final class Oportunidade extends AggregateRoot<OportunidadeId> {
         this.responsavelId = responsavelId;
         this.pessoaId = pessoaId;
         this.updatedAt = Instant.now();
+        validateOrigem(this.origem, this.origemOutros, this.parceiroId);
+    }
+
+    private static void validateOrigem(OrigemNegocio origem, String origemOutros, UUID parceiroId) {
+        if (origem == OrigemNegocio.INDICACAO_PARCEIRO && parceiroId == null) {
+            throw new IllegalArgumentException("parceiroId é obrigatório quando origem é INDICACAO_PARCEIRO");
+        }
+        if (origem == OrigemNegocio.OUTROS && (origemOutros == null || origemOutros.isBlank())) {
+            throw new IllegalArgumentException("origemOutros é obrigatório quando origem é OUTROS");
+        }
+    }
+
+    private static UUID normalizeParceiroId(OrigemNegocio origem, UUID parceiroId) {
+        return origem == OrigemNegocio.INDICACAO_PARCEIRO ? parceiroId : null;
+    }
+
+    private static String normalizeOrigemOutros(OrigemNegocio origem, String origemOutros) {
+        return origem == OrigemNegocio.OUTROS ? required(origemOutros, "origemOutros") : null;
     }
 
     private static String required(String s, String f) {
@@ -156,11 +184,13 @@ public final class Oportunidade extends AggregateRoot<OportunidadeId> {
     public Optional<UUID> empreendimentoId() { return Optional.ofNullable(empreendimentoId); }
     public Optional<UUID> tipoProjetoId() { return Optional.ofNullable(tipoProjetoId); }
     public Optional<UUID> responsavelId() { return Optional.ofNullable(responsavelId); }
-    public String titulo() { return titulo; }
-    public Optional<String> descricao() { return Optional.ofNullable(descricao); }
+    public Optional<UUID> parceiroId() { return Optional.ofNullable(parceiroId); }
+    public String descricao() { return descricao; }
     public BigDecimal valor() { return valor; }
     public Optional<BigDecimal> metragemM2() { return Optional.ofNullable(metragemM2); }
-    public Optional<LocalDate> prazoFechamento() { return Optional.ofNullable(prazoFechamento); }
+    public Optional<LocalDate> previsaoFechamento() { return Optional.ofNullable(previsaoFechamento); }
+    public OrigemNegocio origem() { return origem; }
+    public Optional<String> origemOutros() { return Optional.ofNullable(origemOutros); }
     public Optional<String> notas() { return Optional.ofNullable(notas); }
     public Instant createdAt() { return createdAt; }
     public Instant updatedAt() { return updatedAt; }

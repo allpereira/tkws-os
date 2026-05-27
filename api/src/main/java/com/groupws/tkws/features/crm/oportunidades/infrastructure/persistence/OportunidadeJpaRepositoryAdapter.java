@@ -35,11 +35,13 @@ class OportunidadeJpaRepositoryAdapter implements OportunidadeRepository {
         e.empreendimentoId = o.empreendimentoId().orElse(null);
         e.tipoProjetoId = o.tipoProjetoId().orElse(null);
         e.responsavelId = o.responsavelId().orElse(null);
-        e.titulo = o.titulo();
-        e.descricao = o.descricao().orElse(null);
+        e.parceiroId = o.parceiroId().orElse(null);
+        e.descricao = o.descricao();
         e.valor = o.valor();
         e.metragemM2 = o.metragemM2().orElse(null);
-        e.prazoFechamento = o.prazoFechamento().orElse(null);
+        e.previsaoFechamento = o.previsaoFechamento().orElse(null);
+        e.origem = o.origem();
+        e.origemOutros = o.origemOutros().orElse(null);
         e.notas = o.notas().orElse(null);
         e.createdAt = o.createdAt();
         e.updatedAt = o.updatedAt();
@@ -80,9 +82,10 @@ class OportunidadeJpaRepositoryAdapter implements OportunidadeRepository {
             PipelineId.of(e.pipelineId), EtapaId.of(e.etapaId),
             e.pessoaId != null ? PessoaId.of(e.pessoaId) : null,
             e.ofertaId, e.tipoPagamentoId, e.empreendimentoId,
-            e.tipoProjetoId, e.responsavelId,
-            e.titulo, e.descricao, e.valor, e.metragemM2,
-            e.prazoFechamento, e.notas, e.createdAt, e.updatedAt
+            e.tipoProjetoId, e.responsavelId, e.parceiroId,
+            e.descricao, e.valor, e.metragemM2,
+            e.previsaoFechamento, e.origem, e.origemOutros, e.notas,
+            e.createdAt, e.updatedAt
         );
     }
 }

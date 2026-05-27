@@ -73,10 +73,10 @@ export function mapOportunidadeToDeal(
   return {
     id: op.id,
     account,
-    title: op.titulo,
+    title: op.descricao,
     value: Math.round(op.valor * 100),
     probability: etapa.probabilidade,
-    expectedClose: formatCloseShort(op.prazoFechamento),
+    expectedClose: formatCloseShort(op.previsaoFechamento),
     owner: {
       initials: initials('Comercial', 2),
       name: formatRelative(op.updatedAt),
@@ -98,7 +98,7 @@ export function filterOportunidades(
     const account = pessoaLabel(op.pessoaId ? pessoaById.get(op.pessoaId) : undefined).toLowerCase()
     const valor = String(op.valor)
     return (
-      op.titulo.toLowerCase().includes(q) ||
+      op.descricao.toLowerCase().includes(q) ||
       account.includes(q) ||
       valor.includes(q)
     )

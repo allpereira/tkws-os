@@ -62,9 +62,9 @@ public class OportunidadeService {
             EtapaId.of(cmd.etapaId()),
             cmd.pessoaId() != null ? PessoaId.of(cmd.pessoaId()) : null,
             cmd.ofertaId(), cmd.tipoPagamentoId(), cmd.empreendimentoId(),
-            cmd.tipoProjetoId(), cmd.responsavelId(),
-            cmd.titulo(), cmd.descricao(), cmd.valor(), cmd.metragemM2(),
-            cmd.prazoFechamento(), cmd.notas()
+            cmd.tipoProjetoId(), cmd.responsavelId(), cmd.parceiroId(),
+            cmd.descricao(), cmd.valor(), cmd.metragemM2(),
+            cmd.previsaoFechamento(), cmd.origem(), cmd.origemOutros(), cmd.notas()
         );
 
         // Se já foi criada diretamente numa etapa de conversão, dispara o evento.
@@ -86,11 +86,12 @@ public class OportunidadeService {
 
         // Atualiza detalhes (não muda etapa aqui · move via endpoint dedicado)
         oportunidade.updateDetalhes(
-            cmd.titulo(), cmd.descricao(), cmd.valor(), cmd.metragemM2(),
-            cmd.prazoFechamento(), cmd.notas(),
+            cmd.descricao(), cmd.valor(), cmd.metragemM2(),
+            cmd.previsaoFechamento(), cmd.origem(), cmd.origemOutros(), cmd.notas(),
             cmd.ofertaId(), cmd.tipoPagamentoId(), cmd.empreendimentoId(),
             cmd.tipoProjetoId(), cmd.responsavelId(),
-            cmd.pessoaId() != null ? PessoaId.of(cmd.pessoaId()) : null
+            cmd.pessoaId() != null ? PessoaId.of(cmd.pessoaId()) : null,
+            cmd.parceiroId()
         );
 
         // Se mudou a etapa, aplica a regra de conversão
