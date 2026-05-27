@@ -38,10 +38,10 @@ Esses arquivos pertencem ao **produto TKWS OS** (não ao DS) e devem ser preserv
 - `confirm-dialog.tsx` — confirmação destrutiva (excluir/etc.)
 - `crud-page.tsx` — template de página CRUD reutilizável
 - `data-table.tsx` — wrapper de `Table` com loading/empty/onRowClick
-- `page-header.tsx` — header editorial Fraunces das telas
+- `page-shell.tsx` — chrome editorial padrão (breadcrumb em barra + header Fraunces + toolbar sticky)
 - `simple-name-form.tsx` — form genérico nome+descricao+ativo+ordem
 
-Se o DS um dia trouxer componente com nome igual a um desses, **renomeie o que veio do DS** para evitar colisão (ex.: `header.tsx` do DS continua sendo `header.tsx`, e o nosso template é `page-header.tsx`).
+Se o DS um dia trouxer componente com nome igual a um desses, **renomeie o que veio do DS** para evitar colisão (ex.: `header.tsx` do DS continua sendo `header.tsx`, e o nosso template é `page-shell.tsx`).
 
 ### 2. Primitivos adaptados (`frontend/src/components/ui/`)
 

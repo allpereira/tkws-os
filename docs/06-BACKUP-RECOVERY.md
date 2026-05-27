@@ -32,6 +32,66 @@
 | Código | Git/GitHub | Mirror semanal para GitLab opcional |
 | Containers imagens | GHCR | Reproducível pelo build |
 
+## Estratégia por banco de dados (todos os bancos)
+
+Visão consolidada de **cada datastore** do TKWS OS e como ele é protegido:
+
+| Banco | Conteúdo | Criticidade | Estratégia | RPO efetivo |
+|---|---|---|---|---|
+| **PostgreSQL `tkws`** (RDS) | Dados de negócio (tenants, pessoas, oportunidades, configs…) | **Crítico** | PITR (logs) + snapshot diário + `pg_dump` diário → S3 | ~5 min (PITR) |
+| **PostgreSQL `zitadel`** (RDS, mesma instância) | Identidade/auth: usuários, orgs, sessões, grants | **Crítico** | Mesma instância → PITR + snapshot; `pg_dump` próprio (ver `backup-rds.sh`) | ~5 min (PITR) |
+| **Redis** | Cache (L2) | **Descartável** | **Sem backup** — é cache reconstrutível; ver nota abaixo | N/A |
+| **S3 uploads** | Arquivos de usuário | Alto | Versionamento + lifecycle Glacier | imediato (versionado) |
+
+> **Por que os dois bancos PostgreSQL?** TKWS e Zitadel compartilham a **mesma
+> instância RDS** (bancos lógicos distintos). O snapshot do RDS cobre os dois de
+> uma vez. O dump portável (`scripts/backup-rds.sh`) faz `pg_dump` de **ambos** —
+> perder o `zitadel` significa perder todo o login dos tenants.
+
+### Point-in-Time Recovery (PITR) — a base do RPO de 15 min
+
+Snapshots diários sozinhos dariam RPO de ~24h. O RPO de **15 min** (prod) vem do
+**PITR**, habilitado pelos *automated backups* do RDS (retém os WAL/transaction
+logs). Garanta no setup da instância:
+
+```bash
+# Verifica que automated backups + PITR estão ligados (retention > 0)
+aws rds describe-db-instances --db-instance-identifier tkws-prod \
+  --query 'DBInstances[0].[BackupRetentionPeriod,LatestRestorableTime]' --output table
+
+# Restore para um instante específico (ex.: 5 min antes de um incidente)
+aws rds restore-db-instance-to-point-in-time \
+  --source-db-instance-identifier tkws-prod \
+  --target-db-instance-identifier tkws-prod-pitr \
+  --restore-time 2026-05-27T14:25:00Z
+```
+
+> Defina `BackupRetentionPeriod` ≥ 7 (staging) / ≥ 30 (prod). Retention 0 **desliga**
+> o PITR — checar isso é parte do checklist de deploy.
+
+### Redis — por que não fazer backup
+
+Redis aqui é **cache** (nível L2 compartilhado; o L1 é Caffeine in-process, ver
+`docs/16-PERFORMANCE.md`). Não guarda fonte-da-verdade: tudo é recomputável a
+partir do PostgreSQL. Logo, **não precisa de backup** — em caso de perda, o cache
+reaquece sozinho. `--maxmemory-policy allkeys-lru` já assume volatilidade.
+
+⚠️ **Se** no futuro o Redis passar a guardar **sessões** ou qualquer dado
+não-reconstrutível, esta decisão muda: habilite persistência (`appendonly yes`,
+AOF) e inclua o volume `redis-data` num snapshot, **ou** troque a policy para
+`volatile-lru` para não despejar sessões.
+
+## Melhores práticas (resumo aplicável)
+
+1. **PITR ligado** nos dois bancos PostgreSQL — é o que entrega RPO de 15 min.
+2. **Dump portável dos dois bancos** (`tkws` + `zitadel`) diário no S3 versionado — independe do RDS/região.
+3. **3-2-1**: snapshot RDS (1) + dump S3 (2) + cópia cross-region opcional (3, offsite).
+4. **Backup testado mensalmente** (restore real, não só "existe o arquivo").
+5. **Criptografia em repouso**: snapshots RDS (AES-256) e bucket S3 com SSE.
+6. **Segredos fora dos bancos e fora da AWS**: `ZITADEL_MASTERKEY` e `.env.prod` no 1Password — sem eles, o backup do Zitadel é inútil.
+7. **Alertas de frescor**: último snapshot/dump < 25h; falha de cron = página.
+8. **Restore documentado e ensaiado** (runbooks abaixo) — emergência não é hora de aprender.
+
 ## Backups automáticos
 
 ### 1. RDS Snapshots (primária)

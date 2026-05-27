@@ -33,9 +33,15 @@ public class GlobalExceptionHandler {
         return problem;
     }
 
+    /**
+     * Mapeia qualquer regra de negócio violada para {@code problem+json}. O status
+     * HTTP vem da própria exceção ({@link DomainException#httpStatus()} · default 422),
+     * então features declaram seu status no domínio — sem handler específico aqui.
+     */
     @ExceptionHandler(DomainException.class)
     public ProblemDetail handleDomain(DomainException ex) {
-        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage());
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+            HttpStatus.valueOf(ex.httpStatus()), ex.getMessage());
         problem.setType(URI.create("https://errors.tkws.com.br/" + ex.code().toLowerCase()));
         problem.setTitle(ex.code());
         return problem;

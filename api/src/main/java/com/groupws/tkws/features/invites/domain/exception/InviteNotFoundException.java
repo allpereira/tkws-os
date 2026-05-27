@@ -1,7 +1,9 @@
 package com.groupws.tkws.features.invites.domain.exception;
 
-public class InviteNotFoundException extends RuntimeException {
+import com.groupws.tkws.shared.domain.DomainException;
+
+public class InviteNotFoundException extends DomainException {
     public InviteNotFoundException(String identifier) {
-        super("Convite não encontrado: " + identifier);
+        super("invites.not_found", "Convite não encontrado: " + identifier, 404);
     }
 }

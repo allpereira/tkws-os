@@ -21,11 +21,17 @@ O frontend chamava `PATCH /api/v1/pessoas/{id}` para editar um lead, mas o
 1. **Mapeie explicitamente cada operação que o cliente consome.** Confira o
    `api.ts` da feature no frontend (`api.get/post/patch/delete`) e garanta um
    `@GetMapping`/`@PostMapping`/`@PatchMapping`/... correspondente.
-2. **Toda operação de escrita tem um Web IT** (REST Assured + JWT mockado) que
-   exercita o verbo de ponta a ponta. Um IT que faz `PATCH` teria pego o 405 no
-   build, não em produção.
+2. **Todo controller tem um Web IT que cobre _todos_ os endpoints** (REST Assured
+   + JWT mockado), exercitando cada verbo de ponta a ponta. Um IT que faz `PATCH`
+   teria pego o 405 no build, não em produção. Cobertura parcial deixa buracos:
+   o IT só protege o que ele de fato chama.
 3. **`405` quase sempre significa "verbo faltando", não "rota faltando".**
    Quando vir 405, procure o `@XxxMapping` ausente antes de qualquer outra coisa.
+
+**Referências de Web IT** (copie o estilo): `PessoaControllerIT` (cobre list,
+byId, search, buscar, create, **patch**, converter + autorização 401/403 +
+isolamento de tenant) e `ContatoControllerIT`. Ambos em
+`features/pessoas/web/` herdando de `AbstractIntegrationTest` + `@Import(MockJwtConfig.class)`.
 
 ### Convenção de verbos no TKWS OS
 
@@ -123,3 +129,31 @@ boolean pertenceAOutra = repository.findByDocumento(tenantId, normalizado)
 ```
 
 No **create** não há essa ressalva (qualquer match é duplicidade).
+
+---
+
+## 5. Troubleshooting · `java.lang.Error: Unresolved compilation problem` em IT
+
+Se um IT que **passava** começa a estourar `java.lang.Error: Unresolved
+compilation problem` (geralmente apontando para uma classe que você nem tocou,
+ex.: `GlobalExceptionHandler`), o culpado costuma ser um **`.class` obsoleto e
+quebrado em `target/classes`**: o compilador do Eclipse (language server do
+VSCode/IDE) grava bytecode "com erro embutido" quando o fonte está num estado
+intermediário não-compilável, e o `mvn` incremental às vezes reaproveita esse
+`.class` em vez de recompilar com o `javac`.
+
+**Sintoma típico:** o contexto Spring sobe, mas ao acionar o método afetado
+(ex.: um `@ExceptionHandler`) ele lança `Error` em runtime — e como o contexto
+fica em cache como falho, **todos** os ITs subsequentes erram em cascata.
+
+**Solução:**
+
+```bash
+mvn -o clean compile            # recompila tudo com o javac
+# se `clean` falhar com "Failed to delete target/classes",
+# encerre o app que está rodando (porta 8080) e/ou force o recompile:
+touch src/main/java/.../ClasseAfetada.java && mvn -o compile
+```
+
+Comum quando há **edição concorrente** do `main` (outro dev/agente mexendo numa
+feature enquanto você roda ITs). Antes de culpar seu teste, recompile limpo.

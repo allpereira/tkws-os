@@ -20,7 +20,7 @@ components/
 ## Regras rápidas
 
 1. **Antes de criar componente em `ui/`:** verifique se ele existe em `design-system/src/components/ui/`. Se sim, siga o runbook em `docs/14`.
-2. **Templates do produto** (App Shell, CrudPage, DataTable, PageHeader, ConfirmDialog, SimpleNomeForm) ficam em `tkws/` e **não vêm do DS**. Esses são da camada de produto.
+2. **Templates do produto** (App Shell, PageShell, CrudPage, DataTable, ConfirmDialog, SimpleNomeForm) ficam em `tkws/` e **não vêm do DS**. Esses são da camada de produto.
 3. **Tokens visuais** (cores, espaçamento, tipografia) vêm de CSS variables declaradas em `src/index.css`, espelhando `design-system/src/styles/globals.css`.
 4. **Nunca importe direto do `design-system/`** — o frontend não depende do DS como package. A sincronia é por cópia consciente.
 

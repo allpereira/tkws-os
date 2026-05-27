@@ -155,7 +155,40 @@ Radix Dialog. Overlay com 60% opacidade. Animações leves.
 
 ## Padrões de página
 
-<!-- TODO: documentar layout de páginas do design system. -->
+### Chrome de página · breadcrumb + `PageShell` (PADRÃO OBRIGATÓRIO)
+
+**Toda tela do `frontend/` usa o mesmo chrome editorial**, espelhado do pattern
+`AppShell` do design system (`design-system/src/pages/patterns/AppShell.tsx`). A
+referência viva é **`/crm/atendimento`**. A estrutura, de cima para baixo:
+
+1. **Barra de breadcrumb** — hierárquica, clicável, `mono` uppercase. Fica numa
+   barra própria full-bleed (`border-b px-6 py-2.5`, fundo `--surface-1`). É a
+   **única forma de breadcrumb** — não use mais a tag `crumb` mono solta acima do
+   título.
+2. **Page header** — título Fraunces serif (`serif text-[30px]`) + `description` +
+   ações à direita (`border-b px-6 pt-6 pb-5`).
+3. **Toolbar sticky** (opcional) — busca / filtros / view switcher (`sticky top-0`).
+4. **Conteúdo** — sobre `--bg`.
+
+Tudo é **full-bleed**: o shell cancela o padding do `<main>` com margens negativas
+(`-mx-4 -my-6 md:-mx-8 md:-my-8`) e usa `px-6` interno, garantindo margem,
+alinhamento e organização idênticos em todas as telas.
+
+**Como usar — nunca monte esse chrome à mão:**
+
+- Caso geral: **`PageShell`** (`@/components/tkws/page-shell`). Passe
+  `breadcrumbs` (hierárquico explícito) **ou** `crumb` (string legada com `·`/`›`,
+  derivada automaticamente para breadcrumb + `title`). Slots: `actions`,
+  `toolbar` (sticky), `children` (conteúdo).
+- Listagens CRUD de Configurações: **`CrudPage`** — já compõe `PageShell`.
+- Listagens de Pessoas (Leads/Clientes): **`PessoaListing`** — já compõe `PageShell`.
+- Pipelines Kanban (Atendimento/Propostas): **`PipelineKanbanShell`** — mesma
+  estrutura, com KPI strip + view switcher fixos.
+
+> Telas novas **devem** entrar por um desses componentes. Se nenhum servir,
+> componha sobre `PageShell` — não recrie a barra de breadcrumb nem o header.
+> O componente antigo `PageHeader` (crumb mono, sem barra) foi **removido** em
+> favor de `PageShell`.
 
 ### Dashboard
 

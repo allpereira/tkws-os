@@ -16,19 +16,26 @@ fi
 source ".env.${ENV}"
 
 TIMESTAMP=$(date -u +"%Y%m%dT%H%M%SZ")
-DUMP_FILE="tkws-${ENV}-${TIMESTAMP}.sql.gz"
 
-echo "==> Fazendo dump do banco tkws..."
-PGPASSWORD="$DB_PASSWORD" pg_dump \
-    -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" \
-    -d tkws --no-owner --no-acl --clean --if-exists \
-    | gzip > "/tmp/$DUMP_FILE"
+# Dump dos DOIS bancos da instância: o da aplicação (tkws) E o do Zitadel.
+# Perder o banco do Zitadel = perder toda a identidade/auth dos tenants, então
+# ele entra no dump portável (defesa em profundidade além do snapshot do RDS).
+DATABASES=(tkws zitadel)
 
-echo "==> Enviando pra S3..."
-aws s3 cp "/tmp/$DUMP_FILE" "s3://${AWS_S3_BUCKET}/backups/${ENV}/${DUMP_FILE}" \
-    --storage-class STANDARD_IA
+for DB in "${DATABASES[@]}"; do
+    DUMP_FILE="${DB}-${ENV}-${TIMESTAMP}.sql.gz"
+    echo "==> Fazendo dump do banco ${DB}..."
+    PGPASSWORD="$DB_PASSWORD" pg_dump \
+        -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" \
+        -d "$DB" --no-owner --no-acl --clean --if-exists \
+        | gzip > "/tmp/$DUMP_FILE"
 
-echo "==> Removendo dump local..."
-rm "/tmp/$DUMP_FILE"
+    echo "==> Enviando ${DB} pra S3..."
+    aws s3 cp "/tmp/$DUMP_FILE" "s3://${AWS_S3_BUCKET}/backups/${ENV}/${DUMP_FILE}" \
+        --storage-class STANDARD_IA
 
-echo "✓ Backup concluído: s3://${AWS_S3_BUCKET}/backups/${ENV}/${DUMP_FILE}"
+    rm "/tmp/$DUMP_FILE"
+    echo "✓ ${DB}: s3://${AWS_S3_BUCKET}/backups/${ENV}/${DUMP_FILE}"
+done
+
+echo "✓ Backup concluído (tkws + zitadel)."
