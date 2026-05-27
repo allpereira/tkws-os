@@ -8,12 +8,33 @@ import { loginSchema, type LoginFormValues } from '@/features/login/types/auth';
 import { loadSavedLogin, persistSavedLogin } from '@/features/login/lib/saved-login';
 import { useLoginFlowStore } from '@/features/login/store/login-flow-store';
 import { useLoginFlow } from '@/features/login/hooks/use-login-flow';
+import { startIdpIntent, ZitadelApiError } from '@/shared/lib/zitadel-client';
 import { Button } from '@/shared/ui/button';
 import { Checkbox } from '@/shared/ui/checkbox';
 import { Input } from '@/shared/ui/input';
 import { Field } from '@/shared/ui/field';
 import { Alert } from '@/shared/ui/alert';
 import { AuthStage } from '@/shared/ui/auth-stage';
+import { Separator } from '@/shared/ui/separator';
+
+const MICROSOFT_IDP_ID: string | undefined =
+  import.meta.env.VITE_ZITADEL_MICROSOFT_IDP_ID || undefined;
+
+function MicrosoftLogo({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 21 21"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+    >
+      <rect x="1" y="1" width="9" height="9" fill="#F25022" />
+      <rect x="11" y="1" width="9" height="9" fill="#7FBA00" />
+      <rect x="1" y="11" width="9" height="9" fill="#00A4EF" />
+      <rect x="11" y="11" width="9" height="9" fill="#FFB900" />
+    </svg>
+  );
+}
 
 export function LoginPage() {
   const search = useSearch({ from: '/login' });
@@ -23,6 +44,8 @@ export function LoginPage() {
   const { status, errorMessage, submit } = useLoginFlow();
   const [showPassword, setShowPassword] = useState(false);
   const [rememberDevice, setRememberDevice] = useState(false);
+  const [idpStatus, setIdpStatus] = useState<'idle' | 'loading'>('idle');
+  const [idpError, setIdpError] = useState<string | null>(null);
 
   // Persiste o authRequestId no store assim que a página carrega.
   // `search.authRequestId` já é `string | undefined` graças ao validateSearch da rota.
@@ -59,6 +82,34 @@ export function LoginPage() {
     await submit(values);
   };
 
+  const onMicrosoftLogin = async () => {
+    if (!MICROSOFT_IDP_ID) return;
+    if (!search.authRequestId) {
+      setIdpError(
+        'Parâmetro de autenticação ausente. Tente acessar novamente pelo aplicativo.',
+      );
+      return;
+    }
+
+    setIdpStatus('loading');
+    setIdpError(null);
+    try {
+      const successUrl = `${window.location.origin}/idp-callback?authRequestId=${encodeURIComponent(search.authRequestId)}`;
+      const failureUrl = `${window.location.origin}/login?authRequestId=${encodeURIComponent(search.authRequestId)}`;
+      const { authUrl } = await startIdpIntent(MICROSOFT_IDP_ID, successUrl, failureUrl);
+      window.location.assign(authUrl);
+    } catch (err) {
+      setIdpStatus('idle');
+      if (err instanceof ZitadelApiError) {
+        setIdpError(
+          'Não foi possível iniciar o login com Microsoft. Tente novamente em instantes.',
+        );
+      } else {
+        setIdpError('Não foi possível conectar ao servidor. Verifique sua conexão.');
+      }
+    }
+  };
+
   return (
     <AuthStage
       quote={
@@ -84,7 +135,9 @@ export function LoginPage() {
       </p>
 
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-3.5">
-        {errorMessage && <Alert variant="error" message={errorMessage} />}
+        {(errorMessage || idpError) && (
+          <Alert variant="error" message={errorMessage ?? idpError ?? ''} />
+        )}
 
         <Field
           label="Email corporativo"
@@ -160,6 +213,25 @@ export function LoginPage() {
             {!isLoading && <ArrowRight className="h-4 w-4" />}
           </Button>
         </div>
+
+        {MICROSOFT_IDP_ID && (
+          <div className="space-y-3 pt-3">
+            <Separator label="Ou continue com" />
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              loading={idpStatus === 'loading'}
+              disabled={isLoading}
+              onClick={() => {
+                void onMicrosoftLogin();
+              }}
+            >
+              {idpStatus !== 'loading' && <MicrosoftLogo className="h-4 w-4" />}
+              {idpStatus === 'loading' ? 'Redirecionando…' : 'Microsoft'}
+            </Button>
+          </div>
+        )}
       </form>
 
       <p className="mt-7 text-center text-[12.5px] text-ink-4">

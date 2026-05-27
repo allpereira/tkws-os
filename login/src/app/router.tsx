@@ -12,6 +12,7 @@ import { LoginPage } from '@/features/login/components/login-page';
 import { RecoveryPage } from '@/features/password-recovery/components/recovery-page';
 import { MfaPage } from '@/features/mfa/components/mfa-page';
 import { AcceptInvitePage } from '@/features/accept-invite/components/accept-invite-page';
+import { IdpCallbackPage } from '@/features/idp-callback/components/idp-callback-page';
 import { getAuthRequest } from '@/shared/lib/zitadel-client';
 
 // ---------------------------------------------------------------------------
@@ -64,6 +65,22 @@ const mfaRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/mfa',
   component: MfaPage,
+});
+
+// ---------------------------------------------------------------------------
+// /idp-callback — retorno do Identity Provider externo (Microsoft, etc.)
+// ---------------------------------------------------------------------------
+
+const idpCallbackRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/idp-callback',
+  validateSearch: (search: Record<string, unknown>) => ({
+    id: typeof search.id === 'string' ? search.id : undefined,
+    token: typeof search.token === 'string' ? search.token : undefined,
+    authRequestId:
+      typeof search.authRequestId === 'string' ? search.authRequestId : undefined,
+  }),
+  component: IdpCallbackPage,
 });
 
 // ---------------------------------------------------------------------------
@@ -159,6 +176,7 @@ export const routeTree = rootRoute.addChildren([
   recoveryRoute,
   mfaRoute,
   acceptInviteRoute,
+  idpCallbackRoute,
 ]);
 
 export const router = createRouter({ routeTree });

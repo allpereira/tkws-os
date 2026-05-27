@@ -1,8 +1,7 @@
 import * as React from 'react'
 import { RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { DataTable } from '@/components/tkws/data-table'
-import { Badge } from '@/components/ui/badge'
+import { ConfirmDialog } from '@/components/tkws/confirm-dialog'
 import { SystemFrame } from '@/components/tkws/system-frame'
 import { formatApiErrorInfo, parseApiError, toneForStatus } from '@/lib/api-error'
 import { Dialog, DialogBody, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -11,12 +10,14 @@ import { PageHeader } from '@/components/tkws/page-header'
 import { Spinner } from '@/components/ui/spinner'
 import { useEtapas } from '@/modules/crm/configuracoes/etapas/api'
 import { usePipelines } from '@/modules/crm/configuracoes/pipelines/api'
-import { formatBRL, formatDate } from '@/lib/format'
-import { useOportunidadesByPipeline } from '../api'
-import { computeKanbanTotals } from '../lib/kanban-oportunidade'
+import { usePessoas } from '@/modules/crm/pessoas/api'
+import type { Pessoa } from '@/modules/crm/pessoas/schema'
+import { useOportunidadesByPipeline, useRemoveOportunidade } from '../api'
+import { computeKanbanTotals, filterOportunidades } from '../lib/kanban-oportunidade'
 import type { Oportunidade } from '../schema'
 import { OportunidadeForm } from './oportunidade-form'
 import { OportunidadeKanban } from './oportunidade-kanban'
+import { OportunidadeList } from './oportunidade-list'
 import { PipelineKanbanShell } from './pipeline-kanban-shell'
 
 export interface PipelineViewProps {
@@ -43,6 +44,8 @@ export function PipelineView({ modulo, title, description }: PipelineViewProps) 
   const [search, setSearch] = React.useState('')
   const [formOpen, setFormOpen] = React.useState(false)
   const [editing, setEditing] = React.useState<Oportunidade | undefined>(undefined)
+  const [toDelete, setToDelete] = React.useState<Oportunidade | undefined>(undefined)
+  const removeMut = useRemoveOportunidade()
 
   const pipelinesModulo = React.useMemo(
     () => pipelinesQuery.data?.filter((p) => p.modulo === modulo && p.ativo) ?? [],
@@ -56,6 +59,7 @@ export function PipelineView({ modulo, title, description }: PipelineViewProps) 
   }, [pipelinesModulo, pipelineId])
 
   const oportunidadesQuery = useOportunidadesByPipeline(pipelineId)
+  const pessoasQuery = usePessoas()
   const etapasDoPipeline = React.useMemo(
     () =>
       (etapasQuery.data ?? [])
@@ -71,9 +75,21 @@ export function PipelineView({ modulo, title, description }: PipelineViewProps) 
   }, [etapasDoPipeline])
 
   const oportunidades = oportunidadesQuery.data ?? []
+
+  const pessoaById = React.useMemo(() => {
+    const map = new Map<string, Pessoa>()
+    for (const p of pessoasQuery.data ?? []) map.set(p.id, p)
+    return map
+  }, [pessoasQuery.data])
+
+  const oportunidadesFiltradas = React.useMemo(
+    () => filterOportunidades(oportunidades, search, pessoaById),
+    [oportunidades, search, pessoaById],
+  )
+
   const totals = React.useMemo(
-    () => computeKanbanTotals(oportunidades, etapaById),
-    [oportunidades, etapaById],
+    () => computeKanbanTotals(oportunidadesFiltradas, etapaById),
+    [oportunidadesFiltradas, etapaById],
   )
 
   const pipelineAtivo = pipelinesModulo.find((p) => p.id === pipelineId)
@@ -85,6 +101,23 @@ export function PipelineView({ modulo, title, description }: PipelineViewProps) 
   const openEdit = (op: Oportunidade) => {
     setEditing(op)
     setFormOpen(true)
+  }
+  const requestDelete = (op: Oportunidade) => {
+    setToDelete(op)
+  }
+  const confirmDelete = async () => {
+    if (!toDelete) return
+    try {
+      await removeMut.mutateAsync(toDelete.id)
+      setToDelete(undefined)
+      // Se o item excluído estava aberto pra edição, fecha o form
+      if (editing?.id === toDelete.id) {
+        setFormOpen(false)
+        setEditing(undefined)
+      }
+    } catch {
+      // Erro fica visível via removeMut.error · usuário pode tentar de novo
+    }
   }
 
   if (pipelinesQuery.isLoading) {
@@ -130,50 +163,15 @@ export function PipelineView({ modulo, title, description }: PipelineViewProps) 
     : null
 
   const listContent =
-    view === 'list' ? (
-      <div className="p-4 md:p-5">
-        <DataTable<Oportunidade>
-          data={oportunidadesQuery.data}
-          isLoading={oportunidadesQuery.isLoading}
-          getRowKey={(r) => r.id}
-          onRowClick={openEdit}
-          columns={[
-            {
-              key: 'titulo',
-              header: 'Título',
-              cell: (r) => <span className="font-medium">{r.titulo}</span>,
-            },
-            {
-              key: 'etapa',
-              header: 'Etapa',
-              width: 'w-44',
-              cell: (r) => {
-                const et = etapasDoPipeline.find((e) => e.id === r.etapaId)
-                return et ? (
-                  <Badge variant="outline" style={{ borderColor: et.cor, color: et.cor }}>
-                    {et.nome}
-                  </Badge>
-                ) : (
-                  '—'
-                )
-              },
-            },
-            {
-              key: 'valor',
-              header: 'Valor',
-              width: 'w-32',
-              align: 'right',
-              cell: (r) => formatBRL(r.valor),
-            },
-            {
-              key: 'prazoFechamento',
-              header: 'Prazo',
-              width: 'w-28',
-              cell: (r) => (r.prazoFechamento ? formatDate(r.prazoFechamento) : '—'),
-            },
-          ]}
-        />
-      </div>
+    view === 'list' && !errorFrame ? (
+      <OportunidadeList
+        etapas={etapasDoPipeline}
+        oportunidades={oportunidadesFiltradas}
+        totals={totals}
+        isLoading={oportunidadesQuery.isLoading}
+        onRowClick={openEdit}
+        onDelete={requestDelete}
+      />
     ) : null
 
   const kanbanContent =
@@ -185,10 +183,11 @@ export function PipelineView({ modulo, title, description }: PipelineViewProps) 
       ) : (
         <OportunidadeKanban
           etapas={etapasDoPipeline}
-          oportunidades={oportunidades}
+          oportunidades={oportunidadesFiltradas}
           search={search}
           onCardClick={openEdit}
           onNewOportunidade={openNew}
+          onDelete={requestDelete}
         />
       )
     ) : null
@@ -226,10 +225,26 @@ export function PipelineView({ modulo, title, description }: PipelineViewProps) 
               modulo={modulo}
               etapas={etapasDoPipeline}
               onSuccess={() => setFormOpen(false)}
+              onRequestDelete={editing ? () => requestDelete(editing) : undefined}
             />
           </DialogBody>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={!!toDelete}
+        onOpenChange={(o) => !o && setToDelete(undefined)}
+        title={toDelete ? `Excluir “${toDelete.titulo}”?` : 'Excluir oportunidade'}
+        description={
+          modulo === 'proposta'
+            ? 'A proposta será removida permanentemente do pipeline.'
+            : 'A oportunidade será removida permanentemente do pipeline.'
+        }
+        variant="danger"
+        confirmLabel="Sim, excluir"
+        loading={removeMut.isPending}
+        onConfirm={confirmDelete}
+      />
     </>
   )
 }

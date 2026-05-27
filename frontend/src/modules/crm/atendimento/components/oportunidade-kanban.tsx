@@ -11,16 +11,11 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from '@dnd-kit/core'
-import { ArrowRight, MessageCircle, Phone, Plus } from 'lucide-react'
+import { Plus } from 'lucide-react'
+import type { BadgeTone } from '@/components/ui/badge'
 import { DealCard, DealLaneHeader } from '@/components/tkws/crm-deal-card'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+import { AdvanceEtapaDropdown } from './advance-etapa-dropdown'
+import { OportunidadeRowMenu } from './oportunidade-row-menu'
 import type { Etapa } from '@/modules/crm/configuracoes/etapas/schema'
 import { usePessoas } from '@/modules/crm/pessoas/api'
 import type { Pessoa } from '@/modules/crm/pessoas/schema'
@@ -43,6 +38,7 @@ export interface OportunidadeKanbanProps {
   search?: string
   onCardClick: (op: Oportunidade) => void
   onNewOportunidade?: () => void
+  onDelete?: (op: Oportunidade) => void
 }
 
 export function OportunidadeKanban({
@@ -51,6 +47,7 @@ export function OportunidadeKanban({
   search = '',
   onCardClick,
   onNewOportunidade,
+  onDelete,
 }: OportunidadeKanbanProps) {
   const moveMut = useMoveOportunidade()
   const pessoasQuery = usePessoas()
@@ -158,6 +155,7 @@ export function OportunidadeKanban({
                       onMoveToEtapa={(toEtapaId) => moveToEtapa(op.id, toEtapaId)}
                       nextEtapaId={nextEtapa?.id}
                       moveDisabled={moveMut.isPending}
+                      onDelete={onDelete ? () => onDelete(op) : undefined}
                     />
                   ))}
                   {cards.length === 0 && (
@@ -190,6 +188,7 @@ export function OportunidadeKanban({
               activeOp.ofertaId ? ofertaTag(ofertaById.get(activeOp.ofertaId)) : undefined,
             )}
             overlay
+            showProbability={false}
           />
         ) : null}
       </DragOverlay>
@@ -256,11 +255,12 @@ function DraggableDealCard({
   onMoveToEtapa,
   nextEtapaId,
   moveDisabled,
+  onDelete,
 }: {
   oportunidade: Oportunidade
   etapa: Etapa
   account: string
-  tag?: { label: string; tone: 'brand' | 'success' | 'warning' | 'danger' | 'purple' | 'pink' }
+  tag?: { label: string; tone: BadgeTone }
   selected?: boolean
   isDragging?: boolean
   onSelect?: () => void
@@ -269,6 +269,7 @@ function DraggableDealCard({
   onMoveToEtapa: (etapaId: string) => void
   nextEtapaId?: string
   moveDisabled?: boolean
+  onDelete?: () => void
 }) {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({ id: op.id })
 
@@ -285,123 +286,27 @@ function DraggableDealCard({
         selected={selected}
         staleDays={staleDays(op.updatedAt)}
         isDragging={isDragging}
+        showProbability={false}
         dragHandleProps={{ ...listeners, ...attributes }}
         onClick={() => {
           onSelect?.()
           onOpen?.()
         }}
+        kebabSlot={
+          onDelete && onOpen ? (
+            <OportunidadeRowMenu onEdit={onOpen} onDelete={onDelete} />
+          ) : undefined
+        }
         actionRow={
-          <div className="grid grid-cols-3 gap-1">
-            <button
-              type="button"
-              onClick={(e) => e.stopPropagation()}
-              className="flex items-center justify-center gap-1 rounded-md py-1.5 text-[10.5px] font-semibold"
-              style={{
-                background: 'var(--surface-2)',
-                color: 'var(--success)',
-                border: '1px solid var(--line-2)',
-              }}
-            >
-              <MessageCircle size={11} /> Chat
-            </button>
-            <button
-              type="button"
-              onClick={(e) => e.stopPropagation()}
-              className="flex items-center justify-center gap-1 rounded-md py-1.5 text-[10.5px] font-semibold"
-              style={{
-                background: 'var(--surface-2)',
-                color: 'var(--brand)',
-                border: '1px solid var(--line-2)',
-              }}
-            >
-              <Phone size={11} /> Ligar
-            </button>
-            <AdvanceEtapaDropdown
-              etapas={etapas}
-              currentEtapaId={etapa.id}
-              nextEtapaId={nextEtapaId}
-              disabled={moveDisabled}
-              onSelect={onMoveToEtapa}
-            />
-          </div>
+          <AdvanceEtapaDropdown
+            etapas={etapas}
+            currentEtapaId={etapa.id}
+            nextEtapaId={nextEtapaId}
+            disabled={moveDisabled}
+            onSelect={onMoveToEtapa}
+          />
         }
       />
     </div>
-  )
-}
-
-/** Dropdown no botão Avançar · escolhe qualquer etapa do pipeline (pattern CRM Kanban). */
-function AdvanceEtapaDropdown({
-  etapas,
-  currentEtapaId,
-  nextEtapaId,
-  onSelect,
-  disabled,
-}: {
-  etapas: Etapa[]
-  currentEtapaId: string
-  nextEtapaId?: string
-  onSelect: (etapaId: string) => void
-  disabled?: boolean
-}) {
-  const targets = etapas.filter((e) => e.id !== currentEtapaId)
-  const nextEtapa = nextEtapaId ? etapas.find((e) => e.id === nextEtapaId) : undefined
-
-  if (targets.length === 0) {
-    return (
-      <span
-        className="flex items-center justify-center gap-1 rounded-md py-1.5 text-[10.5px] font-bold"
-        style={{ background: 'var(--surface-2)', color: 'var(--text-mute)', border: '1px solid var(--line-2)' }}
-      >
-        Única etapa
-      </span>
-    )
-  }
-
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild disabled={disabled}>
-        <button
-          type="button"
-          onClick={(e) => e.stopPropagation()}
-          onPointerDown={(e) => e.stopPropagation()}
-          className="flex w-full items-center justify-center gap-1 rounded-md py-1.5 text-[10.5px] font-bold disabled:opacity-50"
-          style={{ background: 'var(--brand)', color: 'var(--bg)' }}
-        >
-          Avançar <ArrowRight size={11} />
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent
-        align="end"
-        className="min-w-[220px]"
-        onClick={(e) => e.stopPropagation()}
-        onPointerDown={(e) => e.stopPropagation()}
-      >
-        <DropdownMenuLabel>Etapa no pipeline</DropdownMenuLabel>
-        {nextEtapa && (
-          <>
-            <DropdownMenuItem
-              disabled={disabled}
-              onSelect={() => onSelect(nextEtapa.id)}
-              className="font-semibold"
-            >
-              <ArrowRight size={12} style={{ color: 'var(--brand)' }} />
-              Próxima · {nextEtapa.nome}
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-          </>
-        )}
-        {targets.map((e) => (
-          <DropdownMenuItem key={e.id} disabled={disabled} onSelect={() => onSelect(e.id)}>
-            <span
-              className="h-2 w-2 shrink-0 rounded-full"
-              style={{ background: e.cor }}
-              aria-hidden
-            />
-            {e.nome}
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
   )
 }

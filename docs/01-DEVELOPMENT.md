@@ -162,6 +162,7 @@ Não use mais `R__seed_dev.sql` — migrations repeatable reexecutam quando o ch
 | Banco novo | Subir a API; o Flyway aplica V1…V7 automaticamente |
 | Ver se V7 já rodou | `SELECT * FROM flyway_schema_history WHERE version = '7';` |
 | API falhou após migrar de `R__` para `V7` | Remover entrada antiga do repeatable (só se existir linha com esse script) |
+| Checksum mismatch em dev (ex.: editou `V7` depois de aplicar) | Com `ENVIRONMENT=dev`, a API faz `flyway repair` antes de `migrate` automaticamente. Desligar: `TKWS_FLYWAY_REPAIR_ON_MIGRATE=false` |
 
 Limpar histórico do repeatable antigo (banco `tkws`, na raiz do repo):
 

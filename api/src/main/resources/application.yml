@@ -88,6 +88,10 @@ logging:
     com.groupws.tkws: ${LOG_LEVEL:DEBUG}
 
 tkws:
+  flyway:
+    # Só efetivo quando spring.flyway.placeholders.environment=dev (ENVIRONMENT padrão local).
+    # Repara checksums antes de migrar — evita Validate failed após editar migration já aplicada.
+    repair-on-migrate: ${TKWS_FLYWAY_REPAIR_ON_MIGRATE:true}
   cors:
     allowed-origins: ${CORS_ORIGINS:http://localhost:5173,http://localhost:5174}
 

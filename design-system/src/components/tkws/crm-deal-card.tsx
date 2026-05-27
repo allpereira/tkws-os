@@ -41,10 +41,16 @@ export interface DealCardProps {
   onClick?: () => void
   /** Click no kebab */
   onMore?: () => void
+  /**
+   * Exibe a barra de probabilidade. Default true. Desligue em boards onde a
+   * probabilidade é derivada da coluna/etapa (mesma para todos os cards da
+   * lane) e a barra vira ruído redundante.
+   */
+  showProbability?: boolean
   className?: string
 }
 
-export function DealCard({ deal, onClick, onMore, className }: DealCardProps) {
+export function DealCard({ deal, onClick, onMore, showProbability = true, className }: DealCardProps) {
   const probTone: 'success' | 'warning' | 'danger' | 'brand' =
     deal.probability >= 70 ? 'success' : deal.probability >= 40 ? 'warning' : deal.probability >= 20 ? 'brand' : 'danger'
 
@@ -101,29 +107,37 @@ export function DealCard({ deal, onClick, onMore, className }: DealCardProps) {
       </div>
 
       {/* Probability */}
-      <div className="mt-3">
-        <div className="mb-1 flex items-center justify-between text-[10.5px]">
-          <span className="mono uppercase tracking-[1.2px]" style={{ color: 'var(--text-mute)' }}>
-            Probabilidade
-          </span>
-          <span className="mono font-bold" style={{ color: 'var(--text)' }}>
-            {deal.probability}%
-          </span>
+      {showProbability && (
+        <div className="mt-3">
+          <div className="mb-1 flex items-center justify-between text-[10.5px]">
+            <span className="mono uppercase tracking-[1.2px]" style={{ color: 'var(--text-mute)' }}>
+              Probabilidade
+            </span>
+            <span className="mono font-bold" style={{ color: 'var(--text)' }}>
+              {deal.probability}%
+            </span>
+          </div>
+          <Progress value={deal.probability} tone={probTone === 'brand' ? 'brand' : probTone} />
         </div>
-        <Progress value={deal.probability} tone={probTone === 'brand' ? 'brand' : probTone} />
-      </div>
+      )}
 
-      {/* Footer */}
-      <footer className="mt-3 flex items-center justify-between border-t pt-2.5" style={{ borderColor: 'var(--line-1)' }}>
-        <div className="flex items-center gap-1.5">
+      {/* Footer · owner primeiro · tag longa embaixo */}
+      <footer className="mt-3 flex flex-col gap-1.5 border-t pt-2.5" style={{ borderColor: 'var(--line-1)' }}>
+        <div className="flex min-w-0 items-center gap-1.5">
           <Avatar size="sm" style={{ background: deal.owner.color ?? 'var(--brand)', height: 20, width: 20, fontSize: 9 }}>
             <AvatarFallback>{deal.owner.initials}</AvatarFallback>
           </Avatar>
-          <span className="mono text-[10px]" style={{ color: 'var(--text-mute)' }}>
+          <span className="mono min-w-0 truncate text-[10px]" style={{ color: 'var(--text-mute)' }}>
             {deal.owner.name}
           </span>
         </div>
-        {deal.tag && <Badge tone={deal.tag.tone}>{deal.tag.label}</Badge>}
+        {deal.tag ? (
+          <div className="min-w-0 w-full">
+            <Badge tone={deal.tag.tone} className="w-full whitespace-normal px-2 py-1 text-left leading-snug">
+              {deal.tag.label}
+            </Badge>
+          </div>
+        ) : null}
       </footer>
     </article>
   )

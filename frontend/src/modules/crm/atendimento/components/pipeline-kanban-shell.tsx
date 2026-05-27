@@ -1,11 +1,6 @@
 import * as React from 'react'
-import {
-  Filter,
-  LayoutGrid,
-  List as ListIcon,
-  Plus,
-  Search,
-} from 'lucide-react'
+import { LayoutGrid, List as ListIcon, Plus, Search } from 'lucide-react'
+import { Breadcrumb, type BreadcrumbItemDef } from '@/components/ui/breadcrumb'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -38,7 +33,10 @@ export interface PipelineKanbanShellProps {
 
 /**
  * Shell editorial do pattern CRM Oportunidades · Kanban.
- * Header + KPI strip + toolbar · board/lista como children.
+ *
+ * Layout flat tipo AppShell · breadcrumb + page header + KPI strip + toolbar
+ * sticky · sem outer card. Cola direto no <main> do AppShell para não criar
+ * efeito "caixa-dentro-de-caixa".
  */
 export function PipelineKanbanShell({
   moduloLabel,
@@ -53,25 +51,36 @@ export function PipelineKanbanShell({
   onNewOportunidade,
   children,
 }: PipelineKanbanShellProps) {
+  const breadcrumbItems: BreadcrumbItemDef[] = React.useMemo(() => {
+    const items: BreadcrumbItemDef[] = [
+      { label: 'CRM' },
+      pipelineName
+        ? { label: moduloLabel }
+        : { label: moduloLabel, current: true },
+    ]
+    if (pipelineName) items.push({ label: pipelineName, current: true })
+    return items
+  }, [moduloLabel, pipelineName])
+
   return (
-    <div
-      className="overflow-hidden rounded-[10px] border"
-      style={{ borderColor: 'var(--line-1)', background: 'var(--bg)' }}
-    >
+    <div className="-mx-4 -my-6 flex min-h-[calc(100vh-7rem)] flex-col md:-mx-8 md:-my-8">
+      {/* Breadcrumb */}
       <div
-        className="border-b p-6 max-[760px]:p-4"
+        className="border-b px-6 py-2.5"
+        style={{ borderColor: 'var(--line-1)', background: 'var(--surface-1)' }}
+      >
+        <Breadcrumb items={breadcrumbItems} />
+      </div>
+
+      {/* Page Header · título + ação primária */}
+      <div
+        className="border-b px-6 pt-6 pb-5"
         style={{ borderColor: 'var(--line-1)', background: 'var(--surface-1)' }}
       >
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div className="min-w-0 flex-1">
-            <div
-              className="mono text-[10.5px] font-semibold uppercase tracking-[1.3px]"
-              style={{ color: 'var(--text-mute)' }}
-            >
-              CRM · {moduloLabel}
-            </div>
             <h1
-              className="serif mt-1.5 text-[28px] font-normal leading-[1.1] md:text-[30px]"
+              className="serif text-[28px] font-normal leading-[1.1] md:text-[30px]"
               style={{ color: 'var(--text)', letterSpacing: '-0.02em' }}
             >
               {totals.count} {totals.count === 1 ? 'oportunidade' : 'oportunidades'}
@@ -80,12 +89,14 @@ export function PipelineKanbanShell({
                 · {formatPipelineTotal(totals.total)} em pipeline
               </em>
             </h1>
-            <div className="mt-1.5 text-[13px]" style={{ color: 'var(--text-soft)' }}>
-              {pipelineName ? `${pipelineName} · ` : ''}
+            <p
+              className="mt-2 max-w-2xl text-[13.5px] leading-relaxed"
+              style={{ color: 'var(--text-soft)' }}
+            >
               {description ?? title}
-            </div>
+            </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
             <Button onClick={onNewOportunidade}>
               <Plus size={14} /> Nova oportunidade
             </Button>
@@ -93,16 +104,11 @@ export function PipelineKanbanShell({
         </div>
       </div>
 
+      {/* KPI strip · enxuto · 3 KPIs · total do pipeline já vive no header */}
       <div
-        className="grid grid-cols-2 gap-3 border-b p-4 sm:grid-cols-4 md:p-6"
+        className="grid grid-cols-3 gap-3 border-b px-6 py-4"
         style={{ borderColor: 'var(--line-1)' }}
       >
-        <KpiMini
-          label="Pipeline"
-          value={formatPipelineTotal(totals.total)}
-          hint={`${totals.count} deals ativos`}
-          tone="brand"
-        />
         <KpiMini
           label="Ponderado"
           value={formatPipelineTotal(totals.weighted)}
@@ -118,15 +124,16 @@ export function PipelineKanbanShell({
         />
       </div>
 
+      {/* Toolbar sticky · busca + view switcher + filtros */}
       <div
-        className="flex flex-wrap items-center gap-3 border-b p-4"
+        className="sticky top-0 z-10 flex flex-wrap items-center gap-3 border-b px-6 py-3"
         style={{ borderColor: 'var(--line-1)', background: 'var(--surface-1)' }}
       >
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
           <Input
             icon={<Search size={13} />}
             placeholder="Buscar deal, cliente, valor…"
-            className="max-w-md min-w-[12rem] flex-1 !text-[13px]"
+            className="max-w-md min-w-[14rem] flex-1 !text-[13px]"
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
           />
@@ -141,15 +148,17 @@ export function PipelineKanbanShell({
             </TabsList>
           </Tabs>
         </div>
-        <div className="flex flex-wrap items-center gap-1.5">
-          <Button variant="outline" size="sm" type="button" disabled>
-            <Filter size={12} /> Filtros
-          </Button>
-          {totals.stale > 0 && <Badge tone="warning">{totals.stale} esquecidos</Badge>}
-        </div>
+        {totals.stale > 0 && (
+          <div className="flex flex-wrap items-center gap-1.5">
+            <Badge tone="warning">{totals.stale} esquecidos</Badge>
+          </div>
+        )}
       </div>
 
-      {children}
+      {/* Content · board ou lista */}
+      <div className="flex-1" style={{ background: 'var(--bg)' }}>
+        {children}
+      </div>
     </div>
   )
 }

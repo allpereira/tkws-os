@@ -39,7 +39,7 @@ export function useMoveOportunidade() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async ({ id, etapaId }: { id: string; etapaId: string }) => {
-      const { data } = await api.patch<Oportunidade>(`/api/v1/crm/oportunidades/${id}/etapa`, { etapaId })
+      const { data } = await api.post<Oportunidade>(`/api/v1/crm/oportunidades/${id}/mover`, { etapaId })
       return data
     },
     onMutate: async ({ id, etapaId }) => {

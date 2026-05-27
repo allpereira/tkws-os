@@ -222,6 +222,73 @@ export async function checkTotp(
 }
 
 // ---------------------------------------------------------------------------
+// Identity Provider Intents — login social (Microsoft, Google, etc.)
+// ---------------------------------------------------------------------------
+
+export interface IdpIntentStartResult {
+  /** URL para qual o browser deve ser redirecionado para iniciar o login no IdP externo. */
+  authUrl: string;
+}
+
+/**
+ * Inicia um intent de login via Identity Provider externo (ex.: Microsoft).
+ * O Zitadel devolve a URL de autorização do IdP (ex.: login.microsoftonline.com).
+ *
+ * Após o usuário autenticar no IdP, o Zitadel processa o callback interno e
+ * redireciona o browser para `successUrl` com `?id=<intentId>&token=<intentToken>`.
+ */
+export async function startIdpIntent(
+  idpId: string,
+  successUrl: string,
+  failureUrl: string,
+): Promise<IdpIntentStartResult> {
+  const data = await apiFetch<{ authUrl?: string; details?: unknown }>(
+    `/v2/idp_intents`,
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        idpId,
+        urls: { successUrl, failureUrl },
+      }),
+    },
+  );
+
+  if (!data.authUrl) {
+    throw new ZitadelApiError(500, 'Zitadel não retornou authUrl para o IdP.');
+  }
+
+  return { authUrl: data.authUrl };
+}
+
+/**
+ * Cria uma sessão a partir de um intent de IdP já concluído.
+ * Use após o Zitadel ter redirecionado o browser para o `successUrl` com
+ * `id` (intentId) e `token` (intentToken) na query string.
+ */
+export async function createSessionFromIdpIntent(
+  idpIntentId: string,
+  idpIntentToken: string,
+): Promise<ZitadelSession> {
+  const data = await apiFetch<{
+    sessionId: string;
+    sessionToken: string;
+  }>('/v2/sessions', {
+    method: 'POST',
+    body: JSON.stringify({
+      checks: {
+        idpIntent: { idpIntentId, idpIntentToken },
+      },
+    }),
+  });
+
+  return {
+    sessionId: data.sessionId,
+    sessionToken: data.sessionToken,
+    challenges: [],
+  };
+}
+
+// ---------------------------------------------------------------------------
 // OIDC Callback — finaliza o fluxo
 // ---------------------------------------------------------------------------
 

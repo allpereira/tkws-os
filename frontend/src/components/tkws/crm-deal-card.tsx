@@ -1,4 +1,4 @@
-import { Calendar, GripVertical, MoreHorizontal, TrendingUp } from 'lucide-react'
+import { Calendar, MoreHorizontal, TrendingUp } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge, type BadgeTone } from '@/components/ui/badge'
 import { LeadScore, type LeadTemperature } from './crm-lead-score'
@@ -52,6 +52,17 @@ export interface DealCardProps {
   dragHandleProps?: React.ButtonHTMLAttributes<HTMLButtonElement>
   /** Linha de ações rápidas (Chat / Ligar / Avançar) */
   actionRow?: React.ReactNode
+  /**
+   * Exibe a barra de probabilidade. Default true. Desligue em boards onde a
+   * probabilidade é derivada da coluna/etapa (mesma para todos os cards da
+   * lane) e a barra vira ruído redundante.
+   */
+  showProbability?: boolean
+  /**
+   * Substitui o botão de "mais ações" no canto sup. direito por um slot
+   * customizado (ex.: DropdownMenuTrigger com Editar/Excluir).
+   */
+  kebabSlot?: React.ReactNode
   className?: string
 }
 
@@ -65,6 +76,8 @@ export function DealCard({
   overlay,
   dragHandleProps,
   actionRow,
+  kebabSlot,
+  showProbability = true,
   className,
 }: DealCardProps) {
   const probTone: 'success' | 'warning' | 'danger' | 'brand' =
@@ -119,16 +132,26 @@ export function DealCard({
             {deal.title}
           </h4>
         </div>
-        <button
-          onClick={(e) => {
-            e.stopPropagation()
-            onMore?.()
-          }}
-          aria-label="Mais"
-          className="h-6 w-6 shrink-0 cursor-pointer rounded-md text-[var(--text-mute)] opacity-0 transition-opacity hover:bg-white/[0.06] group-hover:opacity-100"
-        >
-          <MoreHorizontal size={13} className="mx-auto" />
-        </button>
+        {kebabSlot ? (
+          <div
+            className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
+            onClick={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            {kebabSlot}
+          </div>
+        ) : (
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              onMore?.()
+            }}
+            aria-label="Mais"
+            className="h-6 w-6 shrink-0 cursor-pointer rounded-md text-[var(--text-mute)] opacity-0 transition-opacity hover:bg-white/[0.06] group-hover:opacity-100"
+          >
+            <MoreHorizontal size={13} className="mx-auto" />
+          </button>
+        )}
       </header>
 
       {/* Valor + close */}
@@ -146,35 +169,43 @@ export function DealCard({
       </div>
 
       {/* Probability */}
-      <div className={cn('mt-3', dragHandleProps && 'pl-3')}>
-        <div className="mb-1 flex items-center justify-between text-[10.5px]">
-          <span className="mono uppercase tracking-[1.2px]" style={{ color: 'var(--text-mute)' }}>
-            Probabilidade
-          </span>
-          <span className="mono font-bold" style={{ color: 'var(--text)' }}>
-            {deal.probability}%
-          </span>
+      {showProbability && (
+        <div className={cn('mt-3', dragHandleProps && 'pl-3')}>
+          <div className="mb-1 flex items-center justify-between text-[10.5px]">
+            <span className="mono uppercase tracking-[1.2px]" style={{ color: 'var(--text-mute)' }}>
+              Probabilidade
+            </span>
+            <span className="mono font-bold" style={{ color: 'var(--text)' }}>
+              {deal.probability}%
+            </span>
+          </div>
+          <Progress value={deal.probability} tone={probTone === 'brand' ? 'brand' : probTone} />
         </div>
-        <Progress value={deal.probability} tone={probTone === 'brand' ? 'brand' : probTone} />
-      </div>
+      )}
 
-      {/* Footer */}
+      {/* Footer · owner na primeira linha · tag longa abaixo (evita estourar a largura da coluna) */}
       <footer
         className={cn(
-          'mt-3 flex items-center justify-between border-t pt-2.5',
+          'mt-3 flex flex-col gap-1.5 border-t pt-2.5',
           dragHandleProps && 'pl-3',
         )}
         style={{ borderColor: 'var(--line-1)' }}
       >
-        <div className="flex items-center gap-1.5">
+        <div className="flex min-w-0 items-center gap-1.5">
           <Avatar size="sm" style={{ background: deal.owner.color ?? 'var(--brand)', height: 20, width: 20, fontSize: 9 }}>
             <AvatarFallback>{deal.owner.initials}</AvatarFallback>
           </Avatar>
-          <span className="mono text-[10px]" style={{ color: 'var(--text-mute)' }}>
+          <span className="mono min-w-0 truncate text-[10px]" style={{ color: 'var(--text-mute)' }}>
             {deal.owner.name}
           </span>
         </div>
-        {deal.tag && <Badge tone={deal.tag.tone}>{deal.tag.label}</Badge>}
+        {deal.tag ? (
+          <div className="min-w-0 w-full">
+            <Badge tone={deal.tag.tone} className="w-full whitespace-normal px-2 py-1 text-left leading-snug">
+              {deal.tag.label}
+            </Badge>
+          </div>
+        ) : null}
       </footer>
 
       {actionRow && !overlay && (

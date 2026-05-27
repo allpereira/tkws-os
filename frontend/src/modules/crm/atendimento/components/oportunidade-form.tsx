@@ -1,6 +1,8 @@
 import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { Trash2 } from 'lucide-react'
 import { FormDialogFooter } from '@/components/tkws/crud-page'
+import { Button } from '@/components/ui/button'
 import { Field, FieldHint, Input, Label, Textarea } from '@/components/ui/input'
 import { MoneyInput } from '@/components/ui/masked-input'
 import { centsToReais, reaisToCents, roundReais } from '@/lib/money'
@@ -52,6 +54,8 @@ export interface OportunidadeFormProps {
   modulo: 'atendimento' | 'proposta'
   etapas: Etapa[]
   onSuccess: () => void
+  /** Dispara fluxo de exclusão · só aparece em modo edição. */
+  onRequestDelete?: () => void
 }
 
 export function OportunidadeForm({
@@ -60,6 +64,7 @@ export function OportunidadeForm({
   modulo,
   etapas,
   onSuccess,
+  onRequestDelete,
 }: OportunidadeFormProps) {
   const isEdit = !!initial
   const empreendimentos = useEmpreendimentos()
@@ -228,7 +233,23 @@ export function OportunidadeForm({
           <AlertDescription>{mutation.error?.message ?? 'Erro inesperado.'}</AlertDescription>
         </Alert>
       )}
-      <FormDialogFooter onCancel={onSuccess} loading={isSubmitting || mutation.isPending} />
+      <FormDialogFooter
+        onCancel={onSuccess}
+        loading={isSubmitting || mutation.isPending}
+        leftSlot={
+          isEdit && onRequestDelete ? (
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={onRequestDelete}
+              disabled={isSubmitting || mutation.isPending}
+              style={{ color: 'var(--danger)' }}
+            >
+              <Trash2 size={13} /> Excluir
+            </Button>
+          ) : null
+        }
+      />
     </form>
   )
 }

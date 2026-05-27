@@ -200,28 +200,34 @@ export function CrudPage<T>({
   )
 }
 
-/** Footer padrão para forms · cancela + salva */
+/** Footer padrão para forms · cancela + salva · com slot opcional à esquerda */
 export function FormDialogFooter({
   onCancel,
   loading,
   submitLabel = 'Salvar',
+  leftSlot,
 }: {
   onCancel: () => void
   loading?: boolean
   submitLabel?: string
+  /** Conteúdo extra (ex.: botão Excluir) ancorado à esquerda do footer. */
+  leftSlot?: React.ReactNode
 }) {
   return (
     <div
-      className="-mx-6 -mb-5 mt-5 flex flex-row-reverse items-center gap-2 border-t px-6 py-4"
+      className="-mx-6 -mb-5 mt-5 flex items-center justify-between gap-2 border-t px-6 py-4"
       style={{ borderColor: 'var(--line-1)' }}
     >
-      <Button type="submit" disabled={loading}>
-        {loading ? <Spinner size={12} /> : null}
-        {loading ? 'Salvando…' : submitLabel}
-      </Button>
-      <Button type="button" variant="outline" onClick={onCancel} disabled={loading}>
-        Cancelar
-      </Button>
+      <div className="flex items-center gap-2">{leftSlot}</div>
+      <div className="flex items-center gap-2">
+        <Button type="button" variant="outline" onClick={onCancel} disabled={loading}>
+          Cancelar
+        </Button>
+        <Button type="submit" disabled={loading}>
+          {loading ? <Spinner size={12} /> : null}
+          {loading ? 'Salvando…' : submitLabel}
+        </Button>
+      </div>
     </div>
   )
 }
