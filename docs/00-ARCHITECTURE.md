@@ -217,6 +217,7 @@ Veja `docs/adr/` para o histórico completo de decisões.
 | `ADR-019` | Tenant context resolvido do JWT (nunca de query/body) |
 | `ADR-020` | Lookup tables sem domain layer |
 | `ADR-021` | `tenants.id` como BIGINT, `zitadel_org_id` à parte |
+| `ADR-022` | Paginação de listagens via envelope `limit/offset` (`PageResponse<T>`) |
 
 > Gap: ADR-017 não existe (numeração pulada).
 

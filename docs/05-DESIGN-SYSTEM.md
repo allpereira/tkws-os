@@ -169,6 +169,16 @@ Radix Dialog. Overlay com 60% opacidade. Animações leves.
 - Largura máxima `max-w-2xl`
 - Espaçamento entre campos `space-y-6`
 - Botão primário à direita, secundário à esquerda
+- **Responsividade (obrigatório):** linhas com múltiplos campos usam grid que
+  **empilha no mobile** — `grid grid-cols-1 gap-3 sm:grid-cols-2` (e não
+  `grid-cols-2` cru). Para um campo estreito ao lado de um largo, use
+  `sm:grid-cols-[minmax(160px,200px)_1fr]` em vez de coluna de pixel fixa
+  (`[140px_1fr]`), que **espreme** controles como Select num espaço apertado.
+  Tudo dentro do `Dialog` (que é `w-full max-w-lg`) precisa caber sem corte —
+  confira no breakpoint mobile.
+- **Formulário longo / com sub-cadastros:** use abas (`Tabs`) para separar blocos
+  (ex.: cadastro de Cliente → abas **Dados** e **Contatos**, ver ADR-023). Uma aba
+  que depende de um id (sub-itens 1:N) fica desabilitada até o registro ser salvo.
 
 ### Listagem / Tabela
 
@@ -203,6 +213,7 @@ Antes de propor mudança visual:
 - [ ] Componente respeita variantes documentadas?
 - [ ] Tipografia respeita escala documentada?
 - [ ] Espaçamento usa tokens?
+- [ ] **Responsivo?** Grids de formulário empilham no mobile (`grid-cols-1 sm:grid-cols-N`); nada é cortado/espremido dentro do `Dialog` no breakpoint estreito?
 - [ ] Funciona em dark mode? (TODO: tema dark a definir)
 - [ ] É acessível? (labels, contrast, foco visível)
 

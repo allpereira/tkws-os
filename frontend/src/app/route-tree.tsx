@@ -8,6 +8,7 @@ import {
 import { Home, Search } from 'lucide-react'
 import { useAuth } from 'react-oidc-context'
 import { AppShell } from '@/components/tkws/app-shell'
+import { PageShell } from '@/components/tkws/page-shell'
 import { SystemFrame } from '@/components/tkws/system-frame'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
@@ -234,32 +235,14 @@ function NotFoundPage() {
 
 function HomePage() {
   return (
-    <>
-      <div className="mb-8">
-        <div
-          className="mono mb-2 text-[10.5px] font-semibold uppercase tracking-[1.4px]"
-          style={{ color: 'var(--text-mute)' }}
-        >
-          DASHBOARD · WS GROUP
-        </div>
-        <h1
-          className="serif text-[42px] font-light leading-[1.05]"
-          style={{ color: 'var(--text)', letterSpacing: '-0.025em' }}
-        >
-          Bem-vindo ao{' '}
-          <em className="italic font-normal" style={{ color: 'var(--brand)' }}>
-            TKWS OS
-          </em>
-        </h1>
-        <p
-          className="mt-3 max-w-2xl text-[14.5px] leading-relaxed"
-          style={{ color: 'var(--text-soft)' }}
-        >
-          Use a navegação à esquerda para acessar o módulo <strong>CRM</strong> (leads, clientes,
-          atendimento, propostas) e as <strong>Configurações</strong> de CRM e Organização.
-        </p>
-      </div>
-    </>
+    <PageShell
+      breadcrumbs={[{ label: 'Início', current: true }]}
+      title="Bem-vindo ao"
+      italic="TKWS OS"
+      description="Use a navegação à esquerda para acessar o módulo CRM (leads, clientes, atendimento, propostas) e as Configurações de CRM e Organização."
+    >
+      <></>
+    </PageShell>
   )
 }
 

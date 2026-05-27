@@ -1,9 +1,11 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import type {
   CreatePessoa,
   DedupResult,
   Pessoa,
+  PessoaListParams,
+  PessoaPage,
   PessoaSearchResult,
   StatusPessoa,
   UpdatePessoa,
@@ -19,8 +21,13 @@ import type {
 const BASE = '/api/v1/pessoas'
 
 export const pessoasApi = {
-  async list(params?: { status?: StatusPessoa; limit?: number; offset?: number }): Promise<Pessoa[]> {
-    const { data } = await api.get<Pessoa[]>(BASE, { params })
+  /**
+   * Listagem paginada (envelope `{ content, limit, offset, total, hasNext }`).
+   * Filtros opcionais: status, q (busca textual), tipoPessoa, cidade, uf, sort.
+   * O backend limita `limit` a 100 (ver ADR-022).
+   */
+  async list(params?: PessoaListParams): Promise<PessoaPage> {
+    const { data } = await api.get<PessoaPage>(BASE, { params })
     return data
   },
   async findById(id: string): Promise<Pessoa> {
@@ -92,10 +99,29 @@ export function usePessoaSearch(query: string, enabled: boolean) {
   })
 }
 
+/**
+ * Listagem "achatada" · retorna `Pessoa[]` (a primeira página). Mantida para
+ * os consumidores que só precisam de um lookup de pessoas (combobox/kanban de
+ * Atendimento). Para a listagem com filtros/paginação, use {@link usePessoasPage}.
+ */
 export function usePessoas(status?: StatusPessoa) {
   return useQuery({
     queryKey: pessoasKeys.list({ status }),
     queryFn: () => pessoasApi.list({ status }),
+    select: (page) => page.content,
+  })
+}
+
+/**
+ * Listagem paginada com filtros · usada pelas telas Leads e Clientes.
+ * Mantém a página anterior visível enquanto a próxima carrega
+ * (`keepPreviousData`) para não "piscar" ao paginar/filtrar.
+ */
+export function usePessoasPage(params: PessoaListParams) {
+  return useQuery({
+    queryKey: pessoasKeys.list(params),
+    queryFn: () => pessoasApi.list(params),
+    placeholderData: keepPreviousData,
   })
 }
 

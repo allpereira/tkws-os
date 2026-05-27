@@ -61,3 +61,4 @@ ou revisado deve usar a forma em inglês.
 | 019 | Tenant context resolvido do JWT, nunca de query/body | Accepted | 2026-05 |
 | 020 | Lookup tables sem domain layer (Clean Architecture pragmática) | Accepted | 2026-05 |
 | 021 | `tenants.id` como BIGINT, `zitadel_org_id` à parte | Accepted | 2026-05 |
+| 022 | Paginação de listagens via envelope `limit/offset` (`PageResponse<T>`) | Accepted | 2026-05 |

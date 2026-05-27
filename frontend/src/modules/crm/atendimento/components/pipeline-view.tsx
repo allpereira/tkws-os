@@ -6,7 +6,7 @@ import { SystemFrame } from '@/components/tkws/system-frame'
 import { formatApiErrorInfo, parseApiError, toneForStatus } from '@/lib/api-error'
 import { Dialog, DialogBody, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { EmptyState } from '@/components/ui/empty-state'
-import { PageHeader } from '@/components/tkws/page-header'
+import { PageShell } from '@/components/tkws/page-shell'
 import { Spinner } from '@/components/ui/spinner'
 import { useEtapas } from '@/modules/crm/configuracoes/etapas/api'
 import { usePipelines } from '@/modules/crm/configuracoes/pipelines/api'
@@ -130,13 +130,12 @@ export function PipelineView({ modulo, title, description }: PipelineViewProps) 
 
   if (pipelinesModulo.length === 0) {
     return (
-      <>
-        <PageHeader crumb="CRM" title={title} description={description} />
+      <PageShell crumb="CRM" title={title} description={description}>
         <EmptyState
           title="Sem pipelines configurados"
           description={`Crie um pipeline em Configurações → CRM → Pipelines com módulo "${modulo}".`}
         />
-      </>
+      </PageShell>
     )
   }
 

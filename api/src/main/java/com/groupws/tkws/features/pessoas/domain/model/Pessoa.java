@@ -81,16 +81,42 @@ public final class Pessoa extends AggregateRoot<PessoaId> {
     public static Pessoa createLead(long tenantId, TipoPessoa tipoPessoa, Documento documento,
                                     String nomeContato, String emailContato,
                                     String celularContato, String nomeEmpresa) {
+        return create(tenantId, tipoPessoa, documento, nomeContato, emailContato,
+            celularContato, nomeEmpresa, StatusPessoa.LEAD);
+    }
+
+    /**
+     * Factory · cria uma Pessoa nova com o {@code status} inicial informado.
+     *
+     * Aceita apenas {@link StatusPessoa#LEAD} ou {@link StatusPessoa#CLIENTE}
+     * (ADR-023). Quando nasce CLIENTE, marca {@code convertidoEm = now} e emite
+     * também o {@link PessoaConvertedToClienteEvent}, para os consumidores da
+     * conversão por funil não precisarem de caso especial.
+     *
+     * Use case de criação deve verificar duplicidade de documento ANTES.
+     */
+    public static Pessoa create(long tenantId, TipoPessoa tipoPessoa, Documento documento,
+                                String nomeContato, String emailContato, String celularContato,
+                                String nomeEmpresa, StatusPessoa status) {
+        Objects.requireNonNull(status, "status");
+        if (status != StatusPessoa.LEAD && status != StatusPessoa.CLIENTE) {
+            throw new IllegalArgumentException(
+                "Criação de Pessoa só aceita status LEAD ou CLIENTE · recebeu: " + status);
+        }
         Instant now = Instant.now();
         PessoaId id = PessoaId.generate();
+        Instant convertidoEm = status == StatusPessoa.CLIENTE ? now : null;
         Pessoa pessoa = new Pessoa(
             id, tenantId, tipoPessoa, documento,
             nomeContato, emailContato, celularContato, nomeEmpresa,
-            StatusPessoa.LEAD, null,
+            status, convertidoEm,
             null, null, null, null, null,
             now, now
         );
-        pessoa.registerEvent(new PessoaCreatedEvent(id, tenantId, tipoPessoa, StatusPessoa.LEAD, now));
+        pessoa.registerEvent(new PessoaCreatedEvent(id, tenantId, tipoPessoa, status, now));
+        if (status == StatusPessoa.CLIENTE) {
+            pessoa.registerEvent(new PessoaConvertedToClienteEvent(id, tenantId, now));
+        }
         return pessoa;
     }
 
@@ -119,6 +145,27 @@ public final class Pessoa extends AggregateRoot<PessoaId> {
         this.convertidoEm = now;
         this.updatedAt = now;
         registerEvent(new PessoaConvertedToClienteEvent(id, tenantId, now));
+    }
+
+    /**
+     * Atualiza os dados cadastrais editáveis no formulário (tipo, documento e
+     * contato). Não muda `status` nem `convertidoEm` — esses só transitam via
+     * {@link #convertToCliente()}.
+     *
+     * A validação de formato do documento (CPF/CNPJ × tipoPessoa) é feita pelo
+     * VO {@link Documento}; a unicidade dentro do tenant é responsabilidade do
+     * use case (que checa antes de chamar este método).
+     */
+    public void updateCadastro(TipoPessoa tipoPessoa, Documento documento,
+                               String nomeContato, String emailContato,
+                               String celularContato, String nomeEmpresa) {
+        this.tipoPessoa = Objects.requireNonNull(tipoPessoa, "tipoPessoa");
+        this.documento = documento;
+        this.nomeContato = validateNome(nomeContato);
+        this.emailContato = blankToNull(emailContato);
+        this.celularContato = blankToNull(celularContato);
+        this.nomeEmpresa = blankToNull(nomeEmpresa);
+        this.updatedAt = Instant.now();
     }
 
     /** Atualiza os dados de contato. Não muda status nem documento. */

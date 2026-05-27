@@ -171,7 +171,44 @@ docker compose exec -T postgres psql -U tkws -d tkws -c "DELETE FROM flyway_sche
 ```
 
 Depois reinicie a API para o Flyway aplicar `V7__seed_dev.sql` se ainda não constar no histórico.
-Para **alterar** dados de seed depois da primeira carga, use a app ou crie uma migration `V8__…` pontual — editar o V7 em banco já migrado não reexecuta o script.
+Para **alterar** dados de seed depois da primeira carga, use a app ou crie uma migration `V{N+1}__…` pontual — editar o V7 em banco já migrado não reexecuta o script.
+
+#### Flyway — cuidados ao criar migrations
+
+Pasta: `api/src/main/resources/db/migration/`. O Flyway roda **automaticamente** na subida da API. Um erro aqui **impede a aplicação de iniciar** — não há “meio termo”.
+
+**Regras obrigatórias**
+
+| Regra | Por quê |
+|---|---|
+| **Um número de versão = um único arquivo** (`V8__…` só pode existir uma vez) | Dois `V8__*.sql` geram `Found more than one migration with version 8` e a API não sobe |
+| **Sempre usar o próximo `N` sequencial** | Antes de criar, liste o que já existe: `ls api/src/main/resources/db/migration/V*.sql \| sort` |
+| **Nunca editar migration já aplicada** em banco compartilhado/prod | Flyway guarda checksum; alteração vira `checksum mismatch`. Corrija com **nova** `V{N+1}__…` |
+| **Nome do arquivo:** `V{N}__descricao_em_snake_case.sql` | O texto após `__` vira `description` no histórico |
+| **Preferir migrations versionadas (`V`)** para schema e seed | `R__*.sql` (repeatable) reexecuta quando o checksum muda — só use com critério (ver seed acima) |
+| **Branches em paralelo** | Quem abre PR primeiro “leva” o `N`; o outro rebaseia e renumeria antes do merge |
+
+**Antes de commitar / abrir PR**
+
+```bash
+# 1) Versões duplicadas? (deve listar cada V1, V2, … uma vez só)
+ls api/src/main/resources/db/migration/V*.sql | sed 's/.*\/V/V/' | cut -d_ -f1 | sort | uniq -d
+
+# 2) Qual o próximo N livre?
+ls api/src/main/resources/db/migration/V*.sql | sort | tail -3
+
+# 3) Subir a API localmente e conferir o histórico
+docker compose exec -T postgres psql -U tkws -d tkws -c \
+  "SELECT version, description, success FROM flyway_schema_history ORDER BY installed_rank;"
+```
+
+Se o comando (1) imprimir algo (ex.: `V8`), há **colisão de versão** — renomeie um dos arquivos para o próximo `N` livre (ex.: `V8__pessoa_contatos.sql` + `V9__pessoas_listing_indexes.sql`).
+
+**Ordem de execução:** Flyway aplica por **número** (`V8` antes de `V9`), não pela data do commit. Se duas mudanças dependem uma da outra, use `N` menor para a que cria tabela/coluna e `N` maior para índices ou dados que referenciam o anterior.
+
+**Depois de renumerar um arquivo já aplicado** (só em dev, raro): o histórico em `flyway_schema_history` ainda aponta para o nome antigo — não renomeie migrations que já rodaram em staging/prod. Em dev local, o caminho mais seguro é `docker compose down -v` (apaga o banco) ou ajuste manual do histórico com cuidado.
+
+Mais detalhes de rollback em produção: `docs/03-DEPLOY.md` (migrations backward-compatible).
 
 ### Redis
 
@@ -487,7 +524,7 @@ Veja `docs/10-FEATURE-CHECKLIST.md` para o checklist completo passo a passo.
 **Resumo:**
 
 1. Copia estrutura de `features/tenants/` como template
-2. Cria migration Flyway: `api/src/main/resources/db/migration/V{N}__nova_feature.sql`
+2. Cria migration Flyway: `api/src/main/resources/db/migration/V{N}__nova_feature.sql` — confira o próximo `N` livre e **nunca duplique versão** (ver [Flyway — cuidados](#flyway--cuidados-ao-criar-migrations))
 3. Escreve teste de domain primeiro (RED)
 4. Implementa domain até GREEN
 5. Sobe pelas camadas: application → infrastructure → web
@@ -509,6 +546,9 @@ Veja `docs/10-FEATURE-CHECKLIST.md` para o checklist completo passo a passo.
 
 ### "Zitadel não conecta no Postgres"
 Aguarde mais. Primeira inicialização do Zitadel demora 1-3 min.
+
+### "Flyway: Found more than one migration with version N"
+Dois ou mais arquivos com o mesmo `VN__` em `api/src/main/resources/db/migration/`. Liste a pasta, escolha o próximo número livre, renomeie um deles (ex.: `V8` + `V9`) e suba a API de novo. Ver [Flyway — cuidados](#flyway--cuidados-ao-criar-migrations).
 
 ### "Flyway: migration checksum mismatch"
 Alguém editou uma migration já aplicada (proibido). Reverter a edição ou criar nova migration que ajuste.

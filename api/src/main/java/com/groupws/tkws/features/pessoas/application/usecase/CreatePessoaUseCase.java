@@ -11,12 +11,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Use case · cria uma Pessoa nova como LEAD.
+ * Use case · cria uma Pessoa nova (LEAD por padrão, ou CLIENTE direto · ADR-023).
  *
  * Orquestração:
  *   1. Se documento informado → validar formato (via VO `Documento`) e
  *      verificar unicidade (não importa `forceCreate`).
- *   2. Criar agregado (Lead).
+ *   2. Criar agregado com o status inicial do comando (LEAD default).
  *   3. Persistir.
  *   4. Publicar eventos.
  *
@@ -48,14 +48,15 @@ public class CreatePessoaUseCase {
             }
         }
 
-        Pessoa pessoa = Pessoa.createLead(
+        Pessoa pessoa = Pessoa.create(
             cmd.tenantId(),
             cmd.tipoPessoa(),
             documento,
             cmd.nomeContato(),
             cmd.emailContato(),
             cmd.celularContato(),
-            cmd.nomeEmpresa()
+            cmd.nomeEmpresa(),
+            cmd.statusOrDefault()
         );
 
         Pessoa saved = repository.save(pessoa);

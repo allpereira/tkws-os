@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { formatApiErrorInfo, parseApiError, toneForStatus } from '@/lib/api-error'
 import { DataTable, type DataTableColumn } from './data-table'
-import { PageHeader } from './page-header'
+import { PageShell } from './page-shell'
 import { ConfirmDialog } from './confirm-dialog'
 import { SystemFrame } from './system-frame'
 import {
@@ -21,7 +21,7 @@ import {
  * CrudPage · template reutilizável de página CRUD.
  *
  * Composição:
- *   - PageHeader com botão "Novo"
+ *   - PageShell (breadcrumb + header) com botão "Novo"
  *   - DataTable com colunas configuráveis
  *   - Coluna de ações (editar, excluir) já incluída
  *   - Dialog de form (passado como children render-prop)
@@ -127,7 +127,7 @@ export function CrudPage<T>({
 
   return (
     <>
-      <PageHeader
+      <PageShell
         crumb={crumb}
         title={title}
         description={description}
@@ -136,45 +136,45 @@ export function CrudPage<T>({
             <Plus size={14} /> {newButtonLabel}
           </Button>
         }
-      />
-
-      {listQuery.isError ? (
-        (() => {
-          const err = parseApiError(listQuery.error)
-          const big = err.status ? String(err.status) : err.isNetworkError ? '⚡' : '!'
-          return (
-            <SystemFrame
-              bigNum={big}
-              bigEmTone={toneForStatus(err)}
-              label={`${err.statusText ?? 'Erro'} · ${title}`}
-              title="Não conseguimos carregar"
-              italic={`os dados de ${title.toLowerCase()}.`}
-              description={err.message}
-              info={formatApiErrorInfo(err)}
-              actions={
-                <Button onClick={() => listQuery.refetch()}>
-                  <RefreshCw size={14} /> Tentar novamente
-                </Button>
-              }
-            />
-          )
-        })()
-      ) : (
-        <DataTable
-          data={listQuery.data}
-          columns={augmentedColumns}
-          isLoading={listQuery.isLoading}
-          emptyTitle={emptyTitle ?? title}
-          emptyDescription="Comece criando o primeiro registro."
-          emptyAction={
-            <Button onClick={openNew}>
-              <Plus size={14} /> {newButtonLabel}
-            </Button>
-          }
-          getRowKey={getRowKey}
-          onRowClick={openEdit}
-        />
-      )}
+      >
+        {listQuery.isError ? (
+          (() => {
+            const err = parseApiError(listQuery.error)
+            const big = err.status ? String(err.status) : err.isNetworkError ? '⚡' : '!'
+            return (
+              <SystemFrame
+                bigNum={big}
+                bigEmTone={toneForStatus(err)}
+                label={`${err.statusText ?? 'Erro'} · ${title}`}
+                title="Não conseguimos carregar"
+                italic={`os dados de ${title.toLowerCase()}.`}
+                description={err.message}
+                info={formatApiErrorInfo(err)}
+                actions={
+                  <Button onClick={() => listQuery.refetch()}>
+                    <RefreshCw size={14} /> Tentar novamente
+                  </Button>
+                }
+              />
+            )
+          })()
+        ) : (
+          <DataTable
+            data={listQuery.data}
+            columns={augmentedColumns}
+            isLoading={listQuery.isLoading}
+            emptyTitle={emptyTitle ?? title}
+            emptyDescription="Comece criando o primeiro registro."
+            emptyAction={
+              <Button onClick={openNew}>
+                <Plus size={14} /> {newButtonLabel}
+              </Button>
+            }
+            getRowKey={getRowKey}
+            onRowClick={openEdit}
+          />
+        )}
+      </PageShell>
 
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
         <DialogContent>

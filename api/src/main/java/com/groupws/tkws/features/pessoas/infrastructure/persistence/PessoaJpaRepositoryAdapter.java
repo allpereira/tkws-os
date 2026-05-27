@@ -5,8 +5,11 @@ import com.groupws.tkws.features.pessoas.domain.model.Pessoa;
 import com.groupws.tkws.features.pessoas.domain.model.PessoaId;
 import com.groupws.tkws.features.pessoas.domain.model.StatusPessoa;
 import com.groupws.tkws.features.pessoas.domain.model.TipoPessoa;
+import com.groupws.tkws.features.pessoas.domain.port.PessoaListCriteria;
 import com.groupws.tkws.features.pessoas.domain.port.PessoaRepository;
+import com.groupws.tkws.features.pessoas.domain.port.PessoaSort;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -54,18 +57,56 @@ class PessoaJpaRepositoryAdapter implements PessoaRepository {
             .toList();
     }
 
+    /** Teto duro de itens por página · ver ADR-022. */
+    private static final int MAX_LIMIT = 100;
+
     @Override
-    public List<Pessoa> list(long tenantId, StatusPessoa statusOuNull, int limit, int offset) {
-        int safeLimit = Math.max(1, Math.min(limit, 200));
+    public List<Pessoa> list(long tenantId, PessoaListCriteria criteria, int limit, int offset) {
+        int safeLimit = Math.max(1, Math.min(limit, MAX_LIMIT));
         int safeOffset = Math.max(0, offset);
         int page = safeOffset / safeLimit;
-        return jpa.list(
+        return jpa.listFiltered(
                 tenantId,
-                statusOuNull != null ? statusOuNull.name() : null,
-                PageRequest.of(page, safeLimit)
+                criteria.status() != null ? criteria.status().name() : null,
+                criteria.tipoPessoa() != null ? criteria.tipoPessoa().name() : null,
+                blankToNull(criteria.uf()),
+                blankToNull(criteria.cidade()),
+                blankToNull(criteria.q()),
+                onlyDigits(criteria.q()),
+                PageRequest.of(page, safeLimit, sortFor(criteria.sort()))
             ).stream()
             .map(this::toDomain)
             .toList();
+    }
+
+    @Override
+    public long count(long tenantId, PessoaListCriteria criteria) {
+        return jpa.countFiltered(
+            tenantId,
+            criteria.status() != null ? criteria.status().name() : null,
+            criteria.tipoPessoa() != null ? criteria.tipoPessoa().name() : null,
+            blankToNull(criteria.uf()),
+            blankToNull(criteria.cidade()),
+            blankToNull(criteria.q()),
+            onlyDigits(criteria.q())
+        );
+    }
+
+    private static Sort sortFor(PessoaSort sort) {
+        return switch (sort) {
+            case NOME -> Sort.by(Sort.Direction.ASC, "nomeContato");
+            case CONVERSAO -> Sort.by(Sort.Direction.DESC, "convertidoEm");
+            case RECENTE -> Sort.by(Sort.Direction.DESC, "createdAt");
+        };
+    }
+
+    private static String blankToNull(String s) {
+        return (s == null || s.isBlank()) ? null : s.trim();
+    }
+
+    /** Extrai só os dígitos · vazio quando não há nenhum (desabilita o ramo de documento no SQL). */
+    private static String onlyDigits(String s) {
+        return s == null ? "" : s.replaceAll("\\D", "");
     }
 
     @Override

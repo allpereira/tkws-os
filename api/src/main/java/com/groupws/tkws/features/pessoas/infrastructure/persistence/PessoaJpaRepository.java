@@ -35,16 +35,67 @@ interface PessoaJpaRepository extends JpaRepository<PessoaJpaEntity, UUID> {
         @Param("celular") String celular
     );
 
+    /**
+     * Listagem filtrada das telas Leads/Clientes. Todos os filtros são
+     * opcionais (param null = ignora). A ordenação vem do {@code Pageable}
+     * (o adapter monta o {@code Sort} a partir do enum PessoaSort).
+     *
+     * `q` casa em nome do contato, nome da empresa, email e — quando
+     * `qDigits` não é vazio — no documento normalizado.
+     *
+     * Os parâmetros opcionais (string) usam {@code CAST(... AS string)} para
+     * fixar o tipo do bind: sem isso o driver PostgreSQL infere {@code bytea}
+     * para parâmetros nulos e a query quebra com
+     * {@code function lower(bytea) does not exist}.
+     */
     @Query("""
         SELECT p FROM PessoaJpaEntity p
         WHERE p.tenantId = :tenantId
-          AND (:status IS NULL OR p.status = :status)
-        ORDER BY p.createdAt DESC
+          AND (CAST(:status AS string) IS NULL OR p.status = CAST(:status AS string))
+          AND (CAST(:tipo AS string) IS NULL OR p.tipoPessoa = CAST(:tipo AS string))
+          AND (CAST(:uf AS string) IS NULL OR p.uf = CAST(:uf AS string))
+          AND (CAST(:cidade AS string) IS NULL OR LOWER(p.cidade) LIKE LOWER(CONCAT('%', CAST(:cidade AS string), '%')))
+          AND (CAST(:q AS string) IS NULL
+                OR LOWER(p.nomeContato) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%'))
+                OR (p.nomeEmpresa IS NOT NULL AND LOWER(p.nomeEmpresa) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%')))
+                OR (p.emailContato IS NOT NULL AND LOWER(p.emailContato) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%')))
+                OR (:qDigits <> '' AND p.documento IS NOT NULL AND p.documento LIKE CONCAT('%', :qDigits, '%'))
+          )
     """)
-    List<PessoaJpaEntity> list(
+    List<PessoaJpaEntity> listFiltered(
         @Param("tenantId") Long tenantId,
         @Param("status") String status,
+        @Param("tipo") String tipo,
+        @Param("uf") String uf,
+        @Param("cidade") String cidade,
+        @Param("q") String q,
+        @Param("qDigits") String qDigits,
         Pageable pageable
+    );
+
+    /** Total de registros que casam com os mesmos filtros de {@link #listFiltered}. */
+    @Query("""
+        SELECT COUNT(p) FROM PessoaJpaEntity p
+        WHERE p.tenantId = :tenantId
+          AND (CAST(:status AS string) IS NULL OR p.status = CAST(:status AS string))
+          AND (CAST(:tipo AS string) IS NULL OR p.tipoPessoa = CAST(:tipo AS string))
+          AND (CAST(:uf AS string) IS NULL OR p.uf = CAST(:uf AS string))
+          AND (CAST(:cidade AS string) IS NULL OR LOWER(p.cidade) LIKE LOWER(CONCAT('%', CAST(:cidade AS string), '%')))
+          AND (CAST(:q AS string) IS NULL
+                OR LOWER(p.nomeContato) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%'))
+                OR (p.nomeEmpresa IS NOT NULL AND LOWER(p.nomeEmpresa) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%')))
+                OR (p.emailContato IS NOT NULL AND LOWER(p.emailContato) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%')))
+                OR (:qDigits <> '' AND p.documento IS NOT NULL AND p.documento LIKE CONCAT('%', :qDigits, '%'))
+          )
+    """)
+    long countFiltered(
+        @Param("tenantId") Long tenantId,
+        @Param("status") String status,
+        @Param("tipo") String tipo,
+        @Param("uf") String uf,
+        @Param("cidade") String cidade,
+        @Param("q") String q,
+        @Param("qDigits") String qDigits
     );
 
     /**

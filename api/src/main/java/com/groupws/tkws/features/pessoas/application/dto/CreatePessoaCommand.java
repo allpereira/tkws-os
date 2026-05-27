@@ -1,5 +1,6 @@
 package com.groupws.tkws.features.pessoas.application.dto;
 
+import com.groupws.tkws.features.pessoas.domain.model.StatusPessoa;
 import com.groupws.tkws.features.pessoas.domain.model.TipoPessoa;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -8,7 +9,7 @@ import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 
 /**
- * Comando para criar uma Pessoa nova (sempre como LEAD).
+ * Comando para criar uma Pessoa nova.
  *
  * Mínimo aceito pela UI de Atendimento (ver ADR-018):
  *   - tipoPessoa
@@ -27,6 +28,10 @@ import jakarta.validation.constraints.Size;
  * Se `forceCreate` for `true`, o vendedor está optando por criar duplicado
  * mesmo que o backend tenha encontrado match por email/celular (mas NÃO
  * por documento — duplicidade de CPF/CNPJ continua bloqueada).
+ *
+ * `status` é o estado inicial (ADR-023): `null`/`LEAD` cria um Lead (default);
+ * `CLIENTE` cria um Cliente direto (tela de Clientes). Outros valores são
+ * rejeitados pelo agregado.
  */
 public record CreatePessoaCommand(
     @Positive long tenantId,
@@ -36,5 +41,11 @@ public record CreatePessoaCommand(
     @Email @Size(max = 160) String emailContato,
     @Size(max = 20) String celularContato,
     @Size(max = 160) String nomeEmpresa,
-    boolean forceCreate
-) {}
+    boolean forceCreate,
+    StatusPessoa status
+) {
+    /** Estado inicial efetivo · default LEAD quando não informado. */
+    public StatusPessoa statusOrDefault() {
+        return status != null ? status : StatusPessoa.LEAD;
+    }
+}

@@ -35,6 +35,8 @@ git checkout -b feature/orcamento-mvp
 ### 1. Migration Flyway
 
 - [ ] Cria `api/src/main/resources/db/migration/V{N}__orcamento.sql`
+- [ ] Confirma que **não existe outro arquivo com o mesmo `V{N}`** (`ls …/migration/V*.sql | sort` — ver `docs/01-DEVELOPMENT.md` · Flyway — cuidados)
+- [ ] Subiu a API localmente após a migration (Flyway aplicou sem erro)
 - [ ] Inclui `tenant_id BIGINT NOT NULL REFERENCES tenants(id)` se for tabela
       multi-tenant (ver [ADR-021](adr/ADR-021-tenant-id-bigint.md) — `tenants.id`
       é BIGINT, não UUID)

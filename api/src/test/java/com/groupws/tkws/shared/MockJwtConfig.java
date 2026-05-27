@@ -53,6 +53,25 @@ public class MockJwtConfig {
         return buildToken(List.of());
     }
 
+    /**
+     * Token org-scoped · embute o `zitadel_org_id` (resource owner) no claim
+     * `urn:zitadel:iam:user:resourceowner:id`, que o
+     * {@code CurrentTenantArgumentResolver} usa para resolver o tenant local.
+     *
+     * Use em ITs de controllers org-scoped (Pessoas, Contatos, …): insira um
+     * tenant com esse `zitadel_org_id` e passe este token para que
+     * {@code @CurrentTenant} resolva o tenant correto.
+     */
+    public static String tokenForOrg(String zitadelOrgId, String... roles) {
+        return buildToken(List.of(roles)) + ORG_SEP + zitadelOrgId;
+    }
+
+    // Delimitador só com chars válidos de token68 (RFC 6750): o filtro de bearer
+    // token do Spring rejeita o header se o token tiver caracteres fora do set
+    // (`#`, `:` etc) — daí usar `~`, que é permitido. Roles/orgId dos testes não
+    // contêm `~`.
+    private static final String ORG_SEP = "~org~";
+
     private static String buildToken(List<String> roles) {
         // Formato simbólico que o MockJwtDecoder reconhece.
         // Em testes reais não precisamos assinar de verdade.
@@ -65,7 +84,17 @@ public class MockJwtConfig {
             if (!token.startsWith("mock-jwt-")) {
                 throw new JwtException("Token mock inválido");
             }
-            String rolesPart = token.substring("mock-jwt-".length());
+
+            // Sufixo opcional `#org:<id>` · embute o resource owner (org) do JWT.
+            String orgId = null;
+            String body = token.substring("mock-jwt-".length());
+            int sep = body.indexOf(ORG_SEP);
+            if (sep >= 0) {
+                orgId = body.substring(sep + ORG_SEP.length());
+                body = body.substring(0, sep);
+            }
+
+            String rolesPart = body;
             List<String> roles = rolesPart.isBlank()
                 ? List.of()
                 : List.of(rolesPart.split(","));
@@ -81,6 +110,11 @@ public class MockJwtConfig {
             Map<String, Object> rolesClaim = new HashMap<>();
             roles.forEach(r -> rolesClaim.put(r, Map.of("org-id", "TKWS")));
             claims.put("urn:zitadel:iam:org:project:roles", rolesClaim);
+
+            // Claim de resource owner (org) · só quando o token foi criado com org.
+            if (orgId != null && !orgId.isBlank()) {
+                claims.put("urn:zitadel:iam:user:resourceowner:id", orgId);
+            }
 
             return new Jwt(
                 token,

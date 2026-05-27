@@ -33,9 +33,24 @@ api.interceptors.request.use((config) => {
   return config
 })
 
+/**
+ * Erros do backend chegam como RFC 7807 problem+json (`{ detail, title, … }`)
+ * ou erro padrão do Spring (`{ message }`). Por padrão o Axios só expõe o
+ * genérico "Request failed with status code 4xx" em `error.message`. Aqui
+ * promovemos a mensagem legível do backend para `error.message`, de modo que
+ * qualquer consumidor (mutations, `parseApiError`, Alerts) exiba algo claro
+ * ao usuário — não o texto técnico do Axios.
+ */
 api.interceptors.response.use(
   (response) => response,
-  (error: AxiosError) => Promise.reject(error),
+  (error: AxiosError) => {
+    const data = error.response?.data as Record<string, unknown> | undefined
+    const backendMessage = (['detail', 'message', 'error'] as const)
+      .map((k) => (typeof data?.[k] === 'string' ? (data[k] as string).trim() : ''))
+      .find((s) => s.length > 0)
+    if (backendMessage) error.message = backendMessage
+    return Promise.reject(error)
+  },
 )
 
 // ============================================================================

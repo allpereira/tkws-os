@@ -327,6 +327,8 @@ IMAGE_TAG=abc1234 \
 
 Migrations Flyway **não fazem rollback automaticamente**.
 
+Antes do deploy, garanta que não há **duas migrations com o mesmo `V{N}`** no repositório — isso impede a API de subir (`Found more than one migration with version N`). Ver `docs/01-DEVELOPMENT.md` · *Flyway — cuidados ao criar migrations*.
+
 Estratégia:
 1. **Toda migration backward-compatible** (cria coluna antes de remover antiga)
 2. **Emergência:** restore do snapshot do RDS (veja `docs/06-BACKUP-RECOVERY.md`)

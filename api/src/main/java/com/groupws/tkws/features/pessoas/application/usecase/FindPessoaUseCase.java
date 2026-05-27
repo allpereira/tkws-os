@@ -4,8 +4,9 @@ import com.groupws.tkws.features.pessoas.application.dto.PessoaSearchView;
 import com.groupws.tkws.features.pessoas.application.dto.PessoaView;
 import com.groupws.tkws.features.pessoas.domain.exception.PessoaNotFoundException;
 import com.groupws.tkws.features.pessoas.domain.model.PessoaId;
-import com.groupws.tkws.features.pessoas.domain.model.StatusPessoa;
+import com.groupws.tkws.features.pessoas.domain.port.PessoaListCriteria;
 import com.groupws.tkws.features.pessoas.domain.port.PessoaRepository;
+import com.groupws.tkws.shared.page.PageResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,11 +34,19 @@ public class FindPessoaUseCase {
             .orElseThrow(() -> new PessoaNotFoundException(id));
     }
 
+    /**
+     * Listagem paginada (offset/limit) das telas Leads/Clientes · aplica os
+     * filtros/ordenação de {@link PessoaListCriteria} e devolve o envelope
+     * padrão {@link PageResponse} com o total para paginação inteligente na UI
+     * (ver ADR-022).
+     */
     @Transactional(readOnly = true)
-    public List<PessoaView> list(long tenantId, StatusPessoa statusOuNull, int limit, int offset) {
-        return repository.list(tenantId, statusOuNull, limit, offset).stream()
+    public PageResponse<PessoaView> list(long tenantId, PessoaListCriteria criteria, int limit, int offset) {
+        List<PessoaView> content = repository.list(tenantId, criteria, limit, offset).stream()
             .map(PessoaView::from)
             .toList();
+        long total = repository.count(tenantId, criteria);
+        return PageResponse.of(content, limit, offset, total);
     }
 
     /**

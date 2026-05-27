@@ -18,6 +18,9 @@ import { z } from 'zod'
 export const TIPO_PESSOA = ['PF', 'PJ'] as const
 export const STATUS_PESSOA = ['LEAD', 'CLIENTE'] as const
 
+/** Ordenações suportadas pela listagem (espelha PessoaSort do backend). */
+export const SORT_PESSOA = ['RECENTE', 'NOME', 'CONVERSAO'] as const
+
 export const pessoaSchema = z.object({
   id: z.string().uuid(),
   tenantId: z.number().int().positive(),
@@ -46,6 +49,11 @@ export const createPessoaSchema = z.object({
   celularContato: z.string().max(20).optional().nullable(),
   nomeEmpresa: z.string().max(160).optional().nullable(),
   forceCreate: z.boolean().optional(),
+  /**
+   * Estado inicial (ADR-023). Ausente/`LEAD` cria Lead; `CLIENTE` cria Cliente
+   * direto (tela de Clientes). O backend rejeita outros valores.
+   */
+  status: z.enum(STATUS_PESSOA).optional(),
 })
 
 export const updatePessoaSchema = createPessoaSchema.partial()
@@ -55,6 +63,33 @@ export type CreatePessoa = z.infer<typeof createPessoaSchema>
 export type UpdatePessoa = z.infer<typeof updatePessoaSchema>
 export type TipoPessoa = (typeof TIPO_PESSOA)[number]
 export type StatusPessoa = (typeof STATUS_PESSOA)[number]
+export type SortPessoa = (typeof SORT_PESSOA)[number]
+
+/**
+ * Envelope de paginação padrão da API (ver ADR-022 no backend):
+ * `{ content, limit, offset, total, hasNext }`.
+ */
+export const pessoaPageSchema = z.object({
+  content: z.array(pessoaSchema),
+  limit: z.number().int(),
+  offset: z.number().int(),
+  total: z.number().int(),
+  hasNext: z.boolean(),
+})
+
+export type PessoaPage = z.infer<typeof pessoaPageSchema>
+
+/** Parâmetros aceitos por `GET /api/v1/pessoas`. */
+export interface PessoaListParams {
+  status?: StatusPessoa
+  q?: string
+  tipoPessoa?: TipoPessoa
+  cidade?: string
+  uf?: string
+  sort?: SortPessoa
+  limit?: number
+  offset?: number
+}
 
 /** Resposta do endpoint de dedup. */
 export interface DedupResult {
@@ -79,3 +114,71 @@ export const pessoaSearchResultSchema = z.object({
 })
 
 export type PessoaSearchResult = z.infer<typeof pessoaSearchResultSchema>
+
+// ============================================================================
+// Contatos da Pessoa (sócios/representante para PJ; parentes/cônjuge para PF).
+// Ver ADR-023.
+// ============================================================================
+
+/** Relacionamentos válidos para Pessoa Jurídica. */
+export const TIPO_RELACIONAMENTO_PJ = ['SOCIO', 'REPRESENTANTE_LEGAL'] as const
+/** Relacionamentos válidos para Pessoa Física. */
+export const TIPO_RELACIONAMENTO_PF = [
+  'PARENTE',
+  'PAI',
+  'MAE',
+  'FILHO',
+  'FILHA',
+  'CONJUGE',
+  'OUTROS',
+] as const
+
+export const TIPO_RELACIONAMENTO = [
+  ...TIPO_RELACIONAMENTO_PJ,
+  ...TIPO_RELACIONAMENTO_PF,
+] as const
+
+export type TipoRelacionamento = (typeof TIPO_RELACIONAMENTO)[number]
+
+/** Rótulos PT-BR para exibição. */
+export const RELACIONAMENTO_LABEL: Record<TipoRelacionamento, string> = {
+  SOCIO: 'Sócio',
+  REPRESENTANTE_LEGAL: 'Representante Legal',
+  PARENTE: 'Parente',
+  PAI: 'Pai',
+  MAE: 'Mãe',
+  FILHO: 'Filho',
+  FILHA: 'Filha',
+  CONJUGE: 'Cônjuge',
+  OUTROS: 'Outros',
+}
+
+/** Opções de relacionamento aplicáveis ao tipo da Pessoa dona. */
+export function relacionamentosParaTipo(
+  tipo: TipoPessoa,
+): ReadonlyArray<TipoRelacionamento> {
+  return tipo === 'PJ' ? TIPO_RELACIONAMENTO_PJ : TIPO_RELACIONAMENTO_PF
+}
+
+export const contatoSchema = z.object({
+  id: z.string().uuid(),
+  pessoaId: z.string().uuid(),
+  nome: z.string().min(1).max(160),
+  email: z.string().email().nullable().optional(),
+  telefone: z.string().nullable().optional(),
+  tipoRelacionamento: z.enum(TIPO_RELACIONAMENTO),
+  createdAt: z.string().datetime({ offset: true }),
+  updatedAt: z.string().datetime({ offset: true }),
+})
+
+export const createContatoSchema = z.object({
+  nome: z.string().min(1, 'Nome obrigatório').max(160),
+  email: z.string().email('Email inválido').optional().nullable().or(z.literal('')),
+  telefone: z.string().max(20).optional().nullable(),
+  tipoRelacionamento: z.enum(TIPO_RELACIONAMENTO, {
+    errorMap: () => ({ message: 'Selecione o relacionamento' }),
+  }),
+})
+
+export type Contato = z.infer<typeof contatoSchema>
+export type CreateContato = z.infer<typeof createContatoSchema>

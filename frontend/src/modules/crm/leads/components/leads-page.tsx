@@ -1,18 +1,30 @@
+import * as React from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { CrudPage, FormDialogFooter } from '@/components/tkws/crud-page'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Plus } from 'lucide-react'
+import { FormDialogFooter } from '@/components/tkws/crud-page'
+import { ErrorAlert } from '@/components/tkws/error-alert'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogBody,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Field, FieldHint, Input, Label } from '@/components/ui/input'
 import { CNPJInput, CPFInput } from '@/components/ui/masked-input'
 import { PhoneInput } from '@/components/ui/phone-input'
 import { SelectField } from '@/components/ui/select-field'
-import { useCreatePessoa, usePessoas, useUpdatePessoa } from '@/modules/crm/pessoas/api'
+import { useCreatePessoa, useUpdatePessoa } from '@/modules/crm/pessoas/api'
 import {
   createPessoaSchema,
   type CreatePessoa,
   type Pessoa,
 } from '@/modules/crm/pessoas/schema'
+import { PessoaListing } from '@/modules/crm/pessoas/components/pessoa-listing'
+import { formatDocumento } from '@/modules/crm/pessoas/components/pessoa-card'
 
 /**
  * Tela "Leads" · view sobre `Pessoa` filtrada por status=LEAD.
@@ -55,7 +67,7 @@ function LeadForm({ initial, onSuccess }: { initial?: Pessoa; onSuccess: () => v
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-4">
-      <div className="grid grid-cols-[140px_1fr] gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(160px,200px)_1fr]">
         <Field>
           <Label required>Tipo</Label>
           <SelectField
@@ -80,7 +92,6 @@ function LeadForm({ initial, onSuccess }: { initial?: Pessoa; onSuccess: () => v
                   id="documento"
                   value={field.value ?? ''}
                   onChange={field.onChange}
-                  onBlur={field.onBlur}
                 />
               ) : (
                 <CPFInput
@@ -88,7 +99,6 @@ function LeadForm({ initial, onSuccess }: { initial?: Pessoa; onSuccess: () => v
                   id="documento"
                   value={field.value ?? ''}
                   onChange={field.onChange}
-                  onBlur={field.onBlur}
                 />
               )
             }
@@ -113,7 +123,7 @@ function LeadForm({ initial, onSuccess }: { initial?: Pessoa; onSuccess: () => v
         </Field>
       )}
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Field>
           <Label htmlFor="emailContato">Email</Label>
           <Input id="emailContato" type="email" {...register('emailContato')} />
@@ -128,74 +138,105 @@ function LeadForm({ initial, onSuccess }: { initial?: Pessoa; onSuccess: () => v
                 id="celularContato"
                 value={field.value ?? ''}
                 onChange={field.onChange}
-                onBlur={field.onBlur}
               />
             )}
           />
         </Field>
       </div>
 
-      {mutation.isError && (
-        <Alert tone="danger">
-          <AlertTitle>Não foi possível salvar</AlertTitle>
-          <AlertDescription>{mutation.error?.message ?? 'Erro inesperado.'}</AlertDescription>
-        </Alert>
-      )}
+      {mutation.isError && <ErrorAlert error={mutation.error} title="Não foi possível salvar" />}
       <FormDialogFooter onCancel={onSuccess} loading={isSubmitting || mutation.isPending} />
     </form>
   )
 }
 
 export function LeadsPage() {
-  const listQuery = usePessoas('LEAD')
+  const [formOpen, setFormOpen] = React.useState(false)
+  const [editing, setEditing] = React.useState<Pessoa | undefined>(undefined)
+
+  const openNew = () => {
+    setEditing(undefined)
+    setFormOpen(true)
+  }
+  const openEdit = (p: Pessoa) => {
+    setEditing(p)
+    setFormOpen(true)
+  }
 
   return (
-    <CrudPage<Pessoa>
-      crumb="CRM"
-      title="Leads"
-      description="Contatos iniciais · ainda não fecharam proposta. Convertem para Cliente automaticamente quando uma Oportunidade atinge etapa de fechamento."
-      newButtonLabel="+ Novo lead"
-      listQuery={listQuery}
-      removeMutation={{ mutateAsync: async () => undefined, isPending: false, error: null } as never}
-      columns={[
-        {
-          key: 'tipoPessoa',
-          header: '',
-          width: 'w-12',
-          cell: (r) => <Badge variant="outline">{r.tipoPessoa}</Badge>,
-        },
-        {
-          key: 'nomeContato',
-          header: 'Nome',
-          cell: (r) => <span className="font-medium">{r.nomeContato}</span>,
-        },
-        {
-          key: 'nomeEmpresa',
-          header: 'Empresa',
-          cell: (r) => <span className="text-muted-foreground">{r.nomeEmpresa ?? '—'}</span>,
-        },
-        {
-          key: 'celularContato',
-          header: 'Contato',
-          cell: (r) => (
-            <span className="text-muted-foreground text-xs">
-              {r.emailContato ?? '—'}
-              <br />
-              {r.celularContato ?? ''}
-            </span>
-          ),
-        },
-        {
-          key: 'documento',
-          header: 'Documento',
-          width: 'w-44',
-          cell: (r) => <span className="font-mono text-xs">{r.documento ?? '—'}</span>,
-        },
-      ]}
-      getRowKey={(r) => r.id}
-      getRowLabel={(r) => r.nomeContato}
-      formDialogTitle={(item) => (item ? `Editar · ${item.nomeContato}` : 'Novo lead')}
-      renderForm={(item, close) => <LeadForm initial={item} onSuccess={close} />}
-    />
+    <>
+      <PessoaListing
+        status="LEAD"
+        crumb="CRM"
+        title="Leads"
+        description="Contatos iniciais · ainda não fecharam proposta. Convertem para Cliente automaticamente quando uma Oportunidade atinge etapa de fechamento."
+        viewStorageKey="tkws.pessoas.view.leads"
+        headerActions={
+          <Button onClick={openNew}>
+            <Plus size={14} /> Novo lead
+          </Button>
+        }
+        onEdit={openEdit}
+        emptyTitle="Nenhum lead ainda"
+        emptyDescription="Cadastre o primeiro contato comercial."
+        emptyAction={
+          <Button onClick={openNew}>
+            <Plus size={14} /> Novo lead
+          </Button>
+        }
+        columns={[
+          {
+            key: 'nomeContato',
+            header: 'Nome',
+            cell: (r) => <span className="font-medium">{r.nomeContato}</span>,
+          },
+          {
+            key: 'tipoPessoa',
+            header: 'Tipo',
+            width: 'w-16',
+            cell: (r) => (
+              <Badge tone={r.tipoPessoa === 'PJ' ? 'purple' : 'brand'}>{r.tipoPessoa}</Badge>
+            ),
+          },
+          {
+            key: 'nomeEmpresa',
+            header: 'Empresa',
+            cell: (r) => <span className="text-muted-foreground">{r.nomeEmpresa ?? '—'}</span>,
+          },
+          {
+            key: 'celularContato',
+            header: 'Contato',
+            cell: (r) => (
+              <span className="text-muted-foreground text-xs">
+                {r.emailContato ?? '—'}
+                <br />
+                {r.celularContato ?? ''}
+              </span>
+            ),
+          },
+          {
+            key: 'documento',
+            header: 'Documento',
+            width: 'w-44',
+            cell: (r) => (
+              <span className="font-mono text-xs">
+                {formatDocumento(r.documento, r.tipoPessoa) ?? '—'}
+              </span>
+            ),
+          },
+        ]}
+      />
+
+      <Dialog open={formOpen} onOpenChange={setFormOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editing ? `Editar · ${editing.nomeContato}` : 'Novo lead'}</DialogTitle>
+          </DialogHeader>
+          <DialogBody>
+            <LeadForm initial={editing} onSuccess={() => setFormOpen(false)} />
+          </DialogBody>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }

@@ -131,6 +131,7 @@ Para CADA feature nova, a ordem é:
 | `docs/12-FEATURE-FLAGS.md` | Como usar feature flags |
 | `docs/13-ONBOARDING.md` | Fluxo de onboarding de tenants (com aprovação manual) |
 | `docs/14-DESIGN-SYSTEM-SYNC.md` | **Antes de copiar/atualizar qualquer componente do `design-system/` para o `frontend/`** — runbook + lista de arquivos preservados |
+| `docs/15-API-BEST-PRACTICES.md` | **Antes de abrir endpoint novo ou escrever query JPQL** — verbos HTTP (evitar 405), params nullable no PostgreSQL (`CAST`), dedup em update |
 | `docs/adr/` | Decisões arquiteturais (por quê fizemos X em vez de Y) · 20 ADRs (gap em 017) |
 
 ## Princípios não-negociáveis
@@ -162,7 +163,7 @@ Para CADA feature nova, a ordem é:
 - Respeitar a estrutura de pastas (Clean Architecture + features)
 - Seguir as regras de ArchUnit já existentes
 - Validar entrada com Zod (frontend) ou Bean Validation (backend)
-- Adicionar migration Flyway sequencial (`V{N}__descricao.sql`) ao mexer em schema
+- Adicionar migration Flyway sequencial (`V{N}__descricao.sql`) ao mexer em schema — **um único arquivo por versão**; ver `docs/01-DEVELOPMENT.md` · Flyway — cuidados
 - Documentar decisão arquitetural em ADR quando aplicável
 - Usar `pnpm` ou `npm` consistente com o que já existe (`npm` por padrão)
 - Logar erros, não engolir (`catch (e) { log.error(...); throw; }`)

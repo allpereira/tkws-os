@@ -7,6 +7,7 @@ import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -21,10 +22,15 @@ import com.groupws.tkws.features.pessoas.application.usecase.CheckDuplicidadePes
 import com.groupws.tkws.features.pessoas.application.usecase.ConvertPessoaToClienteUseCase;
 import com.groupws.tkws.features.pessoas.application.usecase.CreatePessoaUseCase;
 import com.groupws.tkws.features.pessoas.application.usecase.FindPessoaUseCase;
+import com.groupws.tkws.features.pessoas.application.usecase.UpdatePessoaUseCase;
 import com.groupws.tkws.features.pessoas.domain.model.PessoaId;
 import com.groupws.tkws.features.pessoas.domain.model.StatusPessoa;
 import com.groupws.tkws.features.pessoas.domain.model.TipoPessoa;
+import com.groupws.tkws.features.pessoas.domain.port.PessoaListCriteria;
+import com.groupws.tkws.features.pessoas.domain.port.PessoaSort;
 import com.groupws.tkws.features.pessoas.web.dto.CreatePessoaRequest;
+import com.groupws.tkws.features.pessoas.web.dto.UpdatePessoaRequest;
+import com.groupws.tkws.shared.page.PageResponse;
 import com.groupws.tkws.shared.web.tenant.CurrentTenant;
 import com.groupws.tkws.shared.web.tenant.TenantContext;
 
@@ -44,6 +50,7 @@ import jakarta.validation.Valid;
  *   GET    /api/v1/pessoas/buscar           · dedup (documento exato + soft)
  *   GET    /api/v1/pessoas/search           · autocomplete (combobox async)
  *   POST   /api/v1/pessoas                  · cria como LEAD
+ *   PATCH  /api/v1/pessoas/{id}             · atualiza dados cadastrais
  *   POST   /api/v1/pessoas/{id}/converter   · promove LEAD → CLIENTE
  */
 @RestController
@@ -55,26 +62,44 @@ class PessoaController {
     private final FindPessoaUseCase findPessoa;
     private final CheckDuplicidadePessoaUseCase checkDuplicidade;
     private final ConvertPessoaToClienteUseCase convertToCliente;
+    private final UpdatePessoaUseCase updatePessoa;
 
     PessoaController(CreatePessoaUseCase createPessoa,
                      FindPessoaUseCase findPessoa,
                      CheckDuplicidadePessoaUseCase checkDuplicidade,
-                     ConvertPessoaToClienteUseCase convertToCliente) {
+                     ConvertPessoaToClienteUseCase convertToCliente,
+                     UpdatePessoaUseCase updatePessoa) {
         this.createPessoa = createPessoa;
         this.findPessoa = findPessoa;
         this.checkDuplicidade = checkDuplicidade;
         this.convertToCliente = convertToCliente;
+        this.updatePessoa = updatePessoa;
     }
 
+    /**
+     * Listagem paginada das telas Leads/Clientes. Filtros opcionais: status,
+     * busca textual `q` (nome/empresa/email/documento), tipoPessoa, cidade, uf
+     * e ordenação `sort` (RECENTE | NOME | CONVERSAO). Paginação por
+     * `limit`/`offset` — `limit` é limitado a 100 no servidor (ver ADR-022).
+     */
     @GetMapping
     @PreAuthorize("hasAnyRole('ORG_ADMIN', 'COMERCIAL_ATENDIMENTO', 'COMERCIAL_PROPOSTA')")
-    public ResponseEntity<List<PessoaView>> list(
+    public ResponseEntity<PageResponse<PessoaView>> list(
         @CurrentTenant TenantContext tenant,
         @RequestParam(required = false) StatusPessoa status,
+        @RequestParam(required = false) String q,
+        @RequestParam(required = false) TipoPessoa tipoPessoa,
+        @RequestParam(required = false) String cidade,
+        @RequestParam(required = false) String uf,
+        @RequestParam(required = false) String sort,
         @RequestParam(defaultValue = "50") int limit,
         @RequestParam(defaultValue = "0") int offset
     ) {
-        return ResponseEntity.ok(findPessoa.list(tenant.tenantId(), status, limit, offset));
+        int safeLimit = Math.max(1, Math.min(limit, 100));
+        int safeOffset = Math.max(0, offset);
+        PessoaListCriteria criteria = new PessoaListCriteria(
+            status, q, tipoPessoa, cidade, uf, PessoaSort.fromOrDefault(sort));
+        return ResponseEntity.ok(findPessoa.list(tenant.tenantId(), criteria, safeLimit, safeOffset));
     }
 
     @GetMapping("/{id}")
@@ -134,6 +159,22 @@ class PessoaController {
         return ResponseEntity
             .created(URI.create("/api/v1/pessoas/" + created.id()))
             .body(created);
+    }
+
+    /**
+     * Atualiza os dados cadastrais de uma Pessoa (tipo, documento, contato).
+     * Não altera status nem conversão. Ver ADR-018.
+     */
+    @PatchMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ORG_ADMIN', 'COMERCIAL_ATENDIMENTO', 'COMERCIAL_PROPOSTA')")
+    public ResponseEntity<PessoaView> update(
+        @PathVariable UUID id,
+        @CurrentTenant TenantContext tenant,
+        @Valid @RequestBody UpdatePessoaRequest request
+    ) {
+        PessoaView updated = updatePessoa.execute(
+            tenant.tenantId(), PessoaId.of(id), request.toCommand(tenant.tenantId()));
+        return ResponseEntity.ok(updated);
     }
 
     /**
