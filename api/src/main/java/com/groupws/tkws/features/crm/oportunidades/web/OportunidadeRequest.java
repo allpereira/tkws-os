@@ -1,7 +1,6 @@
 package com.groupws.tkws.features.crm.oportunidades.web;
 
 import com.groupws.tkws.features.crm.oportunidades.application.OportunidadeCommand;
-import com.groupws.tkws.features.crm.oportunidades.domain.model.OrigemNegocio;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
@@ -25,7 +24,7 @@ public record OportunidadeRequest(
     @PositiveOrZero BigDecimal valor,
     @PositiveOrZero BigDecimal metragemM2,
     LocalDate previsaoFechamento,
-    @NotNull OrigemNegocio origem,
+    @NotNull UUID origemId,
     @Size(max = 160) String origemOutros,
     String notas
 ) {
@@ -35,7 +34,7 @@ public record OportunidadeRequest(
             empreendimentoId, tipoProjetoId, responsavelId, parceiroId,
             descricao,
             valor == null ? BigDecimal.ZERO : valor,
-            metragemM2, previsaoFechamento, origem, origemOutros, notas
+            metragemM2, previsaoFechamento, origemId, origemOutros, notas
         );
     }
 }

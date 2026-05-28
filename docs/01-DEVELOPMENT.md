@@ -464,6 +464,12 @@ export type Tenant = z.infer<typeof tenantSchema>;
 // Usa o mesmo schema no form, no fetch, e no test
 ```
 
+#### Datas de calendário (`yyyy-MM-dd` / API `LocalDate`)
+
+Para campos **sem hora** (ex.: previsão de fechamento), o wire format é
+`yyyy-MM-dd`. Use `@/lib/calendar-date` e `DateField` — **nunca**
+`new Date('2026-06-30')`. Detalhes e checklist: [15-API-BEST-PRACTICES.md](15-API-BEST-PRACTICES.md) §5.
+
 #### Componentes funcionais com Props tipadas
 
 ```tsx

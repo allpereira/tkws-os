@@ -143,7 +143,7 @@ BEGIN
             ('00000000-0000-0000-0000-000000009102', tenant_dev_id, pipe_proposta_id, 'ETA-102', 'Criativo',      '#BB6BD9', 30, 'aberta', 1, false, true, NOW(), NOW()),
             ('00000000-0000-0000-0000-000000009103', tenant_dev_id, pipe_proposta_id, 'ETA-103', 'Orçamento',     '#74C7E4', 50, 'aberta', 2, false, true, NOW(), NOW()),
             ('00000000-0000-0000-0000-000000009104', tenant_dev_id, pipe_proposta_id, 'ETA-104', 'Apresentação',  '#F2C94C', 75, 'aberta', 3, false, true, NOW(), NOW()),
-            ('00000000-0000-0000-0000-000000009105', tenant_dev_id, pipe_proposta_id, 'ETA-105', 'Aprovação',     '#5FD9A5', 100, 'ganha', 4, true,  true, NOW(), NOW())
+            ('00000000-0000-0000-0000-000000009105', tenant_dev_id, pipe_proposta_id, 'ETA-105', 'Aprovação Projeto',     '#5FD9A5', 100, 'ganha', 4, true,  true, NOW(), NOW())
         ON CONFLICT (id) DO NOTHING;
 
         RAISE NOTICE 'Seed de dev (V7) executado: 2 tenants + 2 usuários + configurações CRM/Organização';

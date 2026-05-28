@@ -8,27 +8,10 @@ import { z } from 'zod'
  *   o que a organização vende.
  * - Quando entra em etapa com `converteLeadEmCliente=true`, o backend
  *   promove a Pessoa para CLIENTE automaticamente.
+ * - `origemId` referencia a configuração Origens de Negócio (ADR-025). As
+ *   regras condicionais (exige parceiro / exige detalhe) vêm das flags da
+ *   origem selecionada e são validadas no formulário, não aqui no schema.
  */
-export const ORIGEM_NEGOCIO = [
-  'INDICACAO_PARCEIRO',
-  'GOOGLE',
-  'REDES_SOCIAIS',
-  'EVENTOS',
-  'FEIRAS',
-  'OUTROS',
-] as const
-
-export type OrigemNegocio = (typeof ORIGEM_NEGOCIO)[number]
-
-export const ORIGEM_NEGOCIO_LABELS: Record<OrigemNegocio, string> = {
-  INDICACAO_PARCEIRO: 'Indicação de Parceiro',
-  GOOGLE: 'Google',
-  REDES_SOCIAIS: 'Redes Sociais',
-  EVENTOS: 'Eventos',
-  FEIRAS: 'Feiras',
-  OUTROS: 'Outros',
-}
-
 export const oportunidadeSchema = z.object({
   id: z.string().uuid(),
   tenantId: z.number().int().positive(),
@@ -45,7 +28,7 @@ export const oportunidadeSchema = z.object({
   valor: z.number().min(0).default(0),
   metragemM2: z.number().min(0).optional().nullable(),
   previsaoFechamento: z.string().date().optional().nullable(),
-  origem: z.enum(ORIGEM_NEGOCIO),
+  origemId: z.string().uuid(),
   origemOutros: z.string().max(160).optional().nullable(),
   notas: z.string().optional().nullable(),
   createdAt: z.string().datetime({ offset: true }),
@@ -66,45 +49,17 @@ const oportunidadeFormBaseSchema = oportunidadeSchema.pick({
   valor: true,
   metragemM2: true,
   previsaoFechamento: true,
-  origem: true,
+  origemId: true,
   origemOutros: true,
   notas: true,
 })
 
-function validateOrigemNegocio<T extends { origem: OrigemNegocio; origemOutros?: string | null; parceiroId?: string | null }>(
-  data: T,
-  ctx: z.RefinementCtx,
-) {
-  if (data.origem === 'INDICACAO_PARCEIRO' && !data.parceiroId) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: 'Selecione o parceiro indicador',
-      path: ['parceiroId'],
-    })
-  }
-  if (data.origem === 'OUTROS' && !(data.origemOutros?.trim())) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: 'Informe qual é a origem',
-      path: ['origemOutros'],
-    })
-  }
-}
+// As regras condicionais de origem (exige parceiro / exige detalhe) dependem das
+// flags da origem selecionada — carregadas em runtime via API. Por isso ficam no
+// formulário (ver oportunidade-form.tsx), não no schema Zod.
+export const createOportunidadeSchema = oportunidadeFormBaseSchema
 
-export const createOportunidadeSchema = oportunidadeFormBaseSchema.superRefine(validateOrigemNegocio)
-
-export const updateOportunidadeSchema = oportunidadeFormBaseSchema.partial().superRefine((data, ctx) => {
-  if (data.origem !== undefined) {
-    validateOrigemNegocio(
-      {
-        origem: data.origem,
-        origemOutros: data.origemOutros ?? null,
-        parceiroId: data.parceiroId ?? null,
-      },
-      ctx,
-    )
-  }
-})
+export const updateOportunidadeSchema = oportunidadeFormBaseSchema.partial()
 
 export type Oportunidade = z.infer<typeof oportunidadeSchema>
 export type CreateOportunidade = z.infer<typeof createOportunidadeSchema>

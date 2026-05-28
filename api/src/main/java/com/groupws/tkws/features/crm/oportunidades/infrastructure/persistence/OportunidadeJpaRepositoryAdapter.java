@@ -40,7 +40,7 @@ class OportunidadeJpaRepositoryAdapter implements OportunidadeRepository {
         e.valor = o.valor();
         e.metragemM2 = o.metragemM2().orElse(null);
         e.previsaoFechamento = o.previsaoFechamento().orElse(null);
-        e.origem = o.origem();
+        e.origemId = o.origemId();
         e.origemOutros = o.origemOutros().orElse(null);
         e.notas = o.notas().orElse(null);
         e.createdAt = o.createdAt();
@@ -84,7 +84,7 @@ class OportunidadeJpaRepositoryAdapter implements OportunidadeRepository {
             e.ofertaId, e.tipoPagamentoId, e.empreendimentoId,
             e.tipoProjetoId, e.responsavelId, e.parceiroId,
             e.descricao, e.valor, e.metragemM2,
-            e.previsaoFechamento, e.origem, e.origemOutros, e.notas,
+            e.previsaoFechamento, e.origemId, e.origemOutros, e.notas,
             e.createdAt, e.updatedAt
         );
     }

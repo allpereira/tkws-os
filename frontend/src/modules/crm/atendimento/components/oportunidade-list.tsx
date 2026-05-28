@@ -14,6 +14,7 @@ import {
 import { Progress } from '@/components/ui/progress'
 import { Spinner } from '@/components/ui/spinner'
 import { LeadScore } from '@/components/tkws/crm-lead-score'
+import { addCalendarDays, todayCalendarDateIso } from '@/lib/calendar-date'
 import { formatBRL } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import type { Etapa } from '@/modules/crm/configuracoes/etapas/schema'
@@ -53,8 +54,7 @@ function applySavedView(
   viewId: SavedViewId,
   etapaById: Map<string, Etapa>,
 ): Oportunidade[] {
-  const now = Date.now()
-  const in30d = now + 30 * 86_400_000
+  const closingLimitIso = addCalendarDays(todayCalendarDateIso(), 30)
   switch (viewId) {
     case 'hot':
       return opps.filter((o) => {
@@ -66,8 +66,7 @@ function applySavedView(
     case 'closing':
       return opps.filter((o) => {
         if (!o.previsaoFechamento) return false
-        const t = new Date(o.previsaoFechamento).getTime()
-        return !Number.isNaN(t) && t <= in30d
+        return o.previsaoFechamento <= closingLimitIso
       })
     case 'high':
       return opps.filter((o) => o.valor >= 5_000_000)

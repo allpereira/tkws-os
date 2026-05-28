@@ -1,7 +1,11 @@
 /**
  * Formatadores de display · pt-BR · usando Intl nativo.
  * Nunca formate "na mão" — sempre use estas funções.
+ *
+ * Datas só-dia (`yyyy-MM-dd` / API `LocalDate`): use `@/lib/calendar-date`.
  */
+
+import { formatCalendarDatePtBr, isCalendarDateString } from '@/lib/calendar-date'
 
 const BRL = new Intl.NumberFormat('pt-BR', {
   style: 'currency',
@@ -48,9 +52,10 @@ export const formatBRLCompact = (v: number | null | undefined) =>
 /** 1.234.567 */
 export const formatNumber = (v: number | null | undefined) => (v == null ? '—' : NUM.format(v))
 
-/** 15/05/2026 */
+/** 15/05/2026 · strings `yyyy-MM-dd` usam calendário civil (sem deslocamento UTC). */
 export const formatDate = (v: string | Date | null | undefined) => {
   if (!v) return '—'
+  if (typeof v === 'string' && isCalendarDateString(v)) return formatCalendarDatePtBr(v)
   const d = typeof v === 'string' ? new Date(v) : v
   if (Number.isNaN(d.getTime())) return '—'
   return DATE.format(d)

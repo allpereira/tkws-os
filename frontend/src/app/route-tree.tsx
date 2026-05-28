@@ -41,6 +41,10 @@ const EtapasPage = lazyPage(
   () => import('@/modules/crm/configuracoes/etapas/components/etapas-page'),
   'EtapasPage',
 )
+const OrigensNegocioPage = lazyPage(
+  () => import('@/modules/crm/configuracoes/origens-negocio/components/origens-negocio-page'),
+  'OrigensNegocioPage',
+)
 
 // Settings · Organização
 const OfertasPage = lazyPage(
@@ -263,6 +267,7 @@ const callbackRoute = createRoute({ getParentRoute: () => rootRoute, path: '/cal
 const settingsCrmTiposPagamentosRoute = createRoute({ getParentRoute: () => rootRoute, path: '/settings/crm/tipos-pagamentos', component: TiposPagamentoPage })
 const settingsCrmPipelinesRoute = createRoute({ getParentRoute: () => rootRoute, path: '/settings/crm/pipelines', component: PipelinesPage })
 const settingsCrmEtapasRoute = createRoute({ getParentRoute: () => rootRoute, path: '/settings/crm/etapas', component: EtapasPage })
+const settingsCrmOrigensNegocioRoute = createRoute({ getParentRoute: () => rootRoute, path: '/settings/crm/origens-negocio', component: OrigensNegocioPage })
 
 // Settings · Organização
 const settingsOrgOfertasRoute = createRoute({ getParentRoute: () => rootRoute, path: '/settings/organizacao/ofertas', component: OfertasPage })
@@ -287,6 +292,7 @@ export const routeTree = rootRoute.addChildren([
   settingsCrmTiposPagamentosRoute,
   settingsCrmPipelinesRoute,
   settingsCrmEtapasRoute,
+  settingsCrmOrigensNegocioRoute,
   settingsOrgOfertasRoute,
   settingsOrgTiposEmpresaRoute,
   settingsOrgUnidadesRoute,

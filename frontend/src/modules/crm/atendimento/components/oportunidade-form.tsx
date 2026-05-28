@@ -15,11 +15,10 @@ import type { Etapa } from '@/modules/crm/configuracoes/etapas/schema'
 import { PessoaComboboxField } from '@/modules/crm/pessoas/components/pessoa-combobox'
 import { ParceiroComboboxField } from '@/modules/crm/pessoas/components/parceiro-combobox'
 import { useTiposPagamento } from '@/modules/crm/configuracoes/tipos-pagamentos/api'
+import { useOrigensNegocio } from '@/modules/crm/configuracoes/origens-negocio/api'
 import { useCreateOportunidade, useUpdateOportunidade } from '../api'
 import {
   createOportunidadeSchema,
-  ORIGEM_NEGOCIO,
-  ORIGEM_NEGOCIO_LABELS,
   type CreateOportunidade,
   type Oportunidade,
 } from '../schema'
@@ -45,11 +44,6 @@ function toOptions<T extends { id: string }>(
   return (data ?? []).map((item) => ({ value: item.id, label: label(item) }))
 }
 
-const origemOptions: SelectOption[] = ORIGEM_NEGOCIO.map((value) => ({
-  value,
-  label: ORIGEM_NEGOCIO_LABELS[value],
-}))
-
 export interface OportunidadeFormProps {
   initial?: Oportunidade
   pipelineId: string
@@ -71,11 +65,12 @@ export function OportunidadeForm({
   const empreendimentos = useEmpreendimentos()
   const ofertas = useOfertas()
   const tiposPagamento = useTiposPagamento()
+  const origens = useOrigensNegocio()
   const createMut = useCreateOportunidade()
   const updateMut = useUpdateOportunidade()
   const mutation = isEdit ? updateMut : createMut
 
-  const { register, handleSubmit, control, formState: { errors, isSubmitting } } = useForm<CreateOportunidade>({
+  const { register, handleSubmit, control, setError, formState: { errors, isSubmitting } } = useForm<CreateOportunidade>({
     resolver: zodResolver(createOportunidadeSchema),
     defaultValues: {
       pipelineId,
@@ -89,14 +84,31 @@ export function OportunidadeForm({
       parceiroId: initial?.parceiroId ?? null,
       valor: initial?.valor ?? 0,
       previsaoFechamento: initial?.previsaoFechamento ?? null,
-      origem: initial?.origem ?? 'OUTROS',
+      origemId: initial?.origemId ?? '',
       origemOutros: initial?.origemOutros ?? '',
     },
   })
 
-  const origem = useWatch({ control, name: 'origem' })
+  // Só origens ativas no seletor; ao editar, mantém a origem atual mesmo se inativa.
+  const origemOptions: SelectOption[] = (origens.data ?? [])
+    .filter((o) => o.ativo || o.id === initial?.origemId)
+    .map((o) => ({ value: o.id, label: o.nome }))
+
+  const origemId = useWatch({ control, name: 'origemId' })
+  const origemSelecionada = origens.data?.find((o) => o.id === origemId)
+  const exigeParceiro = origemSelecionada?.exigeParceiro ?? false
+  const exigeDetalhe = origemSelecionada?.exigeDetalhe ?? false
 
   const onSubmit = handleSubmit(async (data) => {
+    // Regras condicionais vêm das flags da origem selecionada (ADR-025).
+    if (exigeParceiro && !data.parceiroId) {
+      setError('parceiroId', { message: 'Selecione o parceiro indicador' })
+      return
+    }
+    if (exigeDetalhe && !data.origemOutros?.trim()) {
+      setError('origemOutros', { message: 'Informe qual é a origem' })
+      return
+    }
     const payload = {
       ...data,
       pipelineId,
@@ -105,9 +117,9 @@ export function OportunidadeForm({
       tipoPagamentoId: data.tipoPagamentoId || null,
       empreendimentoId: data.empreendimentoId || null,
       responsavelId: data.responsavelId || null,
-      parceiroId: data.origem === 'INDICACAO_PARCEIRO' ? data.parceiroId || null : null,
+      parceiroId: exigeParceiro ? data.parceiroId || null : null,
       previsaoFechamento: data.previsaoFechamento || null,
-      origemOutros: data.origem === 'OUTROS' ? data.origemOutros?.trim() || null : null,
+      origemOutros: exigeDetalhe ? data.origemOutros?.trim() || null : null,
       valor: roundReais(data.valor),
     }
     if (isEdit && initial) await updateMut.mutateAsync({ id: initial.id, input: payload })
@@ -215,15 +227,18 @@ export function OportunidadeForm({
         <Label required>Origem</Label>
         <SelectField
           control={control}
-          name="origem"
-          placeholder="Selecione a origem"
+          name="origemId"
+          placeholder={origens.isLoading ? 'Carregando…' : 'Selecione a origem'}
           options={origemOptions}
-          state={errors.origem ? 'error' : 'default'}
+          state={errors.origemId ? 'error' : 'default'}
         />
-        {errors.origem && <FieldHint state="error">{errors.origem.message}</FieldHint>}
+        {emptyHint(origens, 'Configurações → CRM → Origens de Negócio') && (
+          <FieldHint>{emptyHint(origens, 'Configurações → CRM → Origens de Negócio')}</FieldHint>
+        )}
+        {errors.origemId && <FieldHint state="error">{errors.origemId.message}</FieldHint>}
       </Field>
 
-      {origem === 'INDICACAO_PARCEIRO' && (
+      {exigeParceiro && (
         <Field>
           <Label>Parceiro</Label>
           <ParceiroComboboxField
@@ -238,7 +253,7 @@ export function OportunidadeForm({
         </Field>
       )}
 
-      {origem === 'OUTROS' && (
+      {exigeDetalhe && (
         <Field>
           <Label htmlFor="origemOutros" required>Qual origem?</Label>
           <Input

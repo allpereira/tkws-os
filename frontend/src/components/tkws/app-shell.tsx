@@ -119,6 +119,7 @@ const settingsSections: NavSection[] = [
     items: [
       { to: '/settings/crm/pipelines', label: 'Pipelines', Icon: Network },
       { to: '/settings/crm/etapas', label: 'Etapas', Icon: Layers },
+      { to: '/settings/crm/origens-negocio', label: 'Origens de Negócio', Icon: MapPin },
       { to: '/settings/crm/tipos-pagamentos', label: 'Tipos de Pagamentos', Icon: CreditCard },
     ],
   },

@@ -4,6 +4,7 @@ import type { BadgeTone } from '@/components/ui/badge'
 import type { Etapa } from '@/modules/crm/configuracoes/etapas/schema'
 import type { Oferta } from '@/modules/organizacao/configuracoes/ofertas/schema'
 import type { Pessoa } from '@/modules/crm/pessoas/schema'
+import { formatCalendarDateShortPtBr } from '@/lib/calendar-date'
 import { formatRelative, initials } from '@/lib/format'
 import type { Oportunidade } from '../schema'
 
@@ -34,10 +35,7 @@ export function staleDays(updatedAt: string): number | undefined {
 }
 
 export function formatCloseShort(iso: string | null | undefined): string {
-  if (!iso) return '—'
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return '—'
-  return d.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })
+  return formatCalendarDateShortPtBr(iso)
 }
 
 export function ofertaTag(oferta: Oferta | undefined): { label: string; tone: BadgeTone } | undefined {

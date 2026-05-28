@@ -7,6 +7,7 @@ import com.groupws.tkws.features.crm.oportunidades.domain.model.Oportunidade;
 import com.groupws.tkws.features.crm.oportunidades.domain.model.OportunidadeId;
 import com.groupws.tkws.features.crm.oportunidades.domain.port.EtapaLookup;
 import com.groupws.tkws.features.crm.oportunidades.domain.port.OportunidadeRepository;
+import com.groupws.tkws.features.crm.oportunidades.domain.port.OrigemLookup;
 import com.groupws.tkws.features.pessoas.domain.model.PessoaId;
 import com.groupws.tkws.shared.page.PageResponse;
 import com.groupws.tkws.shared.page.Pagination;
@@ -29,14 +30,22 @@ public class OportunidadeService {
 
     private final OportunidadeRepository repository;
     private final EtapaLookup etapaLookup;
+    private final OrigemLookup origemLookup;
     private final ApplicationEventPublisher eventPublisher;
 
     public OportunidadeService(OportunidadeRepository repository,
                                EtapaLookup etapaLookup,
+                               OrigemLookup origemLookup,
                                ApplicationEventPublisher eventPublisher) {
         this.repository = repository;
         this.etapaLookup = etapaLookup;
+        this.origemLookup = origemLookup;
         this.eventPublisher = eventPublisher;
+    }
+
+    private OrigemLookup.OrigemInfo requireOrigem(long tenantId, java.util.UUID origemId) {
+        return origemLookup.findOrigem(tenantId, origemId)
+            .orElseThrow(() -> new IllegalArgumentException("origem de negócio inválida: " + origemId));
     }
 
     @Transactional(readOnly = true)
@@ -56,6 +65,7 @@ public class OportunidadeService {
 
     @Transactional
     public OportunidadeView create(long tenantId, OportunidadeCommand cmd) {
+        OrigemLookup.OrigemInfo origem = requireOrigem(tenantId, cmd.origemId());
         Oportunidade oportunidade = Oportunidade.create(
             tenantId,
             PipelineId.of(cmd.pipelineId()),
@@ -64,7 +74,8 @@ public class OportunidadeService {
             cmd.ofertaId(), cmd.tipoPagamentoId(), cmd.empreendimentoId(),
             cmd.tipoProjetoId(), cmd.responsavelId(), cmd.parceiroId(),
             cmd.descricao(), cmd.valor(), cmd.metragemM2(),
-            cmd.previsaoFechamento(), cmd.origem(), cmd.origemOutros(), cmd.notas()
+            cmd.previsaoFechamento(), cmd.origemId(), origem.exigeParceiro(), origem.exigeDetalhe(),
+            cmd.origemOutros(), cmd.notas()
         );
 
         // Se já foi criada diretamente numa etapa de conversão, dispara o evento.
@@ -85,9 +96,11 @@ public class OportunidadeService {
             .orElseThrow(() -> new OportunidadeNotFoundException(id));
 
         // Atualiza detalhes (não muda etapa aqui · move via endpoint dedicado)
+        OrigemLookup.OrigemInfo origem = requireOrigem(tenantId, cmd.origemId());
         oportunidade.updateDetalhes(
             cmd.descricao(), cmd.valor(), cmd.metragemM2(),
-            cmd.previsaoFechamento(), cmd.origem(), cmd.origemOutros(), cmd.notas(),
+            cmd.previsaoFechamento(), cmd.origemId(), origem.exigeParceiro(), origem.exigeDetalhe(),
+            cmd.origemOutros(), cmd.notas(),
             cmd.ofertaId(), cmd.tipoPagamentoId(), cmd.empreendimentoId(),
             cmd.tipoProjetoId(), cmd.responsavelId(),
             cmd.pessoaId() != null ? PessoaId.of(cmd.pessoaId()) : null,

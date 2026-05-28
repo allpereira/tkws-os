@@ -1,6 +1,9 @@
 import { Controller, type Control, type FieldPath, type FieldValues } from 'react-hook-form'
-import { format, parse, isValid } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
+import {
+  formatCalendarDatePtBr,
+  parseCalendarDate,
+  toCalendarDateIso,
+} from '@/lib/calendar-date'
 import { Calendar as CalendarIcon, X as XIcon } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from './popover'
 import { Calendar } from './calendar'
@@ -10,10 +13,9 @@ import { cn } from '@/lib/utils'
 /**
  * DateField · wrapper do Calendar/Popover integrado com RHF via `Controller`.
  *
- * Internamente o `field.value` é uma **string ISO `yyyy-MM-dd`** (formato que
- * o backend `Oportunidade.previsaoFechamento` espera · ver schema Zod
- * `z.string().date()`). O usuário vê e clica no formato `dd/MM/yyyy` pt-BR
- * via DayPicker.
+ * Internamente o `field.value` é **string `yyyy-MM-dd`** (API `LocalDate` ·
+ * Zod `z.string().date()`). Parse/format via `@/lib/calendar-date` — nunca
+ * `new Date(iso)`. O usuário vê `dd/MM/yyyy` pt-BR no botão e no DayPicker.
  *
  * Uso:
  *   <DateField
@@ -61,15 +63,14 @@ export function DateField<TFormValues extends FieldValues>({
       name={name}
       render={({ field }) => {
         const iso = field.value && typeof field.value === 'string' ? field.value : ''
-        const parsed = iso ? parse(iso, 'yyyy-MM-dd', new Date()) : undefined
-        const selectedDate = parsed && isValid(parsed) ? parsed : undefined
-        const label = selectedDate ? format(selectedDate, 'dd/MM/yyyy', { locale: ptBR }) : ''
+        const selectedDate = iso ? parseCalendarDate(iso) : undefined
+        const label = iso ? formatCalendarDatePtBr(iso) : ''
 
         const handleSelect = (date: Date | undefined) => {
           if (!date) {
             field.onChange(null)
           } else {
-            field.onChange(format(date, 'yyyy-MM-dd'))
+            field.onChange(toCalendarDateIso(date))
           }
         }
 

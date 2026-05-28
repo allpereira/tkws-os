@@ -157,3 +157,49 @@ touch src/main/java/.../ClasseAfetada.java && mvn -o compile
 
 Comum quando há **edição concorrente** do `main` (outro dev/agente mexendo numa
 feature enquanto você roda ITs). Antes de culpar seu teste, recompile limpo.
+
+---
+
+## 5. Campos de data (LocalDate) · sem fuso no wire
+
+### O problema (caso real · previsão de fechamento exibida −1 dia)
+
+O frontend enviava e recebia `"2026-06-30"` (correto na API e no Postgres `DATE`),
+mas partes do React faziam `new Date("2026-06-30")`. O ECMAScript trata isso como
+**meia-noite UTC**; em `America/Sao_Paulo` vira **29/06/2026 21:00** — o usuário
+via **29/06** no formulário, kanban e filtros.
+
+### Contrato API (autoritativo)
+
+| Camada | Tipo | JSON | Exemplo |
+|---|---|---|---|
+| Java domain / JPA | `java.time.LocalDate` | string | `"2026-06-30"` |
+| PostgreSQL | `DATE` | — | `2026-06-30` |
+| Frontend Zod | `z.string().date()` | string | `"2026-06-30"` |
+
+**Nunca** serializar `LocalDate` como timestamp (`1696118400000`) nem como
+`2026-06-30T00:00:00Z` — isso reintroduz ambiguidade de fuso no cliente.
+
+Jackson (Spring Boot + `jackson-datatype-jsr310`) já faz o certo por padrão.
+Teste de referência: `LocalDateJacksonTest` em `api/src/test/.../serialization/`.
+
+### Regras no frontend
+
+1. **Data de calendário** (previsão de fechamento, vencimento, aniversário, etc.):
+   use **`@/lib/calendar-date`** (`parseCalendarDate`, `toCalendarDateIso`,
+   `formatCalendarDatePtBr`). **Proibido** `new Date('yyyy-MM-dd')` e **proibido**
+   derivar o dia com `.toISOString().split('T')[0]` a partir de um `Date` UTC.
+2. **Data/hora** (`createdAt`, `updatedAt`, `convertidoEm`): ISO-8601 com offset
+   (`z.string().datetime({ offset: true })`) · aí sim `new Date` + `formatDateTime`.
+3. **`DateField`** (`components/ui/date-field.tsx`) já usa `calendar-date` — novos
+   campos de data no formulário devem reutilizar esse componente, não inventar input.
+4. Comparações de intervalo entre datas só-dia: compare strings `yyyy-MM-dd`
+   (`localeCompare`) ou `compareCalendarDates` / `addCalendarDays` — não timestamps.
+
+### Checklist rápido
+
+- [ ] Coluna Postgres é `DATE` (não `TIMESTAMPTZ`) quando não há hora de negócio
+- [ ] DTO/View/Request usam `LocalDate` no Java
+- [ ] Schema Zod usa `z.string().date()` (ou `.nullable()`)
+- [ ] UI usa `DateField` + `calendar-date` para exibir/formatar
+- [ ] Teste Vitest cobre `2026-06-30` → `30/06/2026` (ver `calendar-date.test.ts`)
